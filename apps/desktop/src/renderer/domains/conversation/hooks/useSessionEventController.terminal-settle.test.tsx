@@ -6,9 +6,9 @@
  * toolCallId 配对，不写聊天状态；闸门对聊天流的保护由既有 cross-session-leak
  * 套件看守。
  */
-import { activeSessionAtom, aiTerminalFeedAtom } from "@shared/store/atoms";
+import { activeSessionAtom, aiEditTargetAtom, aiTerminalFeedAtom, hotTrackingBySessionAtom, toggleCurrentSessionHotTrackingAtom } from "@shared/store/atoms";
 import { act, renderHook } from "@testing-library/react";
-import type { SessionEvent } from "@vetta/runtime-core";
+import type { ToolEndEvent, ToolStartEvent } from "@vetta/runtime-core";
 import { getDefaultStore, Provider } from "jotai";
 import type { ReactNode } from "react";
 import { beforeEach, expect, it } from "vitest";
@@ -26,7 +26,7 @@ const activeSessionRef = {
 };
 const wrapper = ({ children }: { children: ReactNode }) => <Provider store={store}>{children}</Provider>;
 
-function toolStart(toolCallId: string): SessionEvent {
+function toolStart(toolCallId: string): ToolStartEvent {
 	return {
 		schemaVersion: 1,
 		channel: "runtime",
@@ -39,10 +39,10 @@ function toolStart(toolCallId: string): SessionEvent {
 		toolName: "bash",
 		args: { command: "bun run build" },
 		startedAt: 1,
-	} as SessionEvent;
+	};
 }
 
-function toolEnd(toolCallId: string): SessionEvent {
+function toolEnd(toolCallId: string): ToolEndEvent {
 	return {
 		schemaVersion: 1,
 		channel: "runtime",
@@ -53,13 +53,12 @@ function toolEnd(toolCallId: string): SessionEvent {
 		source: "runtime-core",
 		toolCallId,
 		toolName: "bash",
-		args: { command: "bun run build" },
+		isError: false,
+		result: { content: [{ type: "text", text: "build ok" }] },
 		startedAt: 1,
 		durationMs: 9,
 		phases: [],
-		result: { content: [{ type: "text", text: "build ok" }] },
-		isError: false,
-	} as SessionEvent;
+	};
 }
 
 function setActiveProfile(profile: "coding" | "work"): void {
@@ -82,6 +81,8 @@ beforeEach(() => {
 	};
 	setActiveProfile("coding");
 	store.set(aiTerminalFeedAtom, []);
+	store.set(aiEditTargetAtom, null);
+	store.set(hotTrackingBySessionAtom, new Map());
 });
 
 it("切走后旧会话的 tool.end 仍结算其终端条目", () => {
@@ -100,6 +101,44 @@ it("切走后旧会话的 tool.end 仍结算其终端条目", () => {
 	const entry = store.get(aiTerminalFeedAtom)[0];
 	expect(entry?.running).toBe(false);
 	expect(entry?.output).toBe("build ok");
+});
+
+it("coding 开关关闭后不写 feed/编辑目标，重新开启恢复且 end 仍可结算", () => {
+	const { result } = renderHook(() => useSessionEventController({ activeSessionRef }), { wrapper });
+	const handler = result.current.createSessionEventHandler("session-a");
+	const editStart: ToolStartEvent = { ...toolStart("edit-on"), type: "tool.start", toolName: "write", args: { path: "src/a.ts" } };
+	act(() => { handler(toolStart("before-off")); handler(editStart); });
+	expect(store.get(aiTerminalFeedAtom)).toHaveLength(1);
+	const previousTarget = store.get(aiEditTargetAtom);
+	expect(previousTarget?.path).toBe("C:/work/a/src/a.ts");
+
+	act(() => store.set(toggleCurrentSessionHotTrackingAtom));
+	act(() => {
+		handler(toolStart("while-off"));
+		handler({ ...editStart, toolCallId: "edit-off", args: { path: "src/off.ts" } });
+	});
+	expect(store.get(aiTerminalFeedAtom)).toHaveLength(1);
+	expect(store.get(aiEditTargetAtom)).toBe(previousTarget);
+	act(() => handler(toolEnd("before-off")));
+	expect(store.get(aiTerminalFeedAtom)[0]).toMatchObject({ running: false, output: "build ok" });
+
+	act(() => store.set(toggleCurrentSessionHotTrackingAtom));
+	act(() => {
+		handler(toolStart("after-on"));
+		handler({ ...editStart, toolCallId: "edit-again", args: { path: "src/again.ts" } });
+	});
+	expect(store.get(aiTerminalFeedAtom)).toHaveLength(2);
+	expect(store.get(aiEditTargetAtom)?.path).toBe("C:/work/a/src/again.ts");
+});
+
+it("work 档写类工具同样不更新编辑目标，即使该 runtime 有开启偏好", () => {
+	setActiveProfile("work");
+	store.set(hotTrackingBySessionAtom, new Map([["session-a", true]]));
+	const { result } = renderHook(() => useSessionEventController({ activeSessionRef }), { wrapper });
+	act(() => result.current.createSessionEventHandler("session-a")({
+		...toolStart("work-write"), type: "tool.start", toolName: "write", args: { path: "src/a.ts" },
+	}));
+	expect(store.get(aiEditTargetAtom)).toBeNull();
 });
 
 it("未知键的 end 仍为 no-op，不新造条目", () => {

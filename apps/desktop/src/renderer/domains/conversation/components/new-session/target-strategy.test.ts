@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { describe, expect, it, vi } from "vitest";
 import { agentTargetKey, teamTargetKey } from "./target";
 import { createNewSessionTargetStrategyRegistry } from "./target-strategy";
@@ -33,6 +34,24 @@ describe("new-session target strategy registry", () => {
 		await registry.resolve(agentTargetKey("agent-1")).dispatch();
 		await expect(registry.resolve(teamTargetKey("team-1")).dispatch()).rejects.toThrow("Unknown new-session target");
 		expect(agent).toHaveBeenCalledOnce();
+		expect(team).not.toHaveBeenCalled();
+	});
+
+	it("routes a worker crew team to the ordinary-session dispatch, never to the Team one", async () => {
+		// REQ-0034：无主控团队 = 普通会话链路（newSessionSend 带 delegationTeamId）。
+		const team = vi.fn(async () => undefined);
+		const crew = vi.fn(async () => undefined);
+		const registry = createNewSessionTargetStrategyRegistry({
+			conversationDispatch: vi.fn(async () => undefined),
+			teamDispatch: team,
+			teamKey: null,
+			agentDispatch: vi.fn(async () => undefined),
+			agentKey: null,
+			workerTeamDispatch: crew,
+			workerTeamKey: teamTargetKey("crew-1"),
+		});
+		await registry.resolve(teamTargetKey("crew-1")).dispatch();
+		expect(crew).toHaveBeenCalledOnce();
 		expect(team).not.toHaveBeenCalled();
 	});
 });

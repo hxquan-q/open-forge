@@ -158,6 +158,7 @@ export class CodingAgentSubagentRuntime
 			() => this.coordinator,
 			() => this,
 			CODING_AGENT_SUBAGENT_TYPE_WORKFLOW,
+			(agentType) => registry.get(agentType),
 		).map(({ tool }) => tool);
 		this.feature = {
 			id: "coding-agent-subagents",

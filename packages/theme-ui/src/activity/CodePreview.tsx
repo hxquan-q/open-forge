@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { useEffect, useState, type JSX } from "react";
 import { codeToHtml } from "shiki";
 import { getTextEditorLanguageId } from "../file-preview/text-editor-language-id";

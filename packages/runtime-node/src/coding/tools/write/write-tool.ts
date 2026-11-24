@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { type Static, Type } from "@sinclair/typebox";
 import type { RuntimeToolDefinition } from "@vetta/runtime-core/kernel";
@@ -83,7 +84,8 @@ export function createWriteTool(cwd: string, options: WriteToolOptions): Runtime
 							text: rejectionReason,
 						},
 					],
-					details: undefined,
+					details: { code: "policy_denied" },
+					isError: true,
 				};
 			}
 

@@ -1,7 +1,7 @@
 // Modified by The Open Forge contributors.
 import { existsSync, readFileSync } from "node:fs";
 import { extname, resolve } from "node:path";
-import type { AgentBlueprint, AgentResourceMode } from "@vetta/agent-team";
+import type { AgentBlueprint, AgentProfileLifecycle, AgentResourceMode } from "@vetta/agent-team";
 import { EMPTY_AGENT_ABILITIES, pluginBlueprintId } from "@vetta/agent-team";
 import type { InstalledPlugin } from "../../preload/api-types/plugins.js";
 import { describeError } from "../logger/describe-error.js";
@@ -108,6 +108,8 @@ export interface PluginAgentPreset {
 	readonly roles: readonly string[];
 	/** 工作区档位归属；缺省归「文档与研究」档（见 AgentResourceMode）。 */
 	readonly mode?: AgentResourceMode;
+	/** 委任生命周期标记；缺省为主控/接管型（见 AgentProfileLifecycle）。 */
+	readonly lifecycle?: AgentProfileLifecycle;
 }
 
 export interface PluginAgentPresetBundle {
@@ -239,6 +241,7 @@ function buildAgentPreset(
 		...(avatarUrl ? { avatarUrl } : {}),
 		// 这个智能体存在的意义就是操作它自己的插件，能力面板关不掉它。
 		pinnedPlugins: [plugin.id],
+		...(declared.lifecycle ? { lifecycle: declared.lifecycle } : {}),
 	};
 
 	return {
@@ -252,6 +255,7 @@ function buildAgentPreset(
 		legacyBlueprintIds: declared.legacyIds ?? [],
 		roles: declared.roles ?? [],
 		...(declared.mode ? { mode: declared.mode } : {}),
+		...(declared.lifecycle ? { lifecycle: declared.lifecycle } : {}),
 	};
 }
 

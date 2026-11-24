@@ -244,6 +244,7 @@ const PluginMcpServerMapSchema = Type.Record(
 export const PluginSkillPresentationRuleSchema = Type.Object(
 	{
 		defaultVisibility: Type.Optional(SkillVisibilitySchema),
+		workspaceMode: Type.Optional(Type.Union([Type.Literal("work"), Type.Literal("coding")])),
 		surfaces: Type.Optional(SkillSurfaceVisibilitySchema),
 		displayName: Type.Optional(NonWhitespaceStringSchema),
 		displayDescription: Type.Optional(NonWhitespaceStringSchema),
@@ -253,6 +254,7 @@ export const PluginSkillPresentationRuleSchema = Type.Object(
 export const PluginSkillPresentationSchema = Type.Object(
 	{
 		defaultVisibility: Type.Optional(SkillVisibilitySchema),
+		workspaceMode: Type.Optional(Type.Union([Type.Literal("work"), Type.Literal("coding")])),
 		surfaces: Type.Optional(SkillSurfaceVisibilitySchema),
 		skills: Type.Optional(Type.Record(NonWhitespaceStringSchema, PluginSkillPresentationRuleSchema)),
 	},
@@ -281,6 +283,17 @@ export type BuiltinPluginAgentRole = (typeof BUILTIN_PLUGIN_AGENT_ROLES)[number]
 
 /** 智能体/团队的工作区档位归属：声明后只出现在对应档的新会话选择器里，缺省归「文档与研究」档。 */
 export const PluginAgentResourceModeSchema = Type.Union([Type.Literal("work"), Type.Literal("coding")]);
+
+/**
+ * 委任生命周期标记：声明即表示该智能体是 worker 型，可被默认会话按域委派。
+ *
+ * - `resident` 常驻：spawn 一次 durable 会话，后续任务 followup_task 顺序排队，绝不重复起实例。
+ * - `oneshot` 一次性：每个任务按定义起 one-shot 子代理。
+ *
+ * **缺省不带标记 = 主控/接管型**：单选时人格接管会话（现状行为）；团队队长未标记即有主控团队
+ * （走 Team 会话编排）。标记是加入委任模型的显式 opt-in。
+ */
+export const PluginAgentLifecycleSchema = Type.Union([Type.Literal("resident"), Type.Literal("oneshot")]);
 
 /** 插件贡献的智能体（blueprint）。人设、头像、职责都由插件提供，宿主只负责铺档案。 */
 export const PluginAgentProfileManifestSchema = Type.Object(
@@ -322,6 +335,11 @@ export const PluginAgentProfileManifestSchema = Type.Object(
 		 * 新会话选择器；这是用户层可见性过滤，不影响调用。缺省归「文档与研究」档。
 		 */
 		mode: Type.Optional(PluginAgentResourceModeSchema),
+		/**
+		 * 委任生命周期标记（`resident` 常驻 / `oneshot` 一次性；见
+		 * {@link PluginAgentLifecycleSchema}）。缺省为主控/接管型：选中时人格接管会话。
+		 */
+		lifecycle: Type.Optional(PluginAgentLifecycleSchema),
 	},
 	{ additionalProperties: false },
 );
@@ -467,6 +485,7 @@ export type PluginAgentManifest = Static<typeof PluginAgentManifestSchema>;
 export type PluginAgentProfileManifest = Static<typeof PluginAgentProfileManifestSchema>;
 export type PluginAgentTeamManifest = Static<typeof PluginAgentTeamManifestSchema>;
 export type PluginAgentTeamMemberManifest = Static<typeof PluginAgentTeamMemberManifestSchema>;
+export type PluginAgentLifecycle = Static<typeof PluginAgentLifecycleSchema>;
 export type PluginSkillPresentation = Static<typeof PluginSkillPresentationSchema>;
 export type PluginSkillPresentationRule = Static<typeof PluginSkillPresentationRuleSchema>;
 export type PluginCliProviderManifest = Static<typeof PluginCliProviderManifestSchema>;

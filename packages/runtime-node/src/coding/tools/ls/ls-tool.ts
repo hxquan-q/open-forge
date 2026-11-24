@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { existsSync, readdirSync, statSync } from "node:fs";
 import { type Static, Type } from "@sinclair/typebox";
 import type { RuntimeToolDefinition, RuntimeToolResult } from "@vetta/runtime-core/kernel";
@@ -8,6 +9,7 @@ import {
 	type ToolPathHost,
 } from "../../shared/path-resolution.js";
 import { DEFAULT_MAX_BYTES, formatSize, type TruncationResult, truncateHead } from "../../shared/truncation.js";
+import type { ReadPathPolicy } from "../read/index.js";
 import { LS_TOOL_DESCRIPTION } from "./description.js";
 
 export const LsToolInputSchema = Type.Object({
@@ -40,6 +42,7 @@ export interface LsOperations {
 
 export interface LsToolOptions {
 	readonly operations?: LsOperations;
+	readonly pathPolicy?: ReadPathPolicy;
 	/** 路径在哪台机器上解析；缺省为本机。远端项目必须换掉，见 {@link ToolPathHost}。 */
 	readonly pathHost?: ToolPathHost;
 }
@@ -74,6 +77,11 @@ export function createLsTool(cwd: string, options: LsToolOptions = {}): RuntimeT
 				(async () => {
 					try {
 						const directoryPath = resolveExistingPath(request.input.path || ".", cwd, pathHost);
+						const rejectionReason = options.pathPolicy?.getRejectionReason(directoryPath);
+						if (rejectionReason !== undefined) {
+							reject(new Error(rejectionReason));
+							return;
+						}
 						const effectiveLimit = request.input.limit ?? DEFAULT_LIMIT;
 
 						if (!(await operations.exists(directoryPath))) {

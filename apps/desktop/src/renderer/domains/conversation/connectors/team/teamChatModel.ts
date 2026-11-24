@@ -147,6 +147,7 @@ export interface TeamMemberViewModel extends ConversationParticipantViewModel {
 	readonly handle: string;
 	readonly avatar?: string;
 	readonly blueprintId: string;
+	readonly workspaceMode?: "work" | "coding";
 	readonly selected: boolean;
 	readonly status: "idle" | "working" | "error";
 }
@@ -411,6 +412,7 @@ export function resolveTeamMembers(
 				...(profile?.avatar ? { avatar: profile.avatar } : {}),
 			}),
 			blueprintId: profile?.blueprintId ?? "",
+			...(profile?.mode ? { workspaceMode: profile.mode } : {}),
 			selected: selectedMemberIds.includes(member.id),
 			status: failedMemberIds.has(member.id) ? "error" : workingMembers.has(member.id) ? "working" : "idle",
 		};

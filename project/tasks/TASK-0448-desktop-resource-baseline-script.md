@@ -33,7 +33,7 @@ depends_on: []
 conflicts_with: []
 integration_status: integrated
 created: 2026-11-06
-updated: 2026-11-07
+updated: 2026-11-18
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -116,3 +116,15 @@ updated: 2026-11-07
 ## 集成补记（2026-11-07）
 
 - 基线脚本与配套修复已随本地 `main` 集成并推送 `origin/dev`（16d7e620f），`integration_status` 补记为 integrated；真实资源基线测量仍未执行（需当前任务授权），Task 保持 in_progress。
+
+## 2026-11-18 门禁事实更正
+
+- 本记录 2026-11-06 评审修复节「`bun run check` exit 1：docs-site 缺 `fumadocs-ui` 模块、
+  mobile 缺 `react-native` 类型并有派生类型错误」的表述已过期。
+- 事实：用户 2026-11-18 在 `chenxvhua` 实跑 `bun run check` → exit 0。lint 5310 文件、
+  types（root/cli/desktop/docs/mobile）全部 0、guards 全过（`[waivers] all waivers valid
+  and unexpired`、修改声明头 `missing=0`）、mobile-lint 0。
+- `WAIVER-0011` / `WAIVER-0012` 现为 `resolved`（非续期）。
+- 范围：本节只更正门禁事实，不改写前述交付结论、不表示人工验收完成；本任务剩余项仍见上
+  （真实资源基线测量未执行、Task 仍为 in_progress），本节不改变上述剩余项。当轮 `test:impact`
+  的 11 失败属行为测试记录，完整 check 不运行测试，本节不推断其已消失。

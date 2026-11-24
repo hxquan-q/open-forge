@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { TeamSessionDocument } from "@vetta/agent-team";
 import { describe, expect, it, vi } from "vitest";
 import type {
@@ -38,6 +39,7 @@ function legacySession(): TeamSessionDocument {
 function catalog(register: ConversationOwnershipCatalogPort["register"]): ConversationOwnershipCatalogPort {
 	return {
 		register,
+		list: async () => [],
 		listByTeam: async () => [],
 		getOwner: async () => undefined,
 		filterUserSessions: async (sessions) => [...sessions],

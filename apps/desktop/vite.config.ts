@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import path, { resolve } from "node:path";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
@@ -164,7 +165,9 @@ export default defineConfig(({ mode }) => {
 			warmup: {
 				// 主窗口入口在 Electron 主进程初始化期间并行完成 transform，
 				// 首帧不再串行等待整棵依赖图的冷转换（dev 专属，打包无影响）。
-				clientFiles: ["./index.html"],
+				// renderApp 是 main.tsx 的动态 import，不在 index.html 的静态入口图内；
+				// 显式预热它及其依赖树，避免窗口出来后白屏等待这段冷转换。
+				clientFiles: ["./index.html", "./renderApp.tsx"],
 			},
 		},
 	};

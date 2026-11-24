@@ -228,6 +228,12 @@ export interface BrowserTabSuccess {
 	readonly truncated?: boolean;
 	readonly inspect?: Record<string, unknown>;
 	readonly screenshotAttachmentId?: string;
+	/**
+	 * screenshot 成功时随结果内联给模型的 PNG（base64），与 computer_observe 的
+	 * RuntimeToolResult image 块同构。纯文本模型由 provider 的 modality 投影自动
+	 * 降级为 notice，宿主无需按模型能力分支；attachmentId 与缓存落盘合同不变。
+	 */
+	readonly screenshotImage?: { readonly data: string; readonly mimeType: "image/png" };
 }
 
 export type CodingAgentBrowserTabFunctionResult = BrowserTabSuccess | BrowserTabToolError;
@@ -254,6 +260,7 @@ export const BROWSER_TAB_TOOL_DESCRIPTION = [
 	"Call this tool directly; it does not require a shell, MCP search, or installing a browser CLI.",
 	"Read actions: snapshot, inspect, screenshot, wait, scroll. Write actions: click, fill, press, navigate.",
 	"snapshot returns an interactive accessibility tree with elementRef values that embed pageRevision.",
+	"screenshot returns the captured PNG inline in the tool result (whole page, or the element when elementRef is given), so vision models can inspect it directly without reading files.",
 	"Pass elementRef back exactly as snapshot printed it (the opaque v1:<pageRevision>:<id> token); {id, pageRevision} is accepted too.",
 	"After navigation or DOM change, old refs return stale_reference — take a new snapshot; never guess a new locator.",
 	"navigate accepts http/https URLs, file:// URLs and absolute local paths — open a local HTML artifact by its path directly, no static server needed. This tool cannot evaluate JavaScript, read cookies, or export tokens.",
@@ -455,9 +462,19 @@ export function formatBrowserTabToolResult(result: CodingAgentBrowserTabFunction
 			isError: true,
 		};
 	}
+	// 图片只进 content（模型可见与持久化媒体链路的 canonical 通道）；details 保持
+	// 旧形状——MB 级 base64 进 details 会触发结果策略的 details 预算并挤掉
+	// screenshotAttachmentId 等 UI 消费字段。
+	const { screenshotImage, ...details } = result;
+	if (!screenshotImage) {
+		return { content: [{ type: "text", text: formatBrowserTabToolSuccess(result) }], details };
+	}
 	return {
-		content: [{ type: "text", text: formatBrowserTabToolSuccess(result) }],
-		details: result,
+		content: [
+			{ type: "text", text: formatBrowserTabToolSuccess(result) },
+			{ type: "image", data: screenshotImage.data, mimeType: screenshotImage.mimeType },
+		],
+		details,
 	};
 }
 

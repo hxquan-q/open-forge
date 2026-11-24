@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import {
 	type AsyncExecutionGate,
 	collectToolProcess,
@@ -14,6 +15,7 @@ import {
 	createTreeToolRegistration,
 	createWriteToolRegistration,
 	type EditPathPolicy,
+	type ReadPathPolicy,
 	type ReadToolOptions,
 	remotePosixToolPathHost,
 	type WritePathPolicy,
@@ -31,6 +33,7 @@ import {
 	type SshReadOperationsOptions,
 } from "./ssh-file-operations.js";
 import { createSshExecutableResolver, createSshToolProcessSpawner } from "./ssh-tool-process.js";
+import { createSshLocalToolPathHost, createSshWorkspaceToolPathHost } from "./ssh-workspace-path-host.js";
 
 export interface SshCodingToolEnvironmentOptions {
 	readonly connection: SshConnection;
@@ -44,6 +47,10 @@ export interface SshCodingToolEnvironmentOptions {
 	readonly remoteCwd: string;
 	readonly editPathPolicy: EditPathPolicy;
 	readonly writePathPolicy: WritePathPolicy;
+	readonly readPathPolicy?: ReadPathPolicy;
+	readonly searchPathPolicy?: ReadPathPolicy;
+	readonly localWorkspaceRoot?: string;
+	readonly localWorkspaceToolRoot?: string;
 	readonly readOptions?: Pick<ReadToolOptions, "binaryContentHint" | "preserveFullText" | "availableSkillNames">;
 	readonly blockUntilSec?: number;
 	/**
@@ -80,8 +87,20 @@ export function createSshCodingToolEnvironment(options: SshCodingToolEnvironment
 	const { connection, remoteCwd } = options;
 	const createLocal = options.createLocalFileToolRegistrations;
 	// 路径一律按远端解析：不探本机磁盘、不按本机家目录展开 `~`、固定 POSIX 语义。
-	const pathHost = remotePosixToolPathHost;
-	const lsOperations = createSshLsOperations(connection);
+	const pathHost =
+		options.localWorkspaceRoot && options.localWorkspaceToolRoot
+			? createSshWorkspaceToolPathHost(
+					{ directory: options.localWorkspaceRoot, toolRoot: options.localWorkspaceToolRoot },
+					options.localReadRoots,
+				)
+			: options.localReadRoots?.length
+				? createSshLocalToolPathHost(options.localReadRoots)
+				: remotePosixToolPathHost;
+	const localWorkspace =
+		options.localWorkspaceRoot && options.localWorkspaceToolRoot
+			? { directory: options.localWorkspaceRoot, toolRoot: options.localWorkspaceToolRoot }
+			: undefined;
+	const lsOperations = createSshLsOperations(connection, { localWorkspace });
 	const isDirectory = async (absolutePath: string): Promise<boolean> =>
 		(await lsOperations.stat(absolutePath)).isDirectory();
 	const search = {
@@ -109,25 +128,42 @@ export function createSshCodingToolEnvironment(options: SshCodingToolEnvironment
 		registrations: [
 			createReadToolRegistration(remoteCwd, {
 				...options.readOptions,
+				pathPolicy: options.readPathPolicy,
 				pathHost,
-				operations: createSshReadOperations(connection, { localReadRoots: options.localReadRoots }),
+				operations: createSshReadOperations(connection, {
+					localReadRoots: options.localReadRoots,
+					localWorkspace,
+				}),
 			}),
 			createEditToolRegistration(remoteCwd, {
 				pathPolicy: options.editPathPolicy,
 				pathHost,
-				operations: createSshEditOperations(connection),
+				operations: createSshEditOperations(connection, { localWorkspace }),
 			}),
 			createWriteToolRegistration(remoteCwd, {
 				pathPolicy: options.writePathPolicy,
 				pathHost,
-				operations: createSshWriteOperations(connection),
+				operations: createSshWriteOperations(connection, { localWorkspace }),
 			}),
-			createLsToolRegistration(remoteCwd, { pathHost, operations: lsOperations }),
-			createGrepToolRegistration(remoteCwd, { ...search, operations: { isDirectory } }),
-			createGlobToolRegistration(remoteCwd, { ...search, operations: { isDirectory } }),
-			createFindToolRegistration(remoteCwd, search),
+			createLsToolRegistration(remoteCwd, {
+				pathHost,
+				operations: lsOperations,
+				pathPolicy: options.readPathPolicy,
+			}),
+			createGrepToolRegistration(remoteCwd, {
+				...search,
+				operations: { isDirectory },
+				pathPolicy: options.searchPathPolicy,
+			}),
+			createGlobToolRegistration(remoteCwd, {
+				...search,
+				operations: { isDirectory },
+				pathPolicy: options.searchPathPolicy,
+			}),
+			createFindToolRegistration(remoteCwd, { ...search, pathPolicy: options.searchPathPolicy }),
 			createTreeToolRegistration(remoteCwd, {
 				...search,
+				pathPolicy: options.searchPathPolicy,
 				// 目录是否存在也得问远端：缺省实现查的是本机磁盘。
 				operations: {
 					exists: lsOperations.exists,

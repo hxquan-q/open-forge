@@ -174,6 +174,7 @@ async function dispatchBrowserTabAction(
 				ok: true,
 				action: "screenshot",
 				screenshotAttachmentId: shot.attachmentId,
+				screenshotImage: { data: shot.data, mimeType: "image/png" },
 				pageRevision: context.pageRevision,
 			};
 		}
@@ -185,6 +186,7 @@ async function dispatchBrowserTabAction(
 			ok: true,
 			action: "screenshot",
 			screenshotAttachmentId: shot.attachmentId,
+			screenshotImage: { data: shot.data, mimeType: "image/png" },
 			pageRevision: context.pageRevision,
 		};
 	}

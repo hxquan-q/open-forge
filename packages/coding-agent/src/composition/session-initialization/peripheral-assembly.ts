@@ -30,6 +30,7 @@ import {
 	createCodingAgentAskUserQuestionSessionExtension,
 } from "../../features/ask-user-question/index.js";
 import { createCodingAgentBrowserTabSessionExtension } from "../../features/browser-tab/browser-tab-session-extension.js";
+import { createComputerUseSessionExtension } from "../../features/computer-use/computer-use-session-extension.js";
 import { createCodingAgentFileOrganizeSessionExtension } from "../../features/file-organize/file-organize-session-extension.js";
 import { CODING_AGENT_GOAL_OBSERVATION, createCodingAgentGoalSessionExtension } from "../../features/goal/index.js";
 import {
@@ -219,6 +220,7 @@ export async function createCodingAgentSessionPeripheralAssembly(
 			createCodingAgentAttachArtifactSessionExtension(),
 			createCodingAgentArtifactSessionExtension(),
 			createCodingAgentBrowserTabSessionExtension(),
+			createComputerUseSessionExtension(),
 			createCodingAgentBackgroundWorkSessionExtension(),
 			createCodingAgentPluginConfigurationSessionExtension(),
 			createCodingAgentSessionAssistanceExtension(),
@@ -254,6 +256,10 @@ export async function createCodingAgentSessionPeripheralAssembly(
 		sessionId: options.readSessionId(),
 		cwd: options.sessionCwd,
 		agentDir: profile.agentDir,
+		agentMode: sessionOptions.agentMode,
+		projectIdentity: sessionOptions.projectIdentity,
+		projectAiWorkspaceRoot: sessionOptions.projectAiWorkspaceRoot,
+		projectAiWorkspaceToolRoot: sessionOptions.projectAiWorkspaceToolRoot,
 		scenario: options.scenario,
 		env: sessionOptions.env,
 		configurationSource: options.configurationSource,

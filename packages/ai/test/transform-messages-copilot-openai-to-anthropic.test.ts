@@ -55,7 +55,10 @@ describe("OpenAI to Anthropic session migration for Copilot Claude", () => {
 			role: "user",
 			content: [
 				{ type: "text", text: "inspect" },
-				{ type: "text", text: "Image content omitted because the current model does not support image input." },
+				{
+					type: "text",
+					text: "Image content omitted because the current model does not support image input. To read the text inside an image file, call the extract_text_from_img tool with its file path instead of trying to view it.",
+				},
 			],
 		});
 		expect(result[1]).toMatchObject({
@@ -63,7 +66,7 @@ describe("OpenAI to Anthropic session migration for Copilot Claude", () => {
 			content: [
 				{
 					type: "text",
-					text: "Image content omitted because the current model does not support image input.",
+					text: "Image content omitted because the current model does not support image input. To read the text inside an image file, call the extract_text_from_img tool with its file path instead of trying to view it.",
 				},
 			],
 		});
@@ -93,7 +96,7 @@ describe("OpenAI to Anthropic session migration for Copilot Claude", () => {
 			content: [
 				{
 					type: "text",
-					text: "Image content omitted because the current model does not support image input.",
+					text: "Image content omitted because the current model does not support image input. To read the text inside an image file, call the extract_text_from_img tool with its file path instead of trying to view it.",
 				},
 			],
 		});

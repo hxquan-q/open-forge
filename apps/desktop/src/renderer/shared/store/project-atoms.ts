@@ -85,6 +85,8 @@ export interface AgentTeamSessionInfo extends SessionInfo {
 	teamSessionId: string;
 	sessionTitle: string;
 	memberAvatarUrls: readonly string[];
+	/** 协调会话数据文件已丢失（BUG-0195）：菜单只留删除；缺省视为可用。 */
+	dataFileMissing?: boolean;
 }
 
 export type SessionContextMenuSession = SessionInfo | AgentTeamSessionInfo;

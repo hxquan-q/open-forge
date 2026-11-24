@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { DEFAULT_SCRYPT_PARAMS, encryptGzipPayload, IV_LENGTH, SALT_LENGTH } from "./crypto.js";
 import { fingerprintSessionPayload } from "./fingerprint.js";
 import {

@@ -4,6 +4,9 @@
 export type { ProjectResourceAccess, RemoteResourceAccessStats } from "@vetta/runtime-ssh";
 export { createProjectResourceAccess } from "@vetta/runtime-ssh";
 export * from "./backend-pool.js";
+export * from "./code-project-ai-workspace.js";
+export * from "./code-project-ai-workspace-storage.js";
+export * from "./code-project-file-policy.js";
 export * from "./coding-agent-tool-environment.js";
 export * from "./historical-session-format.js";
 export * from "./historical-session-import-backend.js";

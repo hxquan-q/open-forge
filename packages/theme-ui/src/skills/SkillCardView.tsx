@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { JSX } from "react";
 import { motion } from "motion/react";
 import { Button, Popover, PopoverContent, PopoverTrigger } from "@vetta-org/ui";
@@ -16,6 +17,7 @@ export interface SkillCardSkillView {
 	readonly isCustom?: boolean;
 	readonly isAgent?: boolean;
 	readonly isReadonly?: boolean;
+	readonly workspaceModeLabel?: string;
 	readonly needsUpdate?: boolean;
 	readonly localVersion?: string | null;
 	readonly downloadCount: number;
@@ -78,7 +80,12 @@ export function SkillCardView({
 					<span className="truncate text-[13px] font-semibold text-foreground">
 						{skill.alias || skill.name}
 					</span>
-					{skill.installed && skill.localVersion && (
+					{skill.workspaceModeLabel && (
+							<span className="inline-flex h-4 shrink-0 items-center rounded-full bg-accent/50 px-1.5 text-[10px] font-medium text-muted-foreground/70">
+								{skill.workspaceModeLabel}
+							</span>
+						)}
+						{skill.installed && skill.localVersion && (
 						<span className="inline-flex h-4 shrink-0 items-center rounded-full bg-accent/50 px-1.5 text-[10px] font-medium tabular-nums text-muted-foreground/70">
 							v{skill.localVersion}
 						</span>

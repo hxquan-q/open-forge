@@ -1,7 +1,7 @@
-import { rm } from "node:fs/promises";
+// Modified by The Open Forge contributors.
+import { readFile, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { parseTeamSessionDocument, type TeamSessionDocument } from "@vetta/agent-team";
-import { createVersionedJsonConfigStore } from "@vetta/toolkit/config-store";
 import { getAppLogger } from "../logger.js";
 import { LEGACY_TEAM_SESSION_ROOT, listLegacyTeamSessionDocuments } from "./team-session-legacy-source.js";
 
@@ -19,14 +19,9 @@ export interface LegacyTeamSessionRepository {
 export function createLegacyTeamSessionRepository(
 	rootDirectory = LEGACY_TEAM_SESSION_ROOT,
 ): LegacyTeamSessionRepository {
-	function store(id: string) {
-		return createVersionedJsonConfigStore<TeamSessionDocument>({
-			path: join(rootDirectory, `${id}.json`),
-			name: `agent-team-session-${id}`,
-			readErrorPolicy: "throw",
-			normalize: parseTeamSessionDocument,
-			logger: log,
-		});
+	async function read(id: string): Promise<TeamSessionDocument> {
+		const parsed: unknown = JSON.parse(await readFile(join(rootDirectory, `${id}.json`), "utf8"));
+		return parseTeamSessionDocument(parsed);
 	}
 
 	async function list(): Promise<readonly TeamSessionDocument[]> {
@@ -39,7 +34,7 @@ export function createLegacyTeamSessionRepository(
 	}
 
 	return {
-		read: (id) => store(id).read(),
+		read,
 		delete: (id) => rm(join(rootDirectory, `${id}.json`), { force: true }),
 		list,
 	};

@@ -299,8 +299,10 @@ export function registerAgentTeamsIpc(
 	);
 	handleReadable(CHANNELS.RENAME_SESSION, async (_event, reference: unknown, name: unknown) => {
 		if (typeof name !== "string" || name.trim().length === 0) throw new Error("name must be a non-empty string");
+		// BUG-0195：renameSession 直接返回快照——未驻留会话的离线改名没有 runtime，
+		// 外层再调一次 snapshot 会因 readSessionDocument 抛 SESSION_NOT_FOUND。
 		return await withDisplayProjection(
-			sessions.snapshot(await sessions.renameSession(teamSessionMutationReference(reference), name)),
+			await sessions.renameSession(teamSessionMutationReference(reference), name),
 			displayProjection,
 		);
 	});

@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { BotAvatar } from "@shared/components/BotAvatar";
 import { DESKTOP_BRAND } from "@/shared/desktop-brand";
 import type { ConversationParticipantViewModel } from "@shared/conversation";

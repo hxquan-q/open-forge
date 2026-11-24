@@ -2,7 +2,7 @@
 import { createConversationUserMessage, resolveConversationAgentText } from "@shared/conversation";
 import { i18n } from "@shared/i18n";
 import {
-	activeSessionAtom,
+	activeSessionHotTrackingAtom,
 	activeSessionStreamingAtom,
 	activeToolNamesAtom,
 	activityPanelTabByProjectAtom,
@@ -479,9 +479,8 @@ export function useSessionEventController({ activeSessionRef }: SessionEventCont
 				// 演示定稿：写类工具一发起就更新全局「AI 正在编辑的文件」，文件页签热跟随。
 				// §11.3（REQ-0030）：LLM 行为热追踪收敛为 code 模式独有——非 coding
 				// 档会话不写全局编辑目标/终端 feed（团队泵天生 coding 档，不经此处）。
-				// 档位读 activeSessionAtom（创建时固化）：activeSessionRef 的
-				// ActiveSessionHandle 不携带 capabilityProfile。
-				if (getDefaultStore().get(activeSessionAtom)?.capabilityProfile === "coding") {
+				// 与输入栏和活动面板共用会话内存开关；work 档始终不能启用。
+				if (getDefaultStore().get(activeSessionHotTrackingAtom)) {
 					const editTarget = aiEditTargetFromToolCall(
 						event.toolName,
 						event.args,

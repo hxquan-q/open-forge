@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { createConversationAgentMessage, createConversationUserMessage } from "@shared/conversation";
 import type { AssistantMessage, AssistantMessageEvent } from "@vetta/ai";
 import type { AssistantSessionEvent } from "@vetta/runtime-core";

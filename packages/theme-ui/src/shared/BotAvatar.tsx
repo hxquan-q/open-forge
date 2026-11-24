@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { memo, useCallback, useEffect, useRef, useState, type JSX } from "react";
 import { AnimatePresence, motion, useAnimation } from "motion/react";
 

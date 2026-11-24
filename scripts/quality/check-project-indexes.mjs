@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { asText, parseFrontmatter } from "../worktree/frontmatter.mjs";

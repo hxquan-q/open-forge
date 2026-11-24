@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { DefaultChatView, ChatComposer } from "../../components/chat-view/DefaultChatView";
 import { MessageList } from "../../components/MessageList";
 import { createActivityWorkspace } from "@shared/workspace/activity-workspace";

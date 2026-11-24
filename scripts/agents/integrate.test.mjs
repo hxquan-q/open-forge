@@ -224,7 +224,7 @@ describe.sequential("Task preparation through a verified final Git integration",
 		git(context.root, ["commit", "--quiet", "-m", "other contribution", "--", "other.txt"]);
 		expect(() => applyIntegration(context)).toThrow(/base advanced/);
 		expect(prepareIntegration(context).status).toBe("needs-review");
-	});
+	}, 15000); // Real Git commits plus candidate preparation spawn long subprocess chains.
 	it("applies only the reverified commit and records integration separately from publishing", async ({
 		processes,
 	}) => {
@@ -238,7 +238,7 @@ describe.sequential("Task preparation through a verified final Git integration",
 			integrationStatus: "integrated",
 		});
 		expect(context.store.read().leases["TASK-0001"].status).toBe("released");
-	});
+	}, 15000); // Re-review, checks and integration replay full Git subprocess chains.
 });
 
 describe("pushed candidate CI verification", () => {

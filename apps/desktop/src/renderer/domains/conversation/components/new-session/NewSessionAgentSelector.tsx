@@ -17,6 +17,7 @@ import {
 	type NewSessionTargetOption,
 	teamTargetKey,
 } from "./target";
+import { isWorkerAgent, isWorkerTeam } from "./worker-target";
 
 export interface NewSessionAgentSelectorProps {
 	readonly selectedKey: NewSessionTargetKey | null;
@@ -74,17 +75,22 @@ export function NewSessionAgentSelector({
 
 	// 先做全量映射再按档位派生可见列表：已选中的 chip 要在两档都能解析出身份（切档后选择
 	// 仍完整可见可发送——可见性过滤只管「还能不能新挑到」，不做调用时校验）。
+	// worker 型资产（REQ-0034）在下拉里带「机组调度」徽标：让用户在选择前就知道
+	// 这一项是"选机组"而不是"选人格"——选中后会话由默认助手驾驶、成员按域委派。
+	const crewBadge = t("newSession.agentSelector.crewBadge");
 	const allTeamOptions = useMemo<readonly NewSessionTargetOption[]>(
 		() =>
 			(document?.teams ?? []).map((team) => ({
 				targetKey: teamTargetKey(team.id),
 				title: team.name,
-				subtitle: t("newSession.agentSelector.memberCount", { count: team.members.length }),
+				subtitle: isWorkerTeam(document, team.id)
+					? `${t("newSession.agentSelector.memberCount", { count: team.members.length })} · ${crewBadge}`
+					: t("newSession.agentSelector.memberCount", { count: team.members.length }),
 				avatarUrls: teamMemberAvatarUrls(team, agentsById, blueprintAvatars),
 				selected: selectedKey === teamTargetKey(team.id),
 				...(team.mode ? { mode: team.mode } : {}),
 			})),
-		[agentsById, blueprintAvatars, document?.teams, selectedKey, t],
+		[agentsById, blueprintAvatars, crewBadge, document, selectedKey, t],
 	);
 	// 只列智能体库里的 Agent：团队 `copy` 绑定产生的 team scope 副本是团队私有的，
 	// 摆进来会变成一堆同名影子条目。
@@ -93,12 +99,18 @@ export function NewSessionAgentSelector({
 			(document ? listLibraryAgentProfiles(document) : []).map((agent) => ({
 				targetKey: agentTargetKey(agent.id),
 				title: agent.name,
-				...(agent.description ? { subtitle: agent.description } : {}),
+				...(agent.description
+					? {
+							subtitle: isWorkerAgent(document, agent.id)
+								? `${agent.description} · ${crewBadge}`
+								: agent.description,
+						}
+					: {}),
 				avatarUrls: [resolveAvatar(agent)],
 				selected: selectedKey === agentTargetKey(agent.id),
 				...(agent.mode ? { mode: agent.mode } : {}),
 			})),
-		[document, resolveAvatar, selectedKey],
+		[crewBadge, document, resolveAvatar, selectedKey],
 	);
 	const teamOptions = useMemo(
 		() => allTeamOptions.filter((option) => matchesTargetMode(option.mode, workspaceMode)),

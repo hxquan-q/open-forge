@@ -1,7 +1,7 @@
 ---
 id: WAIVER-0002
 rule: Apache-2.0 §4(b) 修改声明头审计（scripts/quality/check-modified-file-notices.mjs）
-status: active
+status: resolved
 owner: scripts/quality
 reason: fork 相对上游的修改文件中存在 671 条存量声明头缺失（2026-09-27 快照）；仓库处于多会话并行活跃期，一次性 --write sweep 会与在途编辑大面积冲突，按 ISSUE-0023 推荐先落地 ratchet 门禁
 risk: 存量缺失在 sweep 前持续存在，Apache 修改声明合规面不完整；基线文件若无人收缩会长期化
@@ -22,3 +22,20 @@ expires: 2027-03-31
 
 到期前由 owner 评估：已出现安静窗口并完成 sweep → 删除基线文件、本 waiver 置
 `resolved`；仍需延期 → 新建 waiver 并附剩余规模证据（`missing=` 计数）。
+
+## 销账记录（2026-11-18，TASK-0127）
+
+- 实测清零：`node scripts/quality/check-modified-file-notices.mjs` 输出
+  `changed=3129 covered=2880 excluded=249 missing=0 unclassified=0`；带基线运行同样为
+  `missing=0 unclassified=0`、`ratchet: waived=0 new=0`，快照 651 条全部修复，
+  不再存在需要抵扣的存量。
+- 尾量处置：机器生成的 `docs/architecture/dependents.md` 改为在
+  `scripts/quality/context-boundary-lib.mjs` 的 `renderDependents()` 多输出一行声明头，
+  随 `--write-dependents` 重生成，未手改产物；其余 6 个修改文件各插入一行声明头。
+- 门禁切换：删除 `scripts/quality/baselines/modified-file-notices.txt`；
+  `scripts/quality/check-guards.mjs` 中该守卫去掉 `--baseline` 参数，改为纯审计运行，
+  `missing!=0` 即非零退出。本 waiver 不再作为任何门禁放行依据。
+- 残余风险：门禁失去 ratchet 抵扣后，任何修改文件缺声明头立即判负。原先
+  `--baseline` 分支里「无 `upstream` remote 时回落基线 sha」的兜底已随基线删除失效，改由
+  TASK-0127 后续修补回落 `origin/dev`（本仓与 `origin` 同源，merge-base 等价）并在回落时告警，
+  CI 与外部贡献者环境不再因缺 `upstream` 而报错。

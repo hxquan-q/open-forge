@@ -35,7 +35,7 @@
     },
     "apps/cli-host": {
       "name": "@vetta/cli-host",
-      "version": "0.1.4",
+      "version": "0.1.5",
       "bin": {
         "openforge": "dist/cli.js",
         "openforge-agent": "dist/agent-cli.js",
@@ -65,7 +65,7 @@
     },
     "apps/desktop": {
       "name": "@vetta/desktop",
-      "version": "0.1.4",
+      "version": "0.1.5",
       "dependencies": {
         "@dagrejs/dagre": "^3.0.0",
         "@fontsource-variable/geist": "^5.2.8",
@@ -223,7 +223,7 @@
     },
     "apps/docs-site": {
       "name": "@vetta/docs-site",
-      "version": "0.1.4",
+      "version": "0.1.5",
       "dependencies": {
         "@vercel/analytics": "^2.0.1",
         "fumadocs-core": "16.14.1",
@@ -278,7 +278,7 @@
     },
     "apps/remote-relay": {
       "name": "@vetta/remote-relay",
-      "version": "0.1.4",
+      "version": "0.1.5",
       "dependencies": {
         "@vetta/remote-control": "workspace:*",
         "@vetta/remote-desktop": "workspace:*",
@@ -291,7 +291,7 @@
     },
     "packages/action-rpc": {
       "name": "@vetta/action-rpc",
-      "version": "0.1.4",
+      "version": "0.1.5",
       "dependencies": {
         "@hono/node-server": "^1.19.14",
         "hono": "^4.12.23",
@@ -303,7 +303,7 @@
     },
     "packages/agent": {
       "name": "@vetta/agent-core",
-      "version": "0.1.4",
+      "version": "0.1.5",
       "dependencies": {
         "@sinclair/typebox": "^0.34.41",
         "@vetta/ai": "workspace:*",
@@ -315,7 +315,7 @@
     },
     "packages/agent-team": {
       "name": "@vetta/agent-team",
-      "version": "0.1.4",
+      "version": "0.1.5",
       "dependencies": {
         "@sinclair/typebox": "^0.34.41",
         "@vetta/runtime-core": "workspace:*",
@@ -327,7 +327,7 @@
     },
     "packages/ai": {
       "name": "@vetta/ai",
-      "version": "0.1.4",
+      "version": "0.1.5",
       "bin": {
         "pi-ai": "./dist/cli.js",
       },
@@ -351,7 +351,7 @@
     },
     "packages/capability-runtime": {
       "name": "@vetta/capability-runtime",
-      "version": "0.1.4",
+      "version": "0.1.5",
       "dependencies": {
         "@vetta-org/capability-sdk": "workspace:*",
       },
@@ -362,7 +362,7 @@
     },
     "packages/capability-sdk": {
       "name": "@vetta-org/capability-sdk",
-      "version": "0.1.4",
+      "version": "0.1.5",
       "dependencies": {
         "@sinclair/typebox": "^0.34.41",
       },
@@ -373,7 +373,7 @@
     },
     "packages/coding-agent": {
       "name": "@vetta/coding-agent",
-      "version": "0.1.4",
+      "version": "0.1.5",
       "dependencies": {
         "@sinclair/typebox": "^0.34.41",
         "@vetta/action-rpc": "workspace:*",
@@ -434,7 +434,7 @@
     },
     "packages/ecosystem-adapter": {
       "name": "@vetta/ecosystem-adapter",
-      "version": "0.1.4",
+      "version": "0.1.5",
       "dependencies": {
         "zod": "^4.4.3",
       },
@@ -446,7 +446,7 @@
     },
     "packages/host-protocol": {
       "name": "@vetta/host-protocol",
-      "version": "0.1.4",
+      "version": "0.1.5",
       "dependencies": {
         "@sinclair/typebox": "^0.34.41",
       },
@@ -457,7 +457,7 @@
     },
     "packages/markdown": {
       "name": "@vetta/markdown",
-      "version": "0.1.4",
+      "version": "0.1.5",
       "dependencies": {
         "react-markdown": "^10.1.0",
         "rehype-highlight": "^7.0.2",
@@ -620,7 +620,7 @@
     },
     "packages/plugins/plugin-sdk": {
       "name": "@vetta-org/plugin-sdk",
-      "version": "0.3.13",
+      "version": "0.3.15",
       "dependencies": {
         "@sinclair/typebox": "^0.34.41",
         "@vetta-org/capability-sdk": "^0.1.0",
@@ -1049,7 +1049,7 @@
     },
     "packages/remote-control": {
       "name": "@vetta/remote-control",
-      "version": "0.1.4",
+      "version": "0.1.5",
       "devDependencies": {
         "@types/node": "^22.10.5",
         "ajv": "^8.20.0",
@@ -1058,7 +1058,7 @@
     },
     "packages/remote-desktop": {
       "name": "@vetta/remote-desktop",
-      "version": "0.1.4",
+      "version": "0.1.5",
       "devDependencies": {
         "electron": "41.10.7",
         "typescript": "^5.9.2",
@@ -1066,7 +1066,7 @@
     },
     "packages/runtime-core": {
       "name": "@vetta/runtime-core",
-      "version": "0.1.4",
+      "version": "0.1.5",
       "dependencies": {
         "@vetta/agent-core": "workspace:*",
         "@vetta/ai": "workspace:*",
@@ -1078,7 +1078,7 @@
     },
     "packages/runtime-desktop": {
       "name": "@vetta/runtime-desktop",
-      "version": "0.1.4",
+      "version": "0.1.5",
       "dependencies": {
         "@vetta/ai": "workspace:*",
         "@vetta/coding-agent": "workspace:*",
@@ -1098,7 +1098,7 @@
     },
     "packages/runtime-knowledge": {
       "name": "@vetta/runtime-knowledge",
-      "version": "0.1.4",
+      "version": "0.1.5",
       "dependencies": {
         "yaml": "^2.8.2",
       },
@@ -1109,7 +1109,7 @@
     },
     "packages/runtime-mcp": {
       "name": "@vetta/runtime-mcp",
-      "version": "0.1.4",
+      "version": "0.1.5",
       "dependencies": {
         "@modelcontextprotocol/sdk": "^1.29.0",
         "@sinclair/typebox": "^0.34.41",
@@ -1122,7 +1122,7 @@
     },
     "packages/runtime-memory": {
       "name": "@vetta/runtime-memory",
-      "version": "0.1.4",
+      "version": "0.1.5",
       "dependencies": {
         "@sinclair/typebox": "^0.34.41",
       },
@@ -1133,7 +1133,7 @@
     },
     "packages/runtime-node": {
       "name": "@vetta/runtime-node",
-      "version": "0.1.4",
+      "version": "0.1.5",
       "dependencies": {
         "@mariozechner/jiti": "^2.6.2",
         "@modelcontextprotocol/sdk": "^1.29.0",
@@ -1167,7 +1167,7 @@
     },
     "packages/runtime-ssh": {
       "name": "@vetta/runtime-ssh",
-      "version": "0.1.4",
+      "version": "0.1.5",
       "dependencies": {
         "@vetta/runtime-core": "workspace:*",
         "@vetta/runtime-node": "workspace:*",
@@ -1181,7 +1181,7 @@
     },
     "packages/runtime-storage": {
       "name": "@vetta/runtime-storage",
-      "version": "0.1.4",
+      "version": "0.1.5",
       "dependencies": {
         "@sinclair/typebox": "^0.34.41",
         "@vetta/runtime-core": "workspace:*",
@@ -1193,7 +1193,7 @@
     },
     "packages/runtime-subagents": {
       "name": "@vetta/runtime-subagents",
-      "version": "0.1.4",
+      "version": "0.1.5",
       "devDependencies": {
         "@types/node": "^22.10.5",
         "typescript": "^5.9.2",
@@ -1201,7 +1201,7 @@
     },
     "packages/runtime-telemetry": {
       "name": "@vetta/runtime-telemetry",
-      "version": "0.1.4",
+      "version": "0.1.5",
       "dependencies": {
         "@langfuse/otel": "^5.4.1",
         "@langfuse/tracing": "^5.4.1",
@@ -1216,7 +1216,7 @@
     },
     "packages/runtime-tools": {
       "name": "@vetta/runtime-tools",
-      "version": "0.1.4",
+      "version": "0.1.5",
       "dependencies": {
         "@sinclair/typebox": "^0.34.41",
         "@vetta/ai": "workspace:*",
@@ -1230,11 +1230,11 @@
     },
     "packages/skill-presets": {
       "name": "@vetta/skill-presets",
-      "version": "0.1.4",
+      "version": "0.1.5",
     },
     "packages/ssh-transport": {
       "name": "@vetta/ssh-transport",
-      "version": "0.1.4",
+      "version": "0.1.5",
       "dependencies": {
         "ssh2": "^1.17.0",
       },
@@ -1246,7 +1246,7 @@
     },
     "packages/theme-sdk": {
       "name": "@vetta-org/theme-sdk",
-      "version": "0.1.4",
+      "version": "0.1.5",
       "devDependencies": {
         "@types/react": "^19.1.1",
         "typescript": "^5.9.2",
@@ -1257,7 +1257,7 @@
     },
     "packages/theme-ui": {
       "name": "@vetta-org/theme-ui",
-      "version": "0.1.4",
+      "version": "0.1.5",
       "dependencies": {
         "@codemirror/lang-css": "^6.3.1",
         "@codemirror/lang-html": "^6.4.11",
@@ -1360,7 +1360,7 @@
     },
     "packages/toolkit": {
       "name": "@vetta/toolkit",
-      "version": "0.1.4",
+      "version": "0.1.5",
       "devDependencies": {
         "@types/node": "^22.10.5",
         "typescript": "^5.9.2",
@@ -1368,7 +1368,7 @@
     },
     "packages/ui": {
       "name": "@vetta-org/ui",
-      "version": "0.1.4",
+      "version": "0.1.5",
       "dependencies": {
         "class-variance-authority": "^0.7.1",
         "clsx": "^2.1.1",

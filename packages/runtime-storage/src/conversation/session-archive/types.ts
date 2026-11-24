@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 /** Open Forge portable session archive (clean-room format; not wire-compatible with third-party tools). */
 
 export const SESSION_ARCHIVE_MAGIC = new Uint8Array([0x4f, 0x46, 0x41, 0x52, 0x0d, 0x0a, 0x1a, 0x0a]); // OFAR\r\n\x1a\n

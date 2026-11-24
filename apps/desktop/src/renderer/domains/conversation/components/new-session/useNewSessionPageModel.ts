@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { useProjectActions } from "@domains/project/hooks/useProjects";
 import { useWorkspaceMode } from "@domains/workspace-mode";
 import { i18n } from "@shared/i18n";
@@ -36,6 +37,7 @@ import { useTranslation } from "react-i18next";
 import type { TeamChatActions, TeamChatViewModel } from "../../connectors/team/teamChatModel";
 import { useSkillList } from "../../hooks/useSkillList";
 import type { SendInteractionContext } from "../input-bar/types";
+import { useAgentTeamDirectoryDocument } from "./agent-team-directory";
 import { PANEL_SHIFT_MIN_ITEMS } from "./constants";
 import { prepareProjectCwd } from "./project-selector/prepare-project-cwd";
 import type { ProjectOption, ProjectSelection } from "./project-selector/project-selection";
@@ -55,6 +57,7 @@ import { useNewSessionSend } from "./useNewSessionSend";
 import { useNewSessionTargetIdentity } from "./useNewSessionTargetIdentity";
 import { useNewSessionTeamDraft } from "./useNewSessionTeamDraft";
 import { useShortViewport } from "./useShortViewport";
+import { isWorkerTeam } from "./worker-target";
 
 interface NewSessionPageModel {
 	/** 右侧活动面板是否展开（与会话页、项目详情页共用同一状态）。 */
@@ -113,8 +116,13 @@ export function useNewSessionPageModel(): NewSessionPageModel {
 	useEffect(() => {
 		setTargetKey(initialTargetKey === "conversation" ? null : initialTargetKey);
 	}, [initialTargetKey]);
-	// 单个智能体走的是普通会话链路，只在创建时多带一个身份；只有团队才需要 Team 编排。
-	const selectedTeamKey = isTeamTarget(targetKey) ? targetKey : null;
+	// 单个智能体（含 worker 型）走的是普通会话链路，只在创建时多带一个身份；
+	// 有主控的团队才需要 Team 编排。无主控团队（队长带生命周期标记）也走普通会话：
+	// 默认会话保持驾驶、成员按域委派（REQ-0034「选人格→选机组」）。
+	const agentTeamDocument = useAgentTeamDirectoryDocument();
+	const selectedTeamId = parseTeamTargetKey(targetKey);
+	const selectedWorkerTeamId = isWorkerTeam(agentTeamDocument, selectedTeamId) ? selectedTeamId : null;
+	const selectedTeamKey = isTeamTarget(targetKey) && !selectedWorkerTeamId ? targetKey : null;
 	const selectedAgentProfileId = parseAgentTargetKey(targetKey);
 	// 项目选择器只覆盖页面本地上下文，不切路由：草稿按 `new:${routeCwd}` 隔离，
 	// 换项目若走路由就会把用户已经打好的正文换走。
@@ -191,6 +199,7 @@ export function useNewSessionPageModel(): NewSessionPageModel {
 		openSession,
 		sendMessage,
 		...(selectedAgentProfileId ? { agentProfileId: selectedAgentProfileId } : {}),
+		...(selectedWorkerTeamId ? { delegationTeamId: selectedWorkerTeamId } : {}),
 	});
 	const teamDraft = useNewSessionTeamDraft({
 		targetKey: selectedTeamKey,
@@ -216,8 +225,11 @@ export function useNewSessionPageModel(): NewSessionPageModel {
 				// 差别仅在于 useNewSessionSend 是否带上 agentProfileId。
 				agentDispatch: newSessionSend.send,
 				agentKey: selectedAgentProfileId ? targetKey : null,
+				// 无主控团队同样走普通会话 dispatch（带上 delegationTeamId）。
+				workerTeamDispatch: newSessionSend.send,
+				workerTeamKey: selectedWorkerTeamId ? targetKey : null,
 			}),
-		[newSessionSend.send, selectedAgentProfileId, selectedTeamKey, targetKey, teamDraft.send],
+		[newSessionSend.send, selectedAgentProfileId, selectedTeamKey, selectedWorkerTeamId, targetKey, teamDraft.send],
 	);
 	const handleSelectTarget = useCallback(
 		(next: NewSessionTargetKey | null) => {

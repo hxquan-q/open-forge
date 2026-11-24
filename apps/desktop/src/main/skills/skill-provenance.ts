@@ -1,4 +1,6 @@
+// Modified by The Open Forge contributors.
 import { resolveSkillProviderPresentation, type SkillProviderPresentation } from "@vetta-org/capability-sdk";
+import type { PluginSkillPresentation } from "@vetta-org/plugin-sdk/manifest";
 import type { SkillPresentation } from "../../preload/api-types/skills.js";
 
 export interface SkillPathContribution {
@@ -49,6 +51,13 @@ export function resolvePluginSkillPresentation(
 		...(displayName ? { displayName } : {}),
 		...(displayDescription ? { displayDescription } : {}),
 	};
+}
+
+export function resolvePluginSkillWorkspaceMode(
+	presentation: PluginSkillPresentation | undefined,
+	skillName: string,
+): "work" | "coding" | undefined {
+	return presentation?.skills?.[skillName.trim()]?.workspaceMode ?? presentation?.workspaceMode;
 }
 
 export function findPluginSkillSource(

@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { cn } from "@shared/lib/utils";
 import { AgentAvatarView } from "@vetta-org/theme-ui/chat";
 import { useEffect, useRef, useState } from "react";

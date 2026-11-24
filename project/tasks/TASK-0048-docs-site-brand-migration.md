@@ -1,7 +1,7 @@
 ---
 id: TASK-0048
 type: task
-status: in_progress
+status: done
 priority: P0
 owner: apps/docs-site
 requirement: REQ-0003
@@ -18,7 +18,7 @@ depends_on: [TASK-0044, TASK-0045, TASK-0049]
 conflicts_with: [TASK-0047]
 integration_status: pending
 created: 2026-09-23
-updated: 2026-10-06
+updated: 2026-11-18
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -107,3 +107,14 @@ updated: 2026-10-06
   2. `Vetta UI Design` 是**插件名**，不是产品称呼。
 - 结论：`docs/` 树不能按模式替换——里面混着产品称呼、插件名、商业品牌名与上游沿革记录（ADR、greenfield 实施日志、适配研究）。要做需要先有一份术语与品牌对照表，范围交用户决定。
 - 另：docs-site 内容改名使 65 个文件从「与上游逐字相同」变成 fork 修改文件，按仓库规则必须带声明头；已为 72 个文件补上，并把声明头基线快照收缩到 652 条。这是我的疏漏——第一次提交 docs-site 内容时只跑了索引守卫，没跑声明头 ratchet。
+
+## 2026-11-18 状态对齐（in_progress → done）
+
+- 背景：本任务三片交付早已落树，但 `status` 自 2026-10-06 起停留在 `in_progress`，属状态滞后于事实；本次按只读静态核查结果对齐。
+- 核查确认：
+  1. `apps/docs-site/lib/site.ts:16` 的 `logoPath` 已为 `/images/open-forge-icon.png`，`apps/docs-site/public/images` 下旧 `vetta-app-icon.webp` 已删除——前文「刻意未改（待用户定）」的图标资产决策已由后续交付消解；
+  2. 站点代码层 `docs.openvetta.com` 全站 0 命中，社交卡渲染文本已为 Open Forge——前文「待站点部署定位确定后统一处理」的常量已清；
+  3. 站点元数据、双语 title/description、兜底分区标签 `OPEN FORGE /`、中文内容树改名、`components/brand-mark.tsx` 与 `reading.tsx` 均在树；样式 token（`vetta-coral` / `vetta-ink` / `vetta-binding`）按决策保留未动。
+- 未部署：站点部署属独立动作，不在本任务范围，本任务交付止于仓库内内容与代码。
+- 本次未重跑 `next build`：构建证据沿用前文（第二片改名后 `next build` 通过、113 个静态页），本次核查为静态证据核对。
+- `integration_status` 保持 `pending`：未合入 `origin/dev`，未 push、未发布。

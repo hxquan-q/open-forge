@@ -32,6 +32,7 @@ export type SidebarLabelKey =
 	| "sidebar.nav.skills"
 	| "sidebar.nav.agents"
 	| "sidebar.nav.weknora"
+	| "sidebar.nav.computerUse"
 	| "sidebar.nav.scenes"
 	| "sidebar.nav.plugins"
 	| "sidebar.nav.modelSettings"
@@ -99,7 +100,8 @@ export interface SidebarNavItem {
 		| "/scenes"
 		| "/plugins"
 		| "/agents"
-		| "/weknora";
+		| "/weknora"
+		| "/computer-use";
 	/** 直达设置页某个 tab（`/settings/$tab`）；与 `path` 互斥。 */
 	readonly settingsTab?: string;
 	readonly title?: string;

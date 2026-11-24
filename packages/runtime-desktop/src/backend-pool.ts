@@ -105,6 +105,10 @@ interface DesktopRuntimeScope extends DesktopMcpRuntimeScope {
 	readonly conversationDir: string;
 	readonly scenario: ConversationScenario;
 	readonly enableSubagents: boolean;
+	readonly agentMode?: string;
+	readonly projectIdentity?: string;
+	readonly projectAiWorkspaceRoot?: string;
+	readonly projectAiWorkspaceToolRoot?: string;
 	readonly serverUrl?: string;
 }
 
@@ -270,7 +274,14 @@ export class DesktopRuntimeBackendPool implements RuntimeHostSessionBackend {
 			createConversationPersistence:
 				this.options.compositionDefaults.createConversationPersistence ??
 				(({ conversationDir }) => createFileConversationPersistence(conversationDir)),
-			createToolEnvironment: createDesktopCodingAgentToolEnvironment,
+			createToolEnvironment: (context) =>
+				createDesktopCodingAgentToolEnvironment({
+					...context,
+					agentMode: scope.agentMode,
+					projectIdentity: scope.projectIdentity,
+					projectAiWorkspaceRoot: scope.projectAiWorkspaceRoot,
+					projectAiWorkspaceToolRoot: scope.projectAiWorkspaceToolRoot,
+				}),
 			createSessionExecutionEnvironment: createDesktopCodingAgentSessionExecutionEnvironment,
 			codingToolResultPolicy:
 				this.options.createCodingToolResultPolicy?.({
@@ -477,6 +488,18 @@ function resolveRuntimeScope(request: RuntimeSessionCreateRequest): DesktopRunti
 		agentDir: request.agentDir ? resolve(request.agentDir) : undefined,
 		scenario: sessionOptions.scenario ?? DEFAULT_SCENARIO,
 		enableSubagents: shouldEnableCodingAgentSubagents(sessionOptions.scenario ?? DEFAULT_SCENARIO),
+		...(sessionOptions.agentMode === "coding"
+			? {
+					agentMode: sessionOptions.agentMode,
+					...(sessionOptions.projectIdentity ? { projectIdentity: sessionOptions.projectIdentity } : {}),
+					...(sessionOptions.projectAiWorkspaceRoot
+						? { projectAiWorkspaceRoot: sessionOptions.projectAiWorkspaceRoot }
+						: {}),
+					...(sessionOptions.projectAiWorkspaceToolRoot
+						? { projectAiWorkspaceToolRoot: sessionOptions.projectAiWorkspaceToolRoot }
+						: {}),
+				}
+			: {}),
 		serverUrl: request.serverUrl,
 	};
 }
@@ -513,6 +536,10 @@ function runtimeScopeKey(scope: DesktopRuntimeScope): string {
 		scope.scenario,
 		scope.enableSubagents,
 		scope.serverUrl ?? null,
+		scope.agentMode ?? null,
+		scope.projectIdentity ?? null,
+		scope.projectAiWorkspaceRoot ?? null,
+		scope.projectAiWorkspaceToolRoot ?? null,
 	]);
 }
 

@@ -39,6 +39,16 @@ export type AgentProfileScope = { readonly kind: "library" } | { readonly kind: 
  */
 export type AgentResourceMode = "work" | "coding";
 
+/**
+ * 委任生命周期标记（REQ-0034）：声明即表示该智能体是 **worker 型**，可被默认会话按域委派——
+ * `resident` 常驻（spawn 一次 durable 会话，后续任务 followup_task 顺序排队，绝不重复起实例）、
+ * `oneshot` 一次性（每个任务按定义起 one-shot 子代理）。
+ *
+ * **缺省不带标记 = 主控/接管型**：单选时人格接管会话（现状），团队队长未标记即有主控团队
+ * （走 Team 会话编排，现状）。标记是加入委任模型的显式 opt-in，存量资产零行为变化。
+ */
+export type AgentProfileLifecycle = "resident" | "oneshot";
+
 export interface AgentProfile {
 	readonly id: string;
 	readonly revision: number;
@@ -57,6 +67,8 @@ export interface AgentProfile {
 	readonly source?: AgentResourceSource;
 	/** 工作区档位归属（见 {@link AgentResourceMode}）；缺省归「文档与研究」档。 */
 	readonly mode?: AgentResourceMode;
+	/** 委任生命周期标记（见 {@link AgentProfileLifecycle}）；缺省为主控/接管型。 */
+	readonly lifecycle?: AgentProfileLifecycle;
 	readonly createdAt: number;
 	readonly updatedAt: number;
 }
@@ -98,6 +110,10 @@ export interface TeamDefinition {
 	readonly source?: AgentResourceSource;
 	/** 工作区档位归属（见 {@link AgentResourceMode}）；缺省归「文档与研究」档。 */
 	readonly mode?: AgentResourceMode;
+	/**
+	 * 团队是否有主控成员不由团队声明：由**队长档案**是否带
+	 * {@link AgentProfile.lifecycle} 标记推导（队长未标记=有主控，走 Team 会话编排）。
+	 */
 	readonly createdAt: number;
 	readonly updatedAt: number;
 }
@@ -241,6 +257,8 @@ export interface CreateAgentProfileInput {
 	readonly mentionHandle: string;
 	readonly blueprintId: string;
 	readonly abilities?: Partial<AgentAbilitySelection>;
+	/** 委任生命周期标记（见 {@link AgentProfileLifecycle}）；缺省为主控/接管型。 */
+	readonly lifecycle?: AgentProfileLifecycle;
 }
 export interface UpdateAgentProfileInput {
 	readonly expectedRevision: number;
@@ -250,6 +268,8 @@ export interface UpdateAgentProfileInput {
 	readonly mentionHandle: string;
 	readonly systemPrompt?: string;
 	readonly abilities: AgentAbilitySelection;
+	/** 全量替换语义：传值即设置/更新标记，缺省即清除（回到主控/接管型）。 */
+	readonly lifecycle?: AgentProfileLifecycle;
 }
 export interface DeleteAgentProfileInput {
 	readonly expectedRevision: number;
@@ -380,6 +400,11 @@ export interface TeamSessionListItem extends TeamSessionReference {
 	readonly workspaceKind?: TeamSessionWorkspaceKind;
 	readonly workspaceId?: string;
 	readonly cwd?: string;
+	/**
+	 * 协调会话数据文件已丢失（BUG-0195）：listSessions 时按 ENOENT 实测填充，不落盘。
+	 * 缺省视为可用——旧调用方与旧记录反序列化天然兼容。
+	 */
+	readonly dataFileMissing?: boolean;
 }
 
 /** Safe renderer-facing updates plus product-neutral ordinary message events. */
@@ -449,6 +474,8 @@ export interface AgentBlueprint {
 	readonly source?: AgentResourceSource;
 	/** 头像 URL；插件 blueprint 由宿主解析成插件资源地址。 */
 	readonly avatarUrl?: string;
+	/** 委任生命周期标记（见 {@link AgentProfileLifecycle}）；插件声明后随预设铺进档案。 */
+	readonly lifecycle?: AgentProfileLifecycle;
 	/**
 	 * 强制随该智能体激活的插件能力，用户在能力面板里关不掉。
 	 *

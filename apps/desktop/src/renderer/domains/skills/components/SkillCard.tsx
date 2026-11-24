@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { SkillCardView } from "@vetta-org/theme-ui/skills";
 import { useTranslation } from "react-i18next";
 import type { ActionState, MergedSkill } from "../hooks/useSkillsPageModel";
@@ -17,10 +18,11 @@ export function SkillCard({
 	onPreview?: (skill: MergedSkill) => void;
 	actionState: ActionState;
 }): JSX.Element {
-	const { t } = useTranslation("skills");
+	const { t } = useTranslation(["skills", "settings"]);
+	const workspaceModeLabel = skill.workspaceMode ? t(`settings:agentMode.${skill.workspaceMode}`) : t("settings:agentMode.both");
 	return (
 		<SkillCardView
-			skill={skill}
+			skill={{ ...skill, workspaceModeLabel }}
 			isLoading={actionState === "loading"}
 			previewable={!!onPreview}
 			onInstall={() => onInstall(skill)}

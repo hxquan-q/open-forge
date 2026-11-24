@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { HOST_PROTOCOL_ERROR_CODES, HostProtocolError } from "@vetta/host-protocol/client";
 import type { SessionEvent } from "@vetta/runtime-core";
 import type { IpcRenderer } from "electron";

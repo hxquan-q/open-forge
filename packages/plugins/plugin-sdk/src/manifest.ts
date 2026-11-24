@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { type Static, type TSchema } from "@sinclair/typebox";
 import type { ValueError } from "@sinclair/typebox/errors";
 import { Value } from "@sinclair/typebox/value";
@@ -288,12 +289,14 @@ function normalizeSkillPresentation(
 	if (!presentation) return undefined;
 	const normalizeRule = (rule: PluginSkillPresentationRule): PluginSkillPresentationRule => ({
 		defaultVisibility: rule.defaultVisibility,
+		workspaceMode: rule.workspaceMode,
 		surfaces: rule.surfaces ? { ...rule.surfaces } : undefined,
 		displayName: rule.displayName?.trim(),
 		displayDescription: rule.displayDescription?.trim(),
 	});
 	return {
 		defaultVisibility: presentation.defaultVisibility,
+		workspaceMode: presentation.workspaceMode,
 		surfaces: presentation.surfaces ? { ...presentation.surfaces } : undefined,
 		skills: presentation.skills
 			? Object.fromEntries(

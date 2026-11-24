@@ -183,6 +183,7 @@ export function createCodingAgentSessionContextAssembly(
 		readParentToolActivation: () => profile.activation,
 		workspacePort: profile.subagentWorkspacePort,
 		typeRegistry: profile.subagentTypeRegistry,
+		delegatedMembers: sessionOptions.delegatedMembers,
 		createChildFactory: profile.createSubagentChildFactory,
 		createChildComposition: options.createChildComposition,
 		assessChildSessionPath: options.assessChildSessionPath,

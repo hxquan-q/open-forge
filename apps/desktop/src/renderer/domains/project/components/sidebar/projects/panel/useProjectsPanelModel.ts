@@ -2,6 +2,7 @@
 import { useBatchTasks } from "@domains/batch-tasks/hooks/useBatchTasks";
 import { notifyTeamSessionsChanged } from "@shared/agent-teams/team-session-events";
 import { useSshHosts } from "@shared/hooks/useSshHost";
+import { useTeamSidebarConversations } from "@shared/hooks/useTeamSidebarConversations";
 import { pathBasename } from "@shared/lib/utils";
 import type { SessionInfo } from "@shared/store/atoms";
 import {
@@ -27,7 +28,6 @@ import { useTranslation } from "react-i18next";
 import { resolveProjectGoneCleanup } from "../../../../hooks/project-gone-cleanup";
 import { resolveSessionOpenTarget } from "../../../../hooks/session-open-target";
 import { useProjects } from "../../../../hooks/useProjects";
-import { useTeamSidebarConversations } from "../../../../hooks/useTeamSidebarConversations";
 import {
 	projectSidebarConversations,
 	type SidebarConversationInfo,
@@ -234,6 +234,9 @@ export function useProjectsPanelModel({
 	const selectSidebarSession = useCallback(
 		(cwd: string, session: SidebarConversationInfo) => {
 			if (session.kind === "agent-team") {
+				// 数据文件缺失的团队会话打开必败：不导航（BUG-0195）。项目区与默认区
+				// 的行选择都在此收口，置灰行点击后什么都不发生。
+				if (session.dataFileMissing) return;
 				selectAfterPaint({ kind: "agent-team", sessionId: session.teamSessionId }, () =>
 					navigate({
 						to: "/agent-teams/$teamId/sessions/$sessionId",

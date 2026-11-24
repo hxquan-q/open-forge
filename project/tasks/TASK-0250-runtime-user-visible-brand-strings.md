@@ -1,7 +1,7 @@
 ---
 id: TASK-0250
 type: task
-status: verifying
+status: done
 priority: P1
 owner: runtime-node / 工具描述
 requirement: REQ-0013
@@ -23,7 +23,7 @@ depends_on: []
 conflicts_with: []
 integration_status: pending
 created: 2026-10-14
-updated: 2026-10-14
+updated: 2026-11-18
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -115,3 +115,12 @@ updated: 2026-10-14
 - 剩余风险：
   - 兜底可执行文件候选路径仍指向旧品牌安装位置（`vetta-desktop-command-port.ts:70-73`），属独立功能缺陷 `BUG-0111`，本任务未改。
   - `%APPDATA%\Vetta`（沙箱放行根）与 `X-Vetta-*` 头等冻结标识按约定保留不动；Windows 路径大小写不敏感，`APP_RUNTIME_NAME=vetta` 的实际目录仍能命中。
+
+## 2026-11-18 静态核查后收口
+
+- 依据：只读静态核查逐条核对，主张全部在树——`vetta-desktop-command-port.ts` 定位失败报错、`ocr-document.ts` 两条解析失败文本、三个工具 `description.ts`（`the Desktop app's` / `the Desktop app executable`）与三个实现的失败文本均已去掉遗留品牌名；`desktop-tool-copy-brand.test.ts` 的断言方向正确（三份描述不含遗留品牌名 + 保留冻结标识 + 四份实现源码守卫）。
+- 扫描面：`packages/runtime-node` 内 `\bVetta\b` 共 5 处，逐条分类后全部是冻结协议头、路径与注释，**用户可见文案 0 处**。
+- **勘误（前文「剩余风险」第一条已过时）**：原文称「兜底可执行文件候选路径仍指向旧品牌安装位置（`vetta-desktop-command-port.ts:70-73`）」——当前 `:72` 已指向 `%LOCALAPPDATA%\Programs\OpenForge\OpenForge.exe`，由 `BUG-0111` / `TASK-0441` 修复。该依赖 Task 自身仍是 `verifying` 未验收，故此处只记录路径已改，不单独宣称 `BUG-0111` 已闭环。
+- 未做真实 PDF/OCR 失败的人工目验（需启动 dev 构造失败场景），本次静态核查未触发；报错与描述文本为纯字符串，静态核足以确认。
+- 本次未重跑测试：绿灯证据沿用前文（`vetta-desktop-command-port.test.ts` + `desktop-tool-copy-brand.test.ts` 10 例、`test:pkg runtime-node` 529 例）。
+- `integration_status` 保持 `pending`：未合入 `origin/dev`，未 push、未发布。

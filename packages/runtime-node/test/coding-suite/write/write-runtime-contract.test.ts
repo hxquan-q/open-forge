@@ -1,4 +1,5 @@
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+// Modified by The Open Forge contributors.
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -105,11 +106,13 @@ describe("runtime write tool", () => {
 		"preserves protected skill path rejection for %s",
 		async (path) => {
 			const cwd = createTemporaryDirectory("protected");
-			const runtime = createWriteTool(cwd, {
+			const registration = createWriteToolRegistration(cwd, {
 				pathPolicy: createTestWritePathPolicy({ cwd, knowledgeRoot: join(cwd, "knowledges") }),
 			});
 			const input = { path, content: "blocked" };
-			const runtimeResult = await runtime.execute(runtimeRequest(input));
+			const runtimeResult = await registration.tool.execute(runtimeRequest(input));
+			expect(runtimeResult.isError).toBe(true);
+			expect(runtimeResult.details).toEqual({ code: "policy_denied" });
 			expect(runtimeResult.content[0]).toMatchObject({
 				text: expect.stringContaining("inside a skill/scene directory"),
 			});
@@ -126,6 +129,47 @@ describe("runtime write tool", () => {
 		const input = { path, content: "blocked" };
 		const runtimeResult = await runtime.execute(runtimeRequest(input));
 		expect(runtimeResult.content[0]).toMatchObject({ text: expect.stringContaining("kb_write_page tool") });
+		expect(runtimeResult.isError).toBe(true);
+		expect(runtimeResult.details).toEqual({ code: "policy_denied" });
+	});
+
+	it("rejects without I/O and preserves a later allowed write through the same registration", async () => {
+		const cwd = createTemporaryDirectory("policy-flow");
+		const target = join(cwd, "output.txt");
+		writeFileSync(target, "original");
+		let deny = true;
+		const calls: string[] = [];
+		const registration = createWriteToolRegistration(cwd, {
+			pathPolicy: { getRejectionReason: () => (deny ? "Access denied by host policy" : undefined) },
+			operations: {
+				async mkdir(directory) {
+					calls.push("mkdir");
+					mkdirSync(directory, { recursive: true });
+				},
+				async writeFile(path, content) {
+					calls.push("write");
+					writeFileSync(path, content, "utf-8");
+				},
+			},
+		});
+		const input = { path: "output.txt", content: "updated" };
+
+		const denied = await registration.tool.execute(runtimeRequest(input));
+		expect(denied).toEqual({
+			content: [{ type: "text", text: "Access denied by host policy" }],
+			details: { code: "policy_denied" },
+			isError: true,
+		});
+		expect(calls).toEqual([]);
+		expect(readFileSync(target, "utf-8")).toBe("original");
+
+		deny = false;
+		const allowed = await registration.tool.execute(runtimeRequest(input));
+		expect(allowed.isError).not.toBe(true);
+		expect(allowed.details).toBeUndefined();
+		expect(allowed.content[0]).toMatchObject({ text: `Successfully wrote 7 bytes to ${target}` });
+		expect(calls).toEqual(["mkdir", "write"]);
+		expect(readFileSync(target, "utf-8")).toBe("updated");
 	});
 
 	it("preserves early cancellation before filesystem operations", async () => {

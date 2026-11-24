@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { PluginAppActionRegistration, PluginContext } from "@vetta-org/plugin-sdk";
 import { describe, expect, it } from "vitest";
 import plugin from "./index";

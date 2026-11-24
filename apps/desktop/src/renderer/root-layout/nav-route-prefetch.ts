@@ -8,6 +8,7 @@ import {
 	loadAllstarDevHomePage,
 	loadAutomationPage,
 	loadBatchTasksPage,
+	loadComputerUsePage,
 	loadKnowledgeBasePage,
 	loadNewSessionPage,
 	loadPluginWorkspaceViewRoute,
@@ -24,6 +25,8 @@ export function navItemPageLoader(item: SidebarNavItem): PageLoader | null {
 	if (item.workspaceView) return loadPluginWorkspaceViewRoute;
 	if (item.settingsTab) return loadSettingsPage;
 	switch (item.path) {
+		case "/computer-use":
+			return loadComputerUsePage;
 		case "/abilities":
 		case "/skills":
 		case "/plugins":

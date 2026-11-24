@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { stat } from "node:fs/promises";
 import { extname, isAbsolute, resolve } from "node:path";
 import type { AgentTeamDocument } from "@vetta/agent-team";
@@ -41,8 +42,13 @@ import {
 } from "./resolve-session-config.js";
 import { readSessionAgentBinding, recordSessionAgentBinding } from "./session-agent-binding-store.js";
 import { readSessionAgentModes, recordSessionAgentMode } from "./session-agent-mode-store.js";
-import { type ResolvedSessionAgentProfile, resolveSessionAgentProfile } from "./session-agent-profile.js";
+import {
+	type ResolvedSessionAgentProfile,
+	resolveSessionAgentProfile,
+	resolveSessionTeamDelegation,
+} from "./session-agent-profile.js";
 import { DesktopSessionCreationTrace } from "./session-creation-trace.js";
+import { delegationTeamBinding, parseDelegationTeamBinding } from "./session-delegation.js";
 import {
 	isConversationCwd,
 	readDesktopSessionHeader,
@@ -109,6 +115,36 @@ export interface DesktopConversationCreateTraceContext {
 	readonly interactionId?: string;
 }
 
+/**
+ * 把解析出的 Agent 绑定折进会话配置：
+ * - persona：人格 addon + 档案能力白名单（既有行为）；
+ * - delegation / team-delegation：委派指引 addon + 委任成员集，**不动 agentConfiguration**
+ *   ——worker 会话由默认助手驾驶，工具/技能面取会话默认，成员自己的技能面在子代理类型上。
+ */
+function applySessionAgentBinding(
+	config: DesktopCodingAgentSessionConfig | undefined,
+	binding: ResolvedSessionAgentProfile | undefined,
+): DesktopCodingAgentSessionConfig | undefined {
+	if (!binding) return config;
+	if (binding.kind === "persona") {
+		return {
+			...config,
+			agentConfiguration: binding.agentConfiguration,
+			systemPromptVolatileAddon: binding.systemPromptVolatileAddon,
+		};
+	}
+	return {
+		...config,
+		delegatedMembers: binding.delegatedMembers,
+		systemPromptVolatileAddon: binding.systemPromptVolatileAddon,
+	};
+}
+
+/** 绑定落盘身份：档案 id 原样；团队委任写 `team:<id>`（同一份 store 的值域扩展）。 */
+function sessionAgentBindingIdentity(binding: ResolvedSessionAgentProfile): string {
+	return binding.kind === "team-delegation" ? delegationTeamBinding(binding.teamId) : binding.agentProfileId;
+}
+
 function hasRuntimeErrorCode(error: unknown, code: string): boolean {
 	return isSessionError(error) && error.code === code;
 }
@@ -154,18 +190,52 @@ export class DesktopConversationService {
 	) {}
 
 	/**
-	 * 解析本次会话生效的 Agent 绑定。
-	 * - 新建：取渲染层传入的 agentProfileId；Agent 已被删则报错要求重选。
-	 * - 恢复：取会话目录旁挂的记录；Agent 已被删则**降级为普通对话**而不是报错，
-	 *   否则绑定过已删 Agent 的历史会话将永远打不开，用户连记录都读不到。
+	 * 解析本次会话生效的 Agent 绑定（persona 接管 / worker 委任 / 团队委任）。
+	 * - 新建：取渲染层传入的 agentProfileId 或 delegationTeamId；对象已被删则报错要求重选。
+	 * - 恢复：取会话目录旁挂的记录（档案 id 或 `team:<id>`）；对象已被删则**降级为普通对话**
+	 *   而不是报错，否则绑定过已删对象的历史会话将永远打不开，用户连记录都读不到。
 	 */
 	private async resolveBoundAgentProfile(
 		config: DesktopCodingAgentSessionConfig | undefined,
 	): Promise<ResolvedSessionAgentProfile | undefined> {
 		const isResume = Boolean(config?.sessionPath);
+		const delegatedTeamId = config?.delegationTeamId;
+		if (delegatedTeamId) {
+			const resolved = await resolveSessionTeamDelegation({
+				teamId: delegatedTeamId,
+				readDocument: this.readAgentTeamDocument,
+			});
+			if (resolved) return resolved;
+			if (!isResume) {
+				throw new DesktopConversationError(
+					"AGENT_PROFILE_UNAVAILABLE",
+					"The selected team is no longer available.",
+					// 键名与配置字段 delegationTeamId 同名；值取局部变量 delegatedTeamId（此处曾误用简写导致 ReferenceError）。
+					{ delegationTeamId: delegatedTeamId },
+				);
+			}
+			log.warn("bound delegation team is gone; falling back to a plain conversation", {
+				delegationTeamId: delegatedTeamId,
+				sessionPath: config?.sessionPath,
+			});
+			return undefined;
+		}
 		const agentProfileId =
 			config?.agentProfileId ??
 			(config?.sessionPath ? await readSessionAgentBinding(config.sessionPath) : undefined);
+		const boundTeamId = agentProfileId ? parseDelegationTeamBinding(agentProfileId) : undefined;
+		if (boundTeamId) {
+			const resolved = await resolveSessionTeamDelegation({
+				teamId: boundTeamId,
+				readDocument: this.readAgentTeamDocument,
+			});
+			if (resolved) return resolved;
+			log.warn("bound delegation team is gone; falling back to a plain conversation", {
+				boundTeamId,
+				sessionPath: config?.sessionPath,
+			});
+			return undefined;
+		}
 		if (!agentProfileId) return undefined;
 		const resolved = await resolveSessionAgentProfile({
 			agentProfileId,
@@ -219,17 +289,12 @@ export class DesktopConversationService {
 				}),
 			);
 			// 绑定的 Agent：新建取渲染层传入的身份，恢复取会话目录旁挂的记录。
+			// persona → 人格 addon + 能力白名单；worker/团队 → 委任成员集 + 委派指引（保持默认驾驶）。
 			// 能力白名单在这里由主进程查表折算，渲染层始终只经手身份。
-			const agentProfile = await trace.measure("resolve-agent-profile", () => this.resolveBoundAgentProfile(config));
+			const agentBinding = await trace.measure("resolve-agent-profile", () => this.resolveBoundAgentProfile(config));
 			// BUG-0148/R4：宿主读取设置页保存的记忆策略并注入普通新建/恢复
 			// 会话；显式传入的 memoryPolicy 优先，off/缺省不注入。
-			const configWithAgent = agentProfile
-				? {
-						...config,
-						agentConfiguration: agentProfile.agentConfiguration,
-						systemPromptVolatileAddon: agentProfile.systemPromptVolatileAddon,
-					}
-				: config;
+			const configWithAgent = applySessionAgentBinding(config, agentBinding);
 			const configWithMemory = withHostMemoryPolicy(configWithAgent, desktopMemoryDirectory(getAgentDir()));
 			const resolvedConfig = await trace.measure("resolve-config", () =>
 				resolveDesktopSessionConfig(configWithMemory, kind, source, {
@@ -244,10 +309,10 @@ export class DesktopConversationService {
 			// 工作模式在这里固化：新会话写入当前默认值，历史会话补写回落值。
 			// 已有记录不覆盖，所以之后改默认值不会改写任何已存在会话。
 			await trace.measure("record-agent-mode", () => recordSessionAgentMode(sessionPath, resolvedConfig.agentMode));
-			// Agent 归属同样只固化一次：会话属于哪个 Agent 是会话身份，中途不可改。
-			if (agentProfile) {
+			// Agent 归属同样只固化一次：会话属于哪个 Agent/团队是会话身份，中途不可改。
+			if (agentBinding) {
 				await trace.measure("record-agent-binding", () =>
-					recordSessionAgentBinding(sessionPath, agentProfile.agentProfileId),
+					recordSessionAgentBinding(sessionPath, sessionAgentBindingIdentity(agentBinding)),
 				);
 			}
 			monitorRuntimeSession(this.runtime, result.sessionId, "interactive");
@@ -274,7 +339,9 @@ export class DesktopConversationService {
 				cwd: resolvedConfig.cwd,
 				listCwd: resolveSessionListCwd(config?.cwd ?? resolvedConfig.cwd),
 				source,
-				...(agentProfile ? { agentProfileId: agentProfile.agentProfileId } : {}),
+				// 委任形态不回传档案身份：驾驶者是默认助手，渲染层不得把成员头像/昵称
+				// 当成本会话人格；只有 persona 接管才展示档案身份。
+				...(agentBinding?.kind === "persona" ? { agentProfileId: agentBinding.agentProfileId } : {}),
 				agentMode: resolvedConfig.agentMode,
 				capabilityProfile: resolvedConfig.capabilityProfile,
 			};

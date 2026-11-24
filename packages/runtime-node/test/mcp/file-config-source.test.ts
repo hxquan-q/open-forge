@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";

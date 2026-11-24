@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type * as ChildProcessModule from "node:child_process";
 import { execFile, spawnSync } from "node:child_process";
 import { chmod, lstat, mkdir, mkdtemp, readdir, readFile, readlink, rm, symlink, writeFile } from "node:fs/promises";

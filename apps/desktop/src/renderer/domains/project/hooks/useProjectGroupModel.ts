@@ -1,4 +1,6 @@
+// Modified by The Open Forge contributors.
 import { notifyTeamSessionsChanged } from "@shared/agent-teams/team-session-events";
+import { classifyTeamSessionRenameFailure } from "@shared/agent-teams/team-session-rename-failure";
 import { pathBasename } from "@shared/lib/utils";
 import type { Project, ProjectType } from "@shared/store/atoms";
 import {
@@ -11,6 +13,7 @@ import {
 	sessionContextMenuAtom,
 	sessionDisplayLabel,
 } from "@shared/store/atoms";
+import { showToast } from "@shared/store/toast-atoms";
 import { isSshProjectUri } from "@vetta/ssh-transport/project-uri";
 import { DEFAULT_VISIBLE_SESSIONS } from "@vetta-org/theme-ui/project";
 import { useAtomValue, useSetAtom } from "jotai";
@@ -37,6 +40,8 @@ export interface ProjectGroupSessionView {
 	iconClassName?: string;
 	trailingAvatarUrls?: readonly string[];
 	titleExtra?: string;
+	/** 数据文件缺失的团队会话（BUG-0195）：置灰呈现。 */
+	dimmed?: boolean;
 	session: SidebarConversationInfo;
 }
 
@@ -164,6 +169,7 @@ export function useProjectGroupModel({
 				iconClassName: identity.iconClassName,
 				trailingAvatarUrls: identity.trailingAvatarUrls,
 				titleExtra: identity.titleExtra,
+				...(session.kind === "agent-team" && session.dataFileMissing ? { dimmed: true } : {}),
 				session,
 			};
 		});
@@ -219,12 +225,28 @@ export function useProjectGroupModel({
 				.renameSession({ id: session.teamSessionId, coordinationSessionPath: session.path }, name)
 				.then(() => {
 					notifyTeamSessionsChanged(session.teamId);
+				})
+				.catch((error: unknown) => {
+					// IPC rejection 无出口会升级成 unhandled rejection（BUG-0114）；
+					// 数据文件缺失按锚点归类成「只能删除」（BUG-0195）。
+					console.error("[project-group] rename team session failed", error);
+					showToast({
+						variant: "error",
+						message:
+							classifyTeamSessionRenameFailure(error) === "data_file_missing"
+								? t("allstarDev.home.sessions.renameFailedDataMissing")
+								: t("sidebar.session.renameFailed"),
+					});
 				});
 		},
-		[onRenameSession, projectCwd],
+		[onRenameSession, projectCwd, t],
 	);
 	const selectSessionByPath = useCallback(
-		(session: SidebarConversationInfo) => onSelectSession(projectCwd, session),
+		(session: SidebarConversationInfo) => {
+			// 数据文件缺失的团队会话打开必败：不导航（BUG-0195）。
+			if (session.kind === "agent-team" && session.dataFileMissing) return;
+			onSelectSession(projectCwd, session);
+		},
 		[onSelectSession, projectCwd],
 	);
 	const toggleShowAll = useCallback(() => setShowAllSessions((value) => !value), []);

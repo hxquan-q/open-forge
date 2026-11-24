@@ -212,14 +212,16 @@ revision 读取；不要依次调用多次 `writeFile()` 冒充多文件事务�
 
 - `defaultVisibility`：插件全部 Skill 的默认值，`visible` 或 `hidden`。
 - `surfaces`：按入口覆盖默认值，当前支持 `abilityCatalog`、`agentConfiguration`、`commandPalette`、`skillPicker`、`pluginDetail`。
-- `skills.<skill-name>`：按 `SKILL.md` 中的稳定 Skill 名覆盖插件默认值；可声明 `defaultVisibility`、`surfaces`、`displayName`、`displayDescription`。
+- `workspaceMode`：`work` / `coding`；只控制输入区 `/` Skill 候选列表在哪种会话模式中出现，未声明时两种模式均可见，不影响 Skill 加载、LLM 调用或权限。
+- `skills.<skill-name>`：按 `SKILL.md` 中的稳定 Skill 名覆盖插件默认值；可声明 `defaultVisibility`、`surfaces`、`workspaceMode`、`displayName`、`displayDescription`。
 - `displayName` / `displayDescription`：仅改变用户看到的文案，不改变 Skill 名、调用路由或已保存引用；支持插件 `%catalogKey%` 本地化占位符。
+- 使用 `workspaceMode` 的插件应声明 `pluginApiVersion: ^2.12.0`；旧宿主会按 fail-closed 版本合同拒绝不兼容清单。
 
 普通用户、项目、市场与 Vetta 内置 Skill 没有声明时继续默认可见。已安装的旧插件没有 `skillPresentation` 时按插件默认隐藏，避免把实现细节意外暴露为产品能力。
 
 ## 贡献智能体与团队
 
-`agent.agents` / `agent.teams` 让插件把**自己的人设**带进产品：宿主在插件启用时把它们铺进用户的智能体库与团队列表，与用户自建的档案并列出现在智能体中心、新会话选择器和 `@` 提及里。声明了 `mode` 档位归属的智能体/团队只在对应档（文档与研究 / 代码）的新会话选择器里出现——这是用户层的可见性过滤，不影响调用与 `@` 提及；未声明默认归「文档与研究」档（两档对等：coding 档同样看不到 work/未声明的智能体）。
+`agent.agents` / `agent.teams` 让插件把**自己的人设**带进产品：宿主在插件启用时把它们铺进用户的智能体库与团队列表，与用户自建的档案并列出现在智能体中心、新会话选择器和 `@` 提及里。声明了 `mode` 档位归属的智能体/团队只在对应档（文档与研究 / 代码）的新会话选择器里出现；在输入区 `@` 候选列表中，显式标记了 `mode` 的成员也按当前会话模式筛选，未标记的成员保留两档可见。以上均为用户层候选可见性过滤，不影响手动输入、已选会话、深链或实际调用。新会话选择器的未声明归属仍按既有合同归「文档与研究」档。
 
 **这些资产由你 1:1 维护**：清单是唯一的真相源，宿主每次同步都按它重铺一遍——你改名、换阵容、改任务书、撤掉一支团队，用户升级后都会如实生效。对应地，用户改不动也删不掉它们（UI 只读展示）；想要一份自己调教的版本，用户复制一份自建档案即可。
 
@@ -270,6 +272,7 @@ revision 读取；不要依次调用多次 `writeFile()` 冒充多文件事务�
 | `legacyIds` | ❌ | 本智能体**接管**的历史 blueprint id（≤ 16 个）。见下方「接管与升级」。 |
 | `roles` | ❌ | 本智能体能顶的**角色 slug**（≤ 8 个）。声明了就能被别的插件按角色引用，见下方「被别人引用」。 |
 | `mode` | ❌ | 工作区档位归属：`work`（文档与研究）/ `coding`（代码）。声明后该智能体只出现在对应档的新会话选择器；成员智能体建议与其团队同标，否则单选入口与团队入口的可见性不一致。缺省归「文档与研究」档。这是可见性过滤，不做调用时校验（已选中的会话、深链与 `@` 提及不受影响）。未声明默认归「文档与研究」档。使用者应声明 `pluginApiVersion: ^2.11.0`。 |
+| `lifecycle` | ❌ | **委任生命周期标记**：声明即表示该智能体是 **worker 型**，可被默认会话按域委派。`resident` 常驻（spawn 一次 durable 会话，后续任务 followup_task 顺序排队，绝不重复起实例）；`oneshot` 一次性（每个任务按定义起 one-shot 子代理）。**缺省不带标记 = 主控/接管型**：单选时人格接管会话（现状行为）；团队队长未标记即有主控团队（走 Team 会话编排）。标记是加入委任模型的显式 opt-in，存量插件不声明则行为零变化。使用者应声明 `pluginApiVersion: ^2.13.0`。 |
 
 ### teams[] 字段
 
@@ -283,6 +286,8 @@ revision 读取；不要依次调用多次 `writeFile()` 冒充多文件事务�
 | `mode` | ❌ | 工作区档位归属（`work` / `coding`），语义同 `agents[].mode`：声明后整支团队只出现在对应档的新会话选择器，未声明默认归「文档与研究」档。使用者应声明 `pluginApiVersion: ^2.11.0`。 |
 
 **第一个成员即队长**，也是用户在团队会话里唯一的对话入口。因此**队长只能是本插件自己的智能体**（写不带斜杠的 `agent`）：让它落在别的插件上，那个插件一卸载这支团队就成了打不开的壳。
+
+**团队是否有主控由队长的 `lifecycle` 推导**：队长未标记（缺省）= 有主控团队，整队走 Team 会话编排；队长声明了 `lifecycle`（worker 型）= 无主控团队，选中时由默认会话保持驾驶、成员按域委派。成员各自的 `lifecycle` 决定它们被委派时是常驻还是一次性。
 
 ### members[] 的两种引用
 

@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { PerfSendProfiler } from "@shared/lib/perf-send";
 import { useThemeComponent } from "@vetta-org/theme-sdk";
 import { useThemeSurface } from "@vetta-org/theme-sdk/appearance";
@@ -28,6 +29,7 @@ import {
 	InputBarAttachmentActions,
 	InputBarContextAction,
 	InputBarExecutionModeAction,
+	InputBarHotTrackingAction,
 	InputBarModelAction,
 	InputBarSendAction,
 	InputBarSkillsAction,
@@ -120,6 +122,7 @@ export function InputBarView({ model, className, classNames }: InputBarViewProps
 						onSelect={commands.onAtSelect}
 						filter={commands.atFilter}
 						cwd={model.effectiveCwd}
+						workspaceMode={model.workspaceMode ?? "work"}
 						items={commands.atItems}
 					/>
 				</PerfSendProfiler> : null}
@@ -158,6 +161,7 @@ export function InputBarView({ model, className, classNames }: InputBarViewProps
 										onSelectConnector={commands.onConnectorSelect}
 										filter={commands.slashFilter}
 										cwd={model.effectiveCwd || undefined}
+										workspaceMode={model.workspaceMode ?? "work"}
 										className={model.isFocused ? "border-primary/20" : undefined}
 										allowCompaction={commands.allowCompaction}
 									/>
@@ -249,7 +253,9 @@ export function InputBarView({ model, className, classNames }: InputBarViewProps
 												onSelectFiles={() => void model.actions.handleSelectFiles()}
 												onSelectImages={() => void model.actions.handleSelectImages()}
 											/>
-							{model.leadingTools.map((tool) => (
+							{model.leadingTools.map((tool) => tool.kind === "hot-tracking" ? (
+								<InputBarHotTrackingAction key={tool.kind} visible={!slashOpen} model={tool.model} />
+							) : (
 								<InputBarExecutionModeAction key={tool.kind} visible={!slashOpen} model={tool.model} />
 							))}
 											<InputBarActiveActions

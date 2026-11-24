@@ -101,7 +101,10 @@ describe("Anthropic message conversion", () => {
 			role: "user",
 			content: [
 				{ type: "text", text: "inspect" },
-				{ type: "text", text: "Image content omitted because the current model does not support image input." },
+				{
+					type: "text",
+					text: "Image content omitted because the current model does not support image input. To read the text inside an image file, call the extract_text_from_img tool with its file path instead of trying to view it.",
+				},
 			],
 		});
 	});
@@ -164,7 +167,7 @@ describe("Anthropic message conversion", () => {
 					type: "tool_result",
 					tool_use_id: "call-1",
 					content:
-						"Read image file [image/png]\nImage content omitted because the current model does not support image input.",
+						"Read image file [image/png]\nImage content omitted because the current model does not support image input. To read the text inside an image file, call the extract_text_from_img tool with its file path instead of trying to view it.",
 				},
 			],
 		});

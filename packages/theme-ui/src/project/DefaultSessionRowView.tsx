@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { cn } from "@vetta-org/ui";
 import { memo, type JSX } from "react";
 import { AvatarStackView } from "../shared/AvatarStackView";
@@ -29,6 +30,11 @@ export interface DefaultSessionRowViewProps {
 	tagColors?: readonly string[];
 	/** Accessible name for the hover "more" trigger. */
 	moreLabel?: string;
+	/**
+	 * 数据文件已缺失的会话行（不可用状态）：内容整体降不透明度呈现。
+	 * 只描述状态，不改变交互——打开守卫与菜单裁剪由宿主决定。
+	 */
+	dimmed?: boolean;
 	onOpenContextMenu: (event: React.MouseEvent) => void;
 	onRename: (name: string) => void;
 	onRenameDone: () => void;
@@ -50,6 +56,7 @@ export const DefaultSessionRowView = memo(function DefaultSessionRowView({
 	titleExtra,
 	forked,
 	moreLabel,
+	dimmed = false,
 	onOpenContextMenu,
 	onRename,
 	onRenameDone,
@@ -79,6 +86,7 @@ export const DefaultSessionRowView = memo(function DefaultSessionRowView({
 				type="button"
 				data-session-active={active ? "true" : undefined}
 				data-session-path={sessionPath || undefined}
+				data-session-dimmed={dimmed ? "true" : undefined}
 				onClick={(event) => {
 					if (renaming) return;
 					prepareSidebarSelection(event.currentTarget);
@@ -107,6 +115,7 @@ export const DefaultSessionRowView = memo(function DefaultSessionRowView({
 						className={cn(
 							"flex min-w-0 flex-1 items-center gap-2",
 							SESSION_ROW_CONTENT_FADE_CLASS,
+							dimmed && "opacity-60",
 						)}
 					>
 						{showTagDots ? (

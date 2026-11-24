@@ -104,7 +104,7 @@ describe("openai-responses tool-result images", () => {
 					{ type: "input_text", text: "inspect" },
 					{
 						type: "input_text",
-						text: "Image content omitted because the current model does not support image input.",
+						text: "Image content omitted because the current model does not support image input. To read the text inside an image file, call the extract_text_from_img tool with its file path instead of trying to view it.",
 					},
 				],
 			},
@@ -133,7 +133,7 @@ describe("openai-responses tool-result images", () => {
 				type: "function_call_output",
 				call_id: "call-1",
 				output:
-					"Read image file [image/png]\nImage content omitted because the current model does not support image input.",
+					"Read image file [image/png]\nImage content omitted because the current model does not support image input. To read the text inside an image file, call the extract_text_from_img tool with its file path instead of trying to view it.",
 			},
 		]);
 	});

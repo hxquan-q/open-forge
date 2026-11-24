@@ -1,4 +1,5 @@
 {
+	"_comment": "Modified by The Open Forge contributors.",
 	"activityPanel": {
 		"tabs": {
 			"file": "Files",
@@ -835,6 +836,11 @@
 			"clear": "Clear all",
 			"selected": "{{count}} members"
 		},
+		"hotTracking": {
+			"label": "LLM activity tracking",
+			"on": "LLM activity tracking is on: follow AI commands, files and browser activity. Applies to this session only; resets to on after restart.",
+			"off": "LLM activity tracking is off: new activity is not replayed or followed automatically. Applies to this session only; resets to on after restart."
+		},
 		"toolbar": {
 			"addImage": "Add image",
 			"attachFile": "Attach file reference",
@@ -1170,6 +1176,7 @@
 			"agentInvalid": "This agent is no longer available. Choose another one.",
 			"retry": "Retry",
 			"memberCount": "{{count}} members",
+			"crewBadge": "Crew dispatch",
 			"groupTeams": "Teams",
 			"groupAgents": "Agents",
 			"pick": "Switch agent",

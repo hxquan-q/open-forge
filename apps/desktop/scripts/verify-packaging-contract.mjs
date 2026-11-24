@@ -94,6 +94,10 @@ export function findDesktopPackagingContractViolations(rootDirectory = repoRoot)
 		violations.push("prepare-pack.js does not stage the required Desktop LICENSE and NOTICE resources");
 	}
 
+	if (!preparePack.includes('from "./prepare-computer-use.mjs"') || !preparePack.includes("verifyComputerUseBundle(")) {
+		violations.push("Windows packaging must verify and stage the bundled computer-use backend");
+	}
+
 	const remoteHost = readFileSync(
 		join(packageRoot, "src", "main", "remote-control", "desktop-remote-desktop-host.ts"),
 		"utf8",

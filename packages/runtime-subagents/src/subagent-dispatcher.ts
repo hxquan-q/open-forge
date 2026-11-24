@@ -87,13 +87,14 @@ export class SubagentDispatcher<TProfile> {
 	async spawn(request: SubagentSpawnRequest): Promise<SubagentSnapshot> {
 		this.assertNotDisposed();
 		const taskName = this.validateRequest(request);
+		const type = this.requireType(request.agentType);
 		if (!this.pool.hasCapacity) {
 			this.scheduling.rejected();
 			throw new Error(
 				`Too many active subagents (${this.pool.activeCount}/${this.pool.maxConcurrent}). Wait or interrupt one before spawning more.`,
 			);
 		}
-		const run = this.reserve(request, taskName, "pending");
+		const run = this.reserve(request, taskName, "pending", type);
 		if (!this.pool.acquire(run)) throw new Error("Subagent concurrency slot changed during spawn");
 		this.scheduling.admitted(run);
 		this.emitUpdate();
@@ -125,7 +126,12 @@ export class SubagentDispatcher<TProfile> {
 		this.clearCompletedByTypes(requestedTypes);
 		const runs = validated.map(({ request, taskName }) => {
 			const hasSlot = this.pool.hasCapacity;
-			const run = this.reserve(request, taskName, hasSlot ? "pending" : "queued");
+			const run = this.reserve(
+				request,
+				taskName,
+				hasSlot ? "pending" : "queued",
+				this.requireType(request.agentType),
+			);
 			if (hasSlot) {
 				if (!this.pool.acquire(run)) throw new Error("Subagent concurrency slot changed during dispatch");
 				this.scheduling.admitted(run);
@@ -213,6 +219,7 @@ export class SubagentDispatcher<TProfile> {
 		request: SubagentSpawnRequest,
 		taskName: string,
 		status: "pending" | "queued",
+		type?: SubagentTypeDefinition<TProfile>,
 	): SubagentRun<TProfile> {
 		const snapshot: SubagentSnapshot = {
 			id: `pending-${taskName}-${this.idGenerator.next()}`,
@@ -226,7 +233,7 @@ export class SubagentDispatcher<TProfile> {
 			startedAt: this.clock.now(),
 			usage: emptyUsage(),
 			generation: 0,
-			title: request.title?.trim() || undefined,
+			title: request.title?.trim() || type?.displayTitle || undefined,
 			deliveryMode: request.deliveryMode ?? "terminal",
 			batchId: request.batchId,
 		};

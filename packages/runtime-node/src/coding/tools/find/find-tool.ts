@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { existsSync } from "node:fs";
 import { type Static, Type } from "@sinclair/typebox";
 import type { RuntimeToolDefinition, RuntimeToolResult } from "@vetta/runtime-core/kernel";
@@ -11,6 +12,7 @@ import {
 } from "../../shared/path-resolution.js";
 import { collectToolProcess, spawnLocalToolProcess, type ToolProcessSpawner } from "../../shared/tool-process.js";
 import { formatSize, type TruncationResult, truncateHead } from "../../shared/truncation.js";
+import type { ReadPathPolicy } from "../read/index.js";
 import { FIND_TOOL_DESCRIPTION } from "./description.js";
 
 const DEFAULT_LIMIT = 1000;
@@ -48,6 +50,7 @@ export interface FindOperations {
 
 export interface FindToolOptions {
 	readonly operations?: FindOperations;
+	readonly pathPolicy?: ReadPathPolicy;
 	readonly fdPath?: string;
 	readonly executableResolver?: CodingToolExecutableResolver;
 	/** 路径在哪台机器上解析；缺省为本机。 */
@@ -75,6 +78,8 @@ export function createFindTool(cwd: string, options: FindToolOptions = {}): Runt
 		async execute(request) {
 			if (request.signal.aborted) throw new Error("Operation aborted");
 			const searchPath = resolveExistingPath(request.input.path ?? ".", cwd, pathHost);
+			const rejectionReason = options.pathPolicy?.getRejectionReason(searchPath);
+			if (rejectionReason !== undefined) throw new Error(rejectionReason);
 			const limit = request.input.limit ?? DEFAULT_LIMIT;
 			if (options.operations) {
 				if (!(await operations.exists(searchPath))) {

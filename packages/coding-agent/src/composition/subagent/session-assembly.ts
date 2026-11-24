@@ -26,6 +26,7 @@ import {
 	CODING_AGENT_SUBAGENT_SCHEDULING_OBSERVATION,
 	type CodingAgentSubagentIssueOperation,
 } from "../../runtime-contracts/subagent-observability.js";
+import type { CodingAgentDelegatedMember } from "../contracts/delegated-members.js";
 import type {
 	CodingAgentConversationSessionPathAssessment,
 	CodingAgentSubagentChildFactory,
@@ -35,9 +36,11 @@ import type {
 	CodingAgentSubagentWorkspacePort,
 } from "../contracts/index.js";
 import { createCodingAgentSubagentChildHandle } from "./child-handle.js";
+import { createSessionDelegatedMemberTypeRegistry } from "./delegated-members.js";
 import { createLocalSubagentId } from "./local-id.js";
 import { buildSubagentNotification } from "./notification.js";
 import { resolveCodingAgentSubagentProfile } from "./profile-policy.js";
+import { createDefaultCodingAgentSubagentTypeRegistry } from "./profiles.js";
 import { createSubagentReportToParentToolRegistration, formatSubagentReport } from "./report-to-parent-tool.js";
 import type { CodingAgentSubagentChildTodoBinding } from "./runtime.js";
 import { CodingAgentSubagentRuntime } from "./runtime.js";
@@ -92,6 +95,11 @@ export interface CodingAgentSubagentSessionAssemblyOptions {
 	readonly readParentToolActivation?: () => CodingAgentToolActivation | undefined;
 	readonly workspacePort?: CodingAgentSubagentWorkspacePort;
 	readonly typeRegistry?: SubagentTypeRegistryLike<CodingAgentSubagentProfile>;
+	/**
+	 * 委任成员定义（REQ-0034）：为**本会话**复制基础注册表后覆盖成员类型；
+	 * 不原地修改 typeRegistry——组合级注册表可能跨会话共享，会话成员不得泄漏。
+	 */
+	readonly delegatedMembers?: readonly CodingAgentDelegatedMember[];
 	readonly createChildFactory?: (context: CodingAgentSubagentChildFactoryContext) => CodingAgentSubagentChildFactory;
 	readonly createChildComposition: (
 		request: CodingAgentSubagentChildCompositionRequest,
@@ -116,6 +124,13 @@ export function createCodingAgentSubagentSessionAssembly(
 	if (!options.enabled) return undefined;
 
 	const lifecycle = createSubagentLifecycle(options);
+	// 会话级注册表：基础类型 + 委任成员（复制而非原地 upsert，见 delegatedMembers 注释）。
+	const baseTypeRegistry: SubagentTypeRegistryLike<CodingAgentSubagentProfile> =
+		options.typeRegistry ?? createDefaultCodingAgentSubagentTypeRegistry();
+	const typeRegistry =
+		options.delegatedMembers && options.delegatedMembers.length > 0
+			? createSessionDelegatedMemberTypeRegistry(baseTypeRegistry, options.delegatedMembers)
+			: baseTypeRegistry;
 	const childFactory = options.createChildFactory?.({
 		cwd: options.cwd,
 		scenario: options.scenario,
@@ -134,7 +149,7 @@ export function createCodingAgentSubagentSessionAssembly(
 		createEntryId: options.createEntryId ?? createLocalSubagentId,
 		lifecycle,
 		formatInitialMessage: formatCodingAgentSubagentTaskMessage,
-		typeRegistry: options.typeRegistry,
+		typeRegistry,
 		readParentMessages: options.readParentMessages,
 		createChild: childFactory
 			? (request, type, forkContext, todo, signal) =>

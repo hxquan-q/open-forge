@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { RuntimeConfigurationSnapshotSource } from "@vetta/runtime-core/configuration";
 import stripAnsi from "strip-ansi";
 import { createNodeCodingToolEnvironment, type NodeCodingToolEnvironment } from "../node-tool-environment.js";
@@ -6,7 +7,7 @@ import type { CommandToolExecutor } from "../shared/command-tool.js";
 import type { ReviewSnapshotBinding } from "../shared/review-capture.js";
 import { sanitizeBinaryOutput } from "../shared/text-decoding.js";
 import type { EditPathPolicy } from "../tools/edit/index.js";
-import type { ReadToolOptions } from "../tools/read/index.js";
+import type { ReadPathPolicy, ReadToolOptions } from "../tools/read/index.js";
 import type { WritePathPolicy } from "../tools/write/index.js";
 import {
 	createNodeBackgroundCommandHost,
@@ -26,6 +27,7 @@ export interface NodeHostCodingToolEnvironmentOptions {
 	readonly protectedDirectories?: readonly string[];
 	readonly editPathPolicy: EditPathPolicy;
 	readonly writePathPolicy: WritePathPolicy;
+	readonly readPathPolicy?: ReadPathPolicy;
 	readonly backgroundService?: BackgroundCommandService;
 	readonly commandExecutor?: CommandToolExecutor;
 	readonly resolveExecutable?: ResolveCodingToolExecutable;
@@ -62,6 +64,7 @@ export function createNodeHostCodingToolEnvironment(
 		}),
 		editPathPolicy: options.editPathPolicy,
 		writePathPolicy: options.writePathPolicy,
+		readPathPolicy: options.readPathPolicy,
 		configurationSource: options.configurationSource,
 		readOptions: options.readOptions,
 		reviewSnapshots: options.reviewSnapshots,

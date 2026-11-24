@@ -37,8 +37,11 @@ export function useSessionContextMenuModel(
 	const tags = useAtomValue(conversationTagsAtom);
 	const openTagEditor = useSetAtom(conversationTagEditorAtom);
 	const pinned = pinnedSessionPaths.has(session.path);
+	// BUG-0195：数据文件缺失的团队会话只保留「删除」——打开/改名/归档/置顶/打标签
+	// 对该条目必败或没有意义，删除链路已有降级（BUG-0087），是唯一出口。
+	const teamDataFileMissing = isAgentTeamSession(session) && session.dataFileMissing === true;
 	// 归档只隐藏侧栏行、随时可恢复，团队会话与普通会话同等对待；运行中的会话另需先停止。
-	const canArchive = allowMutations;
+	const canArchive = allowMutations && !teamDataFileMissing;
 	const archiveDisabled = runningSessionPaths.has(session.path);
 
 	const handleRename = useCallback(() => {
@@ -146,9 +149,10 @@ export function useSessionContextMenuModel(
 		canArchive,
 		canDelete: allowMutations && session.access?.delete !== false,
 		// 远程项目下的会话，工作目录在远端，系统文件管理器无从显示。
-		canOpenInFolder: !isSshProjectUri(session.cwd),
-		canRename: allowMutations && session.access?.rename !== false,
-		extraItems,
+		canOpenInFolder: !isSshProjectUri(session.cwd) && !teamDataFileMissing,
+		canPin: !teamDataFileMissing,
+		canRename: allowMutations && session.access?.rename !== false && !teamDataFileMissing,
+		extraItems: teamDataFileMissing ? undefined : extraItems,
 		labels: {
 			pin: pinned ? t("contextMenu.unpin") : t("contextMenu.pin"),
 			rename: t("contextMenu.rename"),

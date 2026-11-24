@@ -148,7 +148,10 @@ describe("openai-completions convertMessages", () => {
 			role: "user",
 			content: [
 				{ type: "text", text: "inspect" },
-				{ type: "text", text: "Image content omitted because the current model does not support image input." },
+				{
+					type: "text",
+					text: "Image content omitted because the current model does not support image input. To read the text inside an image file, call the extract_text_from_img tool with its file path instead of trying to view it.",
+				},
 			],
 		});
 	});
@@ -230,7 +233,7 @@ describe("openai-completions convertMessages", () => {
 		expect(messages.at(-1)).toEqual({
 			role: "tool",
 			content:
-				"Read image file [image/png]\nImage content omitted because the current model does not support image input.",
+				"Read image file [image/png]\nImage content omitted because the current model does not support image input. To read the text inside an image file, call the extract_text_from_img tool with its file path instead of trying to view it.",
 			tool_call_id: "tool-1",
 		});
 	});

@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { createContext, useContext, useMemo } from "react";
 import type { ComponentType, ReactNode } from "react";
 import type { ChatTimelineItem } from "./types";

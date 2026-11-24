@@ -1,3 +1,4 @@
+<!-- Modified by The Open Forge contributors. -->
 # @vetta/plugin-office-viewer
 
 ## Context Boundary

@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import {
 	AGENT_TEAM_SCHEMA_VERSION,
 	type AgentProfile,
@@ -146,6 +147,8 @@ export class AgentTeamStore {
 				blueprintId: input.blueprintId,
 				abilities: createAgentAbilities(input.abilities, blueprint.defaultAbilities),
 				scope: { kind: "library" },
+				...(blueprint.lifecycle ? { lifecycle: blueprint.lifecycle } : {}),
+				...(input.lifecycle ? { lifecycle: input.lifecycle } : {}),
 				createdAt: now,
 				updatedAt: now,
 			};
@@ -184,6 +187,8 @@ export class AgentTeamStore {
 					plugins: [...input.abilities.plugins],
 					...(input.abilities.extensions ? { extensions: cloneExtensions(input.abilities.extensions) } : {}),
 				},
+				// 全量替换语义：传值即设置，缺省即清除（回到主控/接管型）。
+				...(input.lifecycle ? { lifecycle: input.lifecycle } : { lifecycle: undefined }),
 				revision: current.revision + 1,
 				updatedAt: this.now(),
 			};

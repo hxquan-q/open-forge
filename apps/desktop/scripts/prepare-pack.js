@@ -26,6 +26,7 @@ import {
 } from "./windows-sandbox-artifacts.mjs";
 import { prepareSpeechModels, SPEECH_MODEL_RESOURCE_ROOT } from "./fetch-speech-models.mjs";
 import { MCP_SERVERS_VENDOR_ROOT, prepareMcpServers } from "./fetch-mcp-servers.mjs";
+import { prepareComputerUse, verifyComputerUseBundle } from "./prepare-computer-use.mjs";
 import { prepareVendorRuntimes } from "./fetch-vendor-runtimes.mjs";
 import {
 	resolveSpeechInputBuildConfig,
@@ -758,6 +759,15 @@ async function stageVendorRuntimes() {
 
 await stageVendorRuntimes();
 
+if (resolvePlatformFamilies().has("win32")) {
+	const computerUse = await prepareComputerUse({ platformTag: "win32-x64" });
+	if (!computerUse) throw new Error("Computer-use backend is required for Windows packages");
+	await verifyComputerUseBundle(computerUse);
+	cpSync(computerUse, join(buildStageDir, "computer-use"), { recursive: true });
+	await verifyComputerUseBundle(join(buildStageDir, "computer-use"));
+}
+
+
 // =============================================================================
 // 内置 MCP servers（extraResources）
 // =============================================================================
@@ -800,6 +810,7 @@ stageSystemSkills(join(buildStageDir, "system-skills"), "prepare-pack");
 
 function resolveExtraResources() {
 	const extraResources = [
+		...(resolvePlatformFamilies().has("win32") ? [{ from: "computer-use", to: "computer-use", filter: ["**/*"] }] : []),
 		{
 			from: "im-gateway",
 			to: "im-gateway",

@@ -1,7 +1,11 @@
 // Modified by The Open Forge contributors.
 import type { Api, AssistantMessage, Message, Model, ToolCall, ToolResultMessage } from "../types.js";
 
-const UNSUPPORTED_IMAGE_INPUT_NOTICE = "Image content omitted because the current model does not support image input.";
+// 同时用于 user 消息与 toolResult 两种投影路径：只声明省略原因不给下一步时，
+// 纯文本模型会在图片上多轮盲试（read 图片、找缓存文件等），这里直接指向 OCR 工具。
+const UNSUPPORTED_IMAGE_INPUT_NOTICE =
+	"Image content omitted because the current model does not support image input. " +
+	"To read the text inside an image file, call the extract_text_from_img tool with its file path instead of trying to view it.";
 
 /**
  * Normalize tool call ID for cross-provider compatibility.

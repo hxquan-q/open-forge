@@ -67,4 +67,3 @@ origin/dev（39cdeec9d526）上 docs-site workflow 构建失败：`capabilities.
 - 实际验证：`bun run --cwd apps/docs-site build` 修复前失败路径即 CI 42264316550 的 MDX frontmatter 错误，修复后本地 build 通过（exit 0）；`check:guards` task-worktrees（449 任务 0 警告）与 project-indexes 通过。
 - 集成：提交进 main 并推送 `main:dev` 后由 docs-site workflow 复核转绿；本任务 status 置 verifying、integration_status 随推送记 integrated。
 - 人工验收：不适用（内容文件构建修复）；完成标准为本地 build 与远端 workflow 双绿。
-

@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { Transport } from "@vetta/ai";
 import type { GitToolStatus, RuntimeStatus, RuntimesStatus, RuntimeType } from "../../main/runtimes/types.js";
 import type { UserMessageClipboardPasteResult, UserMessageClipboardWriteRequest } from "../../shared/clipboard.js";

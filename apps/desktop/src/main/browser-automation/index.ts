@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { join } from "node:path";
 import { getVettaHomePath } from "@vetta/action-rpc";
 import { getAppLogger } from "../logger.js";
