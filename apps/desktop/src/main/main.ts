@@ -527,6 +527,9 @@ if (!gotSingleLock) {
 		}
 		const rendererBootPaintPromise = appLifecycle.waitForRendererBootPaint();
 		const rendererContentPaintPromise = appLifecycle.waitForRendererContentPaint();
+		// renderer 依赖图转换完成（module-loaded）后再启动插件 dev server，避免 18 个 Vite
+		// 子进程在首屏前抢 CPU；不用 content-paint 信号，因为它有 10s 兜底超时会提前放行。
+		const rendererModulesLoadedPromise = appLifecycle.waitForRendererModulesLoaded();
 		void rendererBootPaintPromise.then((result) => {
 			if (mainWindow.isDestroyed()) return;
 			// 被安装器重启时应用不是活动应用（ShipIt 以守护进程身份拉起），
@@ -805,28 +808,6 @@ if (!gotSingleLock) {
 		appLifecycle.markReady();
 		pluginPackageOpenService?.markReady();
 		void remotePairingService.restore();
-		if (!app.isPackaged) {
-			void startConfiguredPluginDevWatches(appRoot)
-				.then(({ ready, failures }) => {
-					if (ready.length > 0) {
-						mainLog.info("plugin development sessions ready", {
-							plugins: ready.map((project) => project.id),
-						});
-					}
-					if (failures.length > 0) {
-						mainLog.error("some configured plugin development sessions failed", {
-							failures: failures.map(({ project, error }) => ({
-								pluginId: project.id,
-								projectDir: project.projectDir,
-								error: error.message,
-							})),
-						});
-					}
-				})
-				.catch((error: unknown) => {
-					mainLog.error("failed to start configured plugin development sessions", error);
-				});
-		}
 
 		app.on("activate", () => {
 			showMainWindow();
@@ -928,6 +909,34 @@ if (!gotSingleLock) {
 			.catch((error: unknown) => {
 				mainLog.error("post-renderer startup failed", error);
 			});
+
+		// 插件 dev server 延后到 renderer 依赖图转换完成（module-loaded）后再启动。
+		// dev 下 18 个独立 Vite 子进程并发抢占 CPU，若在首屏前启动会把 renderer 转换从
+		// ~2.5s 拖到 ~41s；插件 activation 本就在首屏之后。保持裸 void，不注册成
+		// postFirstPaint 相位任务，以免阻塞同相位的桌宠/快捷面板/updater。
+		void rendererModulesLoadedPromise.then(() => {
+			if (mainWindow.isDestroyed() || app.isPackaged) return;
+			void startConfiguredPluginDevWatches(appRoot)
+				.then(({ ready, failures }) => {
+					if (ready.length > 0) {
+						mainLog.info("plugin development sessions ready", {
+							plugins: ready.map((project) => project.id),
+						});
+					}
+					if (failures.length > 0) {
+						mainLog.error("some configured plugin development sessions failed", {
+							failures: failures.map(({ project, error }) => ({
+								pluginId: project.id,
+								projectDir: project.projectDir,
+								error: error.message,
+							})),
+						});
+					}
+				})
+				.catch((error: unknown) => {
+					mainLog.error("failed to start configured plugin development sessions", error);
+				});
+		});
 	});
 }
 
