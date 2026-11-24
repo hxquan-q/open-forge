@@ -15,6 +15,11 @@
 		},
 		"packages/ui/src/stepper.tsx": {
 			"D03": 2
+		},
+		"packages/ui/src/color-swatch-picker.tsx": {
+			"D01": 16,
+			"D02": 3,
+			"D03": 2
 		}
 	}
 }

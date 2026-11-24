@@ -753,6 +753,7 @@
     "packages/toolkit/test/config-store.test.ts": 1,
     "packages/toolkit/test/disposable.test.ts": 14,
     "packages/ui/src/button-group.test.tsx": 1,
+    "packages/ui/src/session-top-item.test.tsx": 2,
     "packages/ui/src/step-slider.test.tsx": 1,
     "scripts/agents/requirement-run.test.mjs": 7,
     "scripts/perf/desktop-baseline.test.mjs": 5,

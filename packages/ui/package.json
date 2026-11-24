@@ -21,6 +21,22 @@
 			"types": "./src/button-group.tsx",
 			"import": "./src/button-group.tsx"
 		},
+		"./color": {
+			"types": "./src/color.ts",
+			"import": "./src/color.ts"
+		},
+		"./color-swatch-picker": {
+			"types": "./src/color-swatch-picker.tsx",
+			"import": "./src/color-swatch-picker.tsx"
+		},
+		"./input": {
+			"types": "./src/input.tsx",
+			"import": "./src/input.tsx"
+		},
+		"./session-top-item": {
+			"types": "./src/session-top-item.tsx",
+			"import": "./src/session-top-item.tsx"
+		},
 		"./step-slider": {
 			"types": "./src/step-slider.tsx",
 			"import": "./src/step-slider.tsx"
