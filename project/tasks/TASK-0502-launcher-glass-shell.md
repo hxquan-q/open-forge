@@ -1,7 +1,7 @@
 ---
 id: TASK-0502
 type: task
-status: in_progress
+status: done
 priority: P2
 owner: packages/theme-ui + packages/ui
 requirement: REQ-0008
@@ -66,3 +66,12 @@ updated: 2026-11-25
 - `bun run check` 全过；`command-menu` 域 vitest 全过。
 - `CommandMenuView.test.tsx` 仍绿：对话框 role/aria、空态、加载骨架、新会话按钮、行激活。
 - 手动验证（说明性）：面板呈玻璃质感，选中项滑块跟随方向键，左下新会话/右下打开关闭按钮可点。
+
+## 交付记录
+
+- 提交：`1ce619fab` feat(theme-ui): 命令面板玻璃外壳——SplashPanel/SplashParts 移植与浮动按钮组。
+- 范围：`packages/ui/src/utils.ts` 新增 5 个玻璃常量；新增 `SplashPanel.tsx`/`SplashParts.tsx`；`CommandMenuView` 重写为 `SplashPanel`+`SplashInputHeader`+浮动 `ButtonGroup`；`CommandMenuRow` 对齐上游玻璃选中态；`overlays/index.ts` 导出新组件与 `COMMAND_MENU_FLOATING_GROUP_CLASS`。
+- 配套：`en`/`zh` `common.json` 删除已失效 `hintNavigate`；`design-exceptions.json` 登记上游玻璃 token（CommandMenuRow D02/D05、CommandMenuView D02、SplashParts D03/D07）；`test-assertion-baseline.json` 该测试文件 6→7（浮动「新会话」钮的唯一可观察契约是回调）。
+- `command-menu.css` 未改（本地已与上游一致，目标条目从 write_paths 移除）。
+- 验证：`command-menu` 域 vitest 79/79 通过（view 测试 14/14，含补移植的唤起快捷键/未读标记与新会话按钮两条）；`bun run check` exit 0；`check:quick` 对全部改动文件 exit 0。
+- 未运行：UI 视觉手动验收（`verify:ui:*` 需另行授权）。
