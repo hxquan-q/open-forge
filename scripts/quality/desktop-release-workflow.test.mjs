@@ -220,7 +220,7 @@ describe("Desktop release workflow contracts", () => {
 			mkdirSync(join(cwd, "scripts/release"), { recursive: true });
 			mkdirSync(join(cwd, "apps/desktop/release"), { recursive: true });
 			mkdirSync(join(cwd, ".github/release-notes"), { recursive: true });
-			for (const name of ["verify-desktop-release-identity.mjs", "release-notes.mjs"]) {
+			for (const name of ["verify-desktop-release-identity.mjs", "release-notes.mjs", "release-notes-format.mjs"]) {
 				cpSync(join(import.meta.dirname, "../release", name), join(cwd, "scripts/release", name));
 			}
 			writeFileSync(join(cwd, "apps/desktop/package.json"), JSON.stringify({ version: "1.2.3" }));

@@ -21,6 +21,7 @@ import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { validateReleaseNoteContent } from "./release-notes-format.mjs";
 
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const RELEASE_NOTES_DIR = ".github/release-notes";
@@ -285,6 +286,13 @@ export function collectReleaseNotesProblems(version, root = repositoryRoot) {
 	for (const fragment of fragments) {
 		problems.push(...fragmentProblems(fragment));
 	}
+
+	// 内容层校验：允许小节之外的标题、小节外条目、占位记号判负；
+	// 风格类警告（超长/内部引用）不阻塞 --check，仅随校验结果输出。
+	const { problems: contentProblems, warnings: contentWarnings } = validateReleaseNoteContent(notes, {
+		file: path,
+	});
+	problems.push(...contentProblems);
 	if (fragments.length > 0) {
 		try {
 			const assembled = assembleReleaseNotes({ version, notes, fragments });
@@ -307,7 +315,7 @@ export function collectReleaseNotesProblems(version, root = repositoryRoot) {
 			problems.push(`${releaseNotesPath(other)} 的标题应为 "${RELEASE_NOTES_TITLE_PREFIX}${other}"，实际是 "${title}"`);
 		}
 	}
-	return problems;
+	return { problems, warnings: contentWarnings };
 }
 
 function main(argv) {
@@ -326,10 +334,11 @@ function main(argv) {
 		console.log(path);
 		return;
 	}
-	const problems = collectReleaseNotesProblems(version);
+	const { problems, warnings } = collectReleaseNotesProblems(version);
 	if (problems.length > 0) {
 		throw new Error([`发布说明状态不合法（v${version}）：`, ...problems.map((problem) => `- ${problem}`)].join("\n"));
 	}
+	for (const warning of warnings) console.warn(`[release-notes] ${warning}`);
 	console.log(`Release notes found for v${version}: ${path}`);
 }
 

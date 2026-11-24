@@ -191,6 +191,8 @@ Greenfield/Legacy 名称墓碑、固定文件数量、行数阈值及实施日�
 
 `check-project-indexes.mjs` 将计划索引和 Task 当前焦点表的状态与对应 frontmatter 对照；README 是导航副本，frontmatter 是状态事实源。`check-guards` 还运行 `bun run scripts/release/release-notes.mjs --check`，保证当前 Desktop manifest 版本对应的 Release Notes 文件存在；发布工作流会再次执行同一校验。
 
+`release-notes-format.mjs` 是 `--check` 调用的内容层校验：允许小节（新增/改进/修复/其他）之外的 `##`、小节外 `- ` 条目、占位记号和空小节判负；超长、内部引用、工程黑话只打 `[release-notes]` warning 不判负，存量说明清理后再评估收紧。
+
 ## Workspace 构建编排（Turborepo）
 
 根 `turbo.json` 将每个 workspace 的 `package.json#scripts.build` 组成任务图，`build.dependsOn = ["^build"]` 保证内部依赖先构建。包清单和依赖边只维护在 Bun workspace 与各包 manifest 中，不再维护根 shell 顺序、Desktop 分层或第二套通用哈希实现。
