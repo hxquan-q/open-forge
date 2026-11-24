@@ -1,5 +1,5 @@
 ---
-id: TASK-0479
+id: TASK-0494
 type: task
 status: done
 priority: P2
@@ -35,7 +35,7 @@ write_paths:
   - apps/desktop/src/preload/apis/session.test.ts
   - apps/desktop/src/renderer/shared/store/running-sessions-atoms.ts
   - project/plans/PLAN-0029-desktop-host-split-and-native-sidecars.md
-  - project/tasks/TASK-0479-session-global-event-push.md
+  - project/tasks/TASK-0494-session-global-event-push.md
 exclusive_paths: []
 depends_on: [TASK-0477]
 conflicts_with: []

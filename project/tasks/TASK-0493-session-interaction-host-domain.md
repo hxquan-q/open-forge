@@ -1,5 +1,5 @@
 ---
-id: TASK-0478
+id: TASK-0493
 type: task
 status: done
 priority: P2
@@ -31,7 +31,7 @@ write_paths:
   - apps/desktop/src/preload/apis/session.ts
   - apps/desktop/src/preload/host-transport.ts
   - project/plans/PLAN-0029-desktop-host-split-and-native-sidecars.md
-  - project/tasks/TASK-0478-session-interaction-host-domain.md
+  - project/tasks/TASK-0493-session-interaction-host-domain.md
 exclusive_paths: []
 depends_on: [TASK-0477]
 conflicts_with: []
