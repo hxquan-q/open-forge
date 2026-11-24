@@ -16,6 +16,8 @@ const labels = {
 	emptyHint: "Try a different keyword",
 	loading: "Searching sessions",
 	title: "Command Menu",
+	actionsLabel: "Actions",
+	newSession: "New session",
 	hintNavigate: "↑↓ Navigate",
 	hintSelect: "↵ Open",
 	hintClose: "esc Close",

@@ -1,10 +1,19 @@
+// Modified by The Open Forge contributors.
 import { AnimatePresence, motion } from "motion/react";
 import { useCallback, useEffect, useRef, type JSX, type RefObject } from "react";
 import { cn } from "@vetta-org/ui";
 import { ThemeSurface } from "../appearance/ThemeSurface";
+import { detectKbdPlatform, resolveKbdKeys } from "../shared/kbd-keys";
+import { VettaKbd } from "../shared/VettaKbd";
 import { CommandMenuRow } from "./CommandMenuRow";
 import type { CommandMenuGroupView, CommandMenuViewLabels } from "./command-menu-types";
 import "./command-menu.css";
+
+/** 悬停提示里的快捷键文字，例如 mac 上的「⌘N」、Windows 上的「Ctrl N」。 */
+function formatKbdTitle(keys: string): string {
+	const platform = detectKbdPlatform();
+	return resolveKbdKeys(keys, platform).join(platform === "mac" ? "" : " ");
+}
 
 /**
  * 全局 Command Menu 的纯展示层：无状态、无数据获取，键盘导航由宿主的快捷键
@@ -19,6 +28,12 @@ export interface CommandMenuViewProps {
 	readonly groups: readonly CommandMenuGroupView[];
 	readonly selectedId: string | null;
 	readonly labels: CommandMenuViewLabels;
+	/** 唤起 / 关闭面板的快捷键（例如 "mod+t"），显示在输入框右侧。 */
+	readonly toggleShortcut?: string;
+	/** 给了就在左下角显示「新会话」按钮，与右下角操作按钮组对称。 */
+	readonly onNewSession?: () => void;
+	/** 新建会话的生效快捷键，显示在按钮里。 */
+	readonly newSessionShortcut?: string;
 	/** 结果集因击键刚变化：抑制选中指示条的位移动画。 */
 	readonly suppressSelectionAnimation: boolean;
 	readonly inputRef?: RefObject<HTMLInputElement | null>;
@@ -34,6 +49,9 @@ export function CommandMenuView({
 	groups,
 	selectedId,
 	labels,
+	toggleShortcut,
+	onNewSession,
+	newSessionShortcut,
 	suppressSelectionAnimation,
 	inputRef,
 	onQueryChange,
@@ -111,6 +129,7 @@ export function CommandMenuView({
 									aria-hidden="true"
 									className="command-menu-input-underline pointer-events-none absolute inset-x-3.5 bottom-0 h-px bg-border/70"
 								/>
+								{toggleShortcut ? <VettaKbd keys={toggleShortcut} size="sm" variant="flat" /> : null}
 							</div>
 
 							<div
@@ -170,9 +189,24 @@ export function CommandMenuView({
 									"text-[11px] text-muted-foreground/80",
 								)}
 							>
-								<span>{labels.hintNavigate}</span>
-								<span>{labels.hintSelect}</span>
-								<span className="ml-auto">{labels.hintClose}</span>
+								{onNewSession ? (
+									<button
+										type="button"
+										onClick={onNewSession}
+										title={newSessionShortcut ? formatKbdTitle(newSessionShortcut) : undefined}
+										className="flex shrink-0 items-center gap-1.5 rounded-md text-foreground/80 transition-colors hover:text-foreground"
+									>
+										<span aria-hidden="true" className="icon-[solar--add-circle-linear] size-3.5" />
+										<span>{labels.newSession}</span>
+										{newSessionShortcut ? (
+											<VettaKbd keys={newSessionShortcut} size="xs" variant="flat" />
+										) : null}
+									</button>
+								) : null}
+								<span className="ml-auto flex items-center gap-3" aria-label={labels.actionsLabel}>
+									<span>{labels.hintSelect}</span>
+									<span>{labels.hintClose}</span>
+								</span>
 							</div>
 						</div>
 					</motion.div>

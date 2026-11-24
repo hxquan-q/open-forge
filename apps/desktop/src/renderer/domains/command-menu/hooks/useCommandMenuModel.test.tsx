@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 // @vitest-environment jsdom
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { getDefaultStore } from "jotai";
@@ -16,11 +17,17 @@ const sessionSearchState = vi.hoisted(() => ({
 const scopeBindings = vi.hoisted(() => ({ current: [] as { key: string; run: () => void }[] }));
 const projectSessions = vi.hoisted(() => ({ current: [] as unknown[] }));
 const prefetchCommandMenuAction = vi.hoisted(() => vi.fn());
+const sessionSearchCalls = vi.hoisted(
+	() => [] as { open: boolean; request: { query: string; activePaths?: readonly string[] } }[],
+);
 
 vi.mock("@tanstack/react-router", () => ({ useNavigate: () => navigate }));
 vi.mock("../../../root-layout/nav-route-prefetch", () => ({ prefetchCommandMenuAction }));
 vi.mock("../../project/hooks/useSessionSearch", () => ({
-	useSessionSearch: () => sessionSearchState,
+	useSessionSearch: (open: boolean, request: { query: string; activePaths?: readonly string[] }) => {
+		sessionSearchCalls.push({ open, request });
+		return sessionSearchState;
+	},
 }));
 vi.mock("../../plugins/runtime/plugin-i18n", () => ({
 	usePluginTextResolver: () => (_pluginId: string, raw: string) => raw,
@@ -35,7 +42,11 @@ vi.mock("react-i18next", () => ({
 	useTranslation: () => ({ t: (key: string) => key }),
 }));
 
-import { commandMenuOpenAtom, projectsAtom } from "@shared/store/atoms";
+import { commandMenuOpenAtom, defaultConversationCwdAtom, projectsAtom, sessionsMapAtom } from "@shared/store/atoms";
+import { attentionSessionPathsAtom } from "@shared/store/attention-sessions-atoms";
+import { pendingInteractionPathsAtom } from "@shared/store/pending-interactions-atoms";
+import { recentSessionVisitsAtom } from "@shared/store/recent-sessions-atoms";
+import { runningSessionPathsAtom } from "@shared/store/running-sessions-atoms";
 import { useCommandMenuModel } from "./useCommandMenuModel";
 
 function sessionResult(path: string, title: string): DesktopSessionSearchResult {
@@ -74,6 +85,12 @@ beforeEach(() => {
 	scopeBindings.current = [];
 	sessionSearchState.results = [];
 	sessionSearchState.loading = false;
+	sessionSearchCalls.length = 0;
+	store.set(runningSessionPathsAtom, new Set<string>());
+	store.set(pendingInteractionPathsAtom, new Map<string, number>());
+	store.set(attentionSessionPathsAtom, new Set<string>());
+	store.set(recentSessionVisitsAtom, []);
+	store.set(sessionsMapAtom, new Map());
 	projectSessions.current = [];
 	Object.defineProperty(window, "vetta", {
 		configurable: true,
@@ -249,4 +266,131 @@ it("keeps an unavailable session out of keyboard navigation", async () => {
 	// 禁用行不参与导航，回车不应打开它。
 	act(() => result.current.onActivateItem("session:/w/locked.jsonl"));
 	expect(navigate).not.toHaveBeenCalled();
+});
+
+it("lists running and waiting sessions on top before anything is typed", () => {
+	store.set(runningSessionPathsAtom, new Set(["/w/run.jsonl", "/w/both.jsonl"]));
+	store.set(pendingInteractionPathsAtom, new Map([["/w/both.jsonl", 1]]));
+	sessionSearchState.results = [sessionResult("/w/run.jsonl", "Run"), sessionResult("/w/both.jsonl", "Both")];
+	const { result } = render();
+
+	const lastCall = sessionSearchCalls.at(-1);
+	expect(lastCall?.open).toBe(true);
+	expect(lastCall?.request).toMatchObject({ query: "", activePaths: ["/w/both.jsonl", "/w/run.jsonl"] });
+	expect(result.current.groups[0].key).toBe("activeSessions");
+	expect(result.current.groups[0].items.map((item) => [item.title, item.status, item.badge])).toEqual([
+		["Both", "waiting", "Proj"],
+		["Run", "running", "Proj"],
+	]);
+});
+
+it("does not start a session search for an empty query when nothing is in progress", () => {
+	render();
+	expect(sessionSearchCalls.at(-1)?.open).toBe(false);
+});
+
+it("keeps a session that just finished on top until it is opened", () => {
+	store.set(attentionSessionPathsAtom, new Set(["/w/done.jsonl"]));
+	sessionSearchState.results = [sessionResult("/w/done.jsonl", "Done")];
+	const { result } = render();
+
+	expect(sessionSearchCalls.at(-1)?.request).toMatchObject({ query: "", activePaths: ["/w/done.jsonl"] });
+	expect(result.current.groups[0].items.map((item) => [item.title, item.status])).toEqual([["Done", "unread"]]);
+});
+
+it("starts a new conversation from the panel and closes it", () => {
+	store.set(defaultConversationCwdAtom, "/w/chat");
+	const { result } = render();
+
+	act(() => result.current.onNewSession());
+	expect(store.get(commandMenuOpenAtom)).toBe(false);
+	expect(navigate).toHaveBeenLastCalledWith({ to: "/new-session/$cwd", params: { cwd: encodeURIComponent("/w/chat") } });
+});
+
+it("starts a new conversation when the new-session shortcut is pressed inside the panel", () => {
+	store.set(defaultConversationCwdAtom, "/w/chat");
+	render();
+
+	// 面板独占键盘；新建会话键必须由面板自己接住，否则按了没反应。默认绑定即 mod+n。
+	press("mod+n");
+	expect(store.get(commandMenuOpenAtom)).toBe(false);
+	expect(navigate).toHaveBeenLastCalledWith({ to: "/new-session/$cwd", params: { cwd: encodeURIComponent("/w/chat") } });
+});
+
+it("slides the selection only for arrow keys, not when the pointer hovers a row", () => {
+	store.set(projectsAtom, [
+		{ cwd: "/w/a", name: "A", sessionCount: 0, type: "normal" },
+		{ cwd: "/w/b", name: "B", sessionCount: 0, type: "normal" },
+	]);
+	const { result } = render();
+
+	press("arrowdown");
+	expect(result.current.suppressSelectionAnimation).toBe(false);
+	act(() => result.current.onHoverItem("project:/w/a"));
+	expect(result.current.selectedId).toBe("project:/w/a");
+	expect(result.current.suppressSelectionAnimation).toBe(true);
+});
+
+it("lists recently opened sessions and does not search again when one starts running", () => {
+	store.set(recentSessionVisitsAtom, [{ path: "/w/done.jsonl", openedAt: 2 }]);
+	sessionSearchState.results = [sessionResult("/w/done.jsonl", "Done")];
+	const { result, rerender } = render();
+	expect(result.current.groups[0]).toMatchObject({ key: "recentSessions" });
+	expect(result.current.groups[0].items.map((item) => item.title)).toEqual(["Done"]);
+
+	// 元数据已缓存：状态变化只换分组与状态，不再为它发起检索（因此不会闪骨架）。
+	const requestBefore = sessionSearchCalls.at(-1)?.request.activePaths;
+	sessionSearchState.results = [];
+	act(() => store.set(runningSessionPathsAtom, new Set(["/w/done.jsonl"])));
+	rerender();
+	// 请求参数保持同一个引用即没有重开检索。
+	expect(sessionSearchCalls.at(-1)?.request.activePaths).toBe(requestBefore);
+
+	// 关掉再打开：缓存已有它，不再为它发起检索。
+	act(() => store.set(commandMenuOpenAtom, false));
+	act(() => store.set(commandMenuOpenAtom, true));
+	rerender();
+	expect(sessionSearchCalls.at(-1)?.open).toBe(false);
+	expect(result.current.groups[0].key).toBe("activeSessions");
+	expect(result.current.groups[0].items.map((item) => [item.title, item.status])).toEqual([["Done", "running"]]);
+});
+
+it("shows watched sessions straight from the sidebar without searching", () => {
+	store.set(defaultConversationCwdAtom, "/chat");
+	store.set(
+		sessionsMapAtom,
+		new Map([["/chat", [{ id: "a", path: "/s/a.jsonl", cwd: "/chat/a", name: "Story", firstMessage: "", modifiedAt: 1 }]]]),
+	);
+	store.set(recentSessionVisitsAtom, [{ path: "/s/a.jsonl", openedAt: 1 }]);
+	const { result } = render();
+
+	expect(sessionSearchCalls.at(-1)?.open).toBe(false);
+	expect(result.current.groups[0]).toMatchObject({ key: "recentSessions" });
+	expect(result.current.groups[0].items.map((item) => item.title)).toEqual(["Story"]);
+});
+
+it("does not search again for a session that a finished search could not find", () => {
+	store.set(recentSessionVisitsAtom, [{ path: "/s/gone.jsonl", openedAt: 1 }]);
+	sessionSearchState.loading = true;
+	const { rerender } = render();
+	expect(sessionSearchCalls.at(-1)).toMatchObject({ open: true, request: { activePaths: ["/s/gone.jsonl"] } });
+
+	sessionSearchState.loading = false;
+	rerender();
+	act(() => store.set(commandMenuOpenAtom, false));
+	act(() => store.set(commandMenuOpenAtom, true));
+	rerender();
+	expect(sessionSearchCalls.at(-1)?.open).toBe(false);
+});
+
+it("does no catalog work while closed but keeps the last results for the closing fade", () => {
+	store.set(projectsAtom, [{ cwd: "/w/a", name: "A", sessionCount: 0, type: "normal" }]);
+	const { result } = render();
+	expect(result.current.groups.map((group) => group.key)).toEqual(["projects", "settings"]);
+
+	act(() => store.set(commandMenuOpenAtom, false));
+	expect(result.current.groups.map((group) => group.key)).toEqual(["projects", "settings"]);
+	// 关着时状态变化不触发会话取数。
+	act(() => store.set(runningSessionPathsAtom, new Set(["/w/run.jsonl"])));
+	expect(sessionSearchCalls.at(-1)?.open).toBe(false);
 });

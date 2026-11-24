@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { SessionExecutionMode } from "@shared/store/atoms";
 import { CommandMenuView } from "@vetta-org/theme-ui/overlays";
 import { useEffect, useRef, type JSX } from "react";
@@ -34,6 +35,9 @@ export function CommandMenu({ onOpenSession }: CommandMenuProps): JSX.Element {
 			groups={model.groups}
 			selectedId={model.selectedId}
 			labels={model.labels}
+			toggleShortcut={model.toggleShortcut}
+			onNewSession={model.onNewSession}
+			newSessionShortcut={model.newSessionShortcut}
 			suppressSelectionAnimation={model.suppressSelectionAnimation}
 			inputRef={inputRef}
 			onQueryChange={model.onQueryChange}

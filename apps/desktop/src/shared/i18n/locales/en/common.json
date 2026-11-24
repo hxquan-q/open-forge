@@ -1058,6 +1058,8 @@
 		"emptyHint": "Try a different keyword",
 		"loading": "Searching sessions",
 		"title": "Command menu",
+		"actionsLabel": "Actions",
+		"newSession": "New session",
 		"hintNavigate": "↑↓ Navigate",
 		"hintSelect": "↵ Open",
 		"hintClose": "esc Close",
@@ -1066,6 +1068,8 @@
 		"searchMarketplace": "Search the ability marketplace",
 		"trigger": "Search",
 		"groups": {
+			"activeSessions": "In progress",
+			"recentSessions": "Recently opened",
 			"projects": "Projects",
 			"sessions": "Sessions",
 			"abilities": "Abilities",
@@ -1082,6 +1086,11 @@
 			"claw": "Claw",
 			"project": "Project",
 			"batch": "Batch"
+		},
+		"sessionStatus": {
+			"running": "Running",
+			"waiting": "Waiting for you",
+			"unread": "Just finished"
 		}
 	}
 }

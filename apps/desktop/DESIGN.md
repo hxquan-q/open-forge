@@ -409,6 +409,8 @@ Size：`default`(h-8) / `xs`(h-6) / `sm`(h-7) / `lg`(h-9) / `icon`(size-8) / `ic
 > **已知例外**：`ButtonGroup`（`@vetta-org/ui`）与 `VettaKbd`（`@vetta-org/theme-ui/shared`）是从上游 open-vetta 移植的原语，**沿用上游视觉语言**，与本地 D01/D02/D03/D05/D07 结构性冲突：任意阴影刻浮雕、字面色 `bg-red-500` 做角标、`rounded-[4px~10px]` 调键帽/药丸曲率、原语层直接用 `<button>`（组件本身就是按钮的封装，D03 在此是误报）、`text-[9px]` 做角标数字。已在 `scripts/quality/baselines/design-exceptions.json` 逐条登记；改写回归本地设计时删除对应条目，超出计数的新增 token 仍判负。
 >
 > 同口径适用后续移植的原语：`Stepper`（`packages/ui/src/stepper.tsx`，D03 `<button>` 为 − / + 两端按钮）、`StepSlider`、`SessionTopItem`、`ColorSwatchPicker`——均登记在同一基线文件，D03 在原语层一律按「组件即按钮封装」处理。其中 `ColorSwatchPicker` 的 D01/D02 计数偏高：色板本身就是字面 hex/rgb 的载体（预设调色板 `#ff375f/#ff9f0a/...`、滴管取色指示 `rgb(0/255)`、轨道阴影 `shadow-[inset_0_0_0_1px_rgb(...)]` 等），改写回归本地设计时应先评估「颜色数据 vs 视觉 token」的边界——色板内字面色属数据层，不应按 D01 视觉 token 计数。`SessionTopItem` 未新增登记（无字面 token，全部走 ButtonGroup/DropdownMenu 已豁免的原语）。
+>
+> Command Menu 启动器面板的移植原语同口径登记：`CommandMenuRow` 的会话归属 chip 用上游 `rounded-[5px]`（D05，跟随上游 badge 曲率而非本地圆角表），`CommandMenuView` 的「新会话」入口在原语层用 `<button>`（D03，与上一条同理为按钮封装自身）。
 
 ### TabBar
 
