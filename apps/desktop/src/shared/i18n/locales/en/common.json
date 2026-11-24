@@ -1060,7 +1060,6 @@
 		"title": "Command menu",
 		"actionsLabel": "Actions",
 		"newSession": "New session",
-		"hintNavigate": "↑↓ Navigate",
 		"hintSelect": "↵ Open",
 		"hintClose": "esc Close",
 		"overflow": "{{count}} more",

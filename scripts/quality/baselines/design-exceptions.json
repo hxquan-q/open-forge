@@ -22,10 +22,15 @@
 			"D03": 2
 		},
 		"packages/theme-ui/src/overlays/CommandMenuRow.tsx": {
+			"D02": 1,
 			"D05": 1
 		},
 		"packages/theme-ui/src/overlays/CommandMenuView.tsx": {
-			"D03": 1
+			"D02": 1
+		},
+		"packages/theme-ui/src/overlays/SplashParts.tsx": {
+			"D03": 1,
+			"D07": 1
 		}
 	}
 }

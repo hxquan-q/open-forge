@@ -237,7 +237,7 @@
     "apps/desktop/src/renderer/domains/bottom-panel/components/BottomPanelHost.launch-terminal.test.tsx": 1,
     "apps/desktop/src/renderer/domains/bottom-panel/registry/resolve-close-decision.test.ts": 1,
     "apps/desktop/src/renderer/domains/bottom-panel/terminal/TerminalSurface.host.test.tsx": 12,
-    "apps/desktop/src/renderer/domains/command-menu/components/CommandMenuView.test.tsx": 6,
+    "apps/desktop/src/renderer/domains/command-menu/components/CommandMenuView.test.tsx": 7,
     "apps/desktop/src/renderer/domains/command-menu/hooks/useCommandMenuModel.test.tsx": 8,
     "apps/desktop/src/renderer/domains/computer-use/ComputerUsePage.test.tsx": 3,
     "apps/desktop/src/renderer/domains/conversation/components/ChatView.composer.test.tsx": 3,

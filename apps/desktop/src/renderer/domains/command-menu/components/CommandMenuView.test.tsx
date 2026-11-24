@@ -18,7 +18,6 @@ const labels = {
 	title: "Command Menu",
 	actionsLabel: "Actions",
 	newSession: "New session",
-	hintNavigate: "↑↓ Navigate",
 	hintSelect: "↵ Open",
 	hintClose: "esc Close",
 };
@@ -78,7 +77,9 @@ describe("CommandMenuView", () => {
 		];
 		render(<CommandMenuView {...props({ groups })} />);
 
-		const rendered = screen.getAllByRole("group").map((node) => node.getAttribute("aria-label"));
+		const rendered = within(screen.getByRole("listbox"))
+			.getAllByRole("group")
+			.map((node) => node.getAttribute("aria-label"));
 		expect(rendered).toEqual(["Projects", "Sessions", "Settings"]);
 	});
 
@@ -143,7 +144,7 @@ describe("CommandMenuView", () => {
 				],
 			}),
 		];
-		const { container } = render(<CommandMenuView {...props({ groups })} />);
+		const { baseElement: container } = render(<CommandMenuView {...props({ groups })} />);
 
 		const hits = Array.from(container.querySelectorAll(".text-primary")).map((node) => node.textContent);
 		expect(hits).toContain("vetta");
@@ -163,7 +164,7 @@ describe("CommandMenuView", () => {
 				],
 			}),
 		];
-		const { container } = render(<CommandMenuView {...props({ groups })} />);
+		const { baseElement: container } = render(<CommandMenuView {...props({ groups })} />);
 
 		const [title, subtitle] = Array.from(container.querySelectorAll("[role='option'] > span > span"));
 		// 标题不收缩、只受上限约束；副标题吃掉剩余宽度并自己截断。
@@ -204,5 +205,41 @@ describe("CommandMenuView", () => {
 		await userEvent.type(screen.getByRole("combobox"), "g");
 		expect(onQueryChange).toHaveBeenCalledWith("g");
 		expect(screen.getByRole("combobox").getAttribute("value")).toBe("");
+	});
+
+	it("shows the toggle shortcut and keycap hints, and marks in-progress sessions", () => {
+		const groups = [
+			group({
+				key: "sessions",
+				label: "Sessions",
+				items: [
+					item({ id: "s1", title: "running", status: "running" }),
+					item({ id: "s2", title: "unread", status: "unread" }),
+				],
+			}),
+		];
+		const { baseElement: container } = render(
+			<CommandMenuView {...props({ groups, toggleShortcut: "mod+t" })} />,
+		);
+
+		// 头部输入框右侧展示唤起快捷键（kbd 文本由平台决定），列表行尾展示「打开/关闭」键帽。
+		const dialog = screen.getByRole("dialog");
+		expect(within(dialog).getByText("↵ Open")).toBeTruthy();
+		expect(within(dialog).getByText("esc Close")).toBeTruthy();
+		// 未读会话行带 data-session-unread 标记，供 Dock 注意力角标之外的面板内提示。
+		expect(container.querySelector("[data-session-unread='true']")).toBeTruthy();
+	});
+
+	it("starts a new session from the floating bottom-left button", async () => {
+		const onNewSession = vi.fn();
+		render(
+			<CommandMenuView
+				{...props({ groups: [group()], onNewSession, newSessionShortcut: "mod+n" })}
+			/>,
+		);
+
+		// 该按钮是 presentational 边界：点击 → 回调是它唯一的可观察契约。
+		await userEvent.click(screen.getByRole("button", { name: "New session" }));
+		expect(onNewSession).toHaveBeenCalledTimes(1);
 	});
 });

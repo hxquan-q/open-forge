@@ -1060,7 +1060,6 @@
 		"title": "命令面板",
 		"actionsLabel": "操作",
 		"newSession": "新会话",
-		"hintNavigate": "↑↓ 选择",
 		"hintSelect": "↵ 打开",
 		"hintClose": "esc 关闭",
 		"overflow": "还有 {{count}} 条",
