@@ -83,4 +83,5 @@ updated: 2026-11-25
 
 - P4a 共享布局：完成（`10410561b` 新增、`5f13c033c` 修正）。
 - P4b 自动化分屏：完成（`12d79c636`；含 `automation-status.ts`、`useAutomationDetailModel`/`AutomationDetailPane`、删除 `HistoryDrawer*`/`TaskFormDialog*`/`useTaskFormModel*`，D03 例外已登记 DESIGN.md 与 design-exceptions.json）。
-- P4c 记忆、P4d WeKnora：待做。
+- P4c 记忆：完成（`9d4bb3144`；`useMemoryPageModel` 聚合纠正/忘记面板态，`MemoryPageView` 走 SplitDetailLayout + SegmentedControl；顺手修掉 `useMemoryListModel.refresh` 依赖 `items` 造成的无限刷新循环）。
+- P4d WeKnora：待做。
