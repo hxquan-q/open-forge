@@ -4,15 +4,21 @@
 import { i18n, initI18n } from "@shared/i18n";
 import { render } from "@testing-library/react";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { WeKnoraPageView, type WeKnoraPageViewProps } from "./components/WeKnoraPageView";
+import { WeKnoraPageView } from "./components/WeKnoraPageView";
+import type { WeKnoraPageActions, WeKnoraPageViewModel } from "./hooks/useWeKnoraViewModel";
 
 /**
  * 「删除智能客服页顶部 48px 空白带」(weknora-top-whitespace-fix AC-1) 的**独立**结构用例
  * (③ 测试相位自建，不复用实现者 `WeKnoraPageView.test.tsx` 的断言)。
  *
  * 角度:实现者只断言了 `root.querySelector(".drag-region")` 为 null。本文件补的是**结构顺序**角度——
- * 「空白带没了」不仅意味着没有 `.drag-region` 节点，还意味着页头 `header` 必须是根节点的**第一个直接
- * 子元素**(此前它前面正好是那条 48px 空白带)，且没有用 `h-12`(48px)的直接子元素把等效空白带又加回来。
+ * 「空白带没了」不仅意味着没有 `.drag-region` 节点，还意味着根节点第一个直接子元素之前不存在
+ * 任何占位兄弟（此前它前面正好是那条 48px 空白带），且没有用 `h-12`(48px)的直接子元素把等效
+ * 空白带又加回来。
+ *
+ * TASK-0506 结构调整说明：页头 `header` 已从根的直接子元素移进内容行的详情列内部（分屏布局的
+ * 右侧列），因此「header 是根的第一个直接子元素」改述为等价事实——根的第一个直接子元素是内容行
+ * `div`（而非 `header`/空白带），页头是详情列的第一个子元素。
  *
  * jsdom 证不了真实像素高度与拖拽手感，见 05-tests.md 的残余风险区。
  */
@@ -23,13 +29,14 @@ vi.mock("@shared/components/RendererMarkdownContent", () => ({
 
 const noop = (): void => undefined;
 
-/** 纯展示视图的最小可用 props：业务状态全空、动作全为 no-op，只验证页面结构。 */
-function props(overrides: Partial<WeKnoraPageViewProps> = {}): WeKnoraPageViewProps {
+/** 纯展示视图的最小可用 viewModel：业务状态全空，只验证页面结构。 */
+function viewModel(overrides: Partial<WeKnoraPageViewModel> = {}): WeKnoraPageViewModel {
 	return {
 		agents: [],
 		agentsStatus: "ready",
 		baseUrl: "http://host:8083",
 		batchDeleting: false,
+		canAsk: false,
 		configured: true,
 		currentSessionId: null,
 		deleteError: null,
@@ -44,26 +51,39 @@ function props(overrides: Partial<WeKnoraPageViewProps> = {}): WeKnoraPageViewPr
 		selectedAgentId: null,
 		sessions: [],
 		sessionsStatus: "ready",
+		settingsOpen: false,
+		sidebarCollapsed: false,
+		sidebarWidth: 272,
 		streamingSessionIds: new Set<string>(),
-		onCancel: noop,
-		onDeleteSession: async () => true,
-		onDeleteSessions: async () => ({ succeeded: [], failed: [] }),
-		onExportSession: async () => undefined,
-		onExportSessions: async () => ({ succeeded: [], failed: [] }),
-		onNewConversation: noop,
-		onOpenSession: noop,
-		onReloadAgents: noop,
-		onReloadSessions: noop,
-		onSaveSetup: noop,
-		onSelectAgent: noop,
-		onSend: noop,
 		...overrides,
 	};
 }
 
+/** 动作全为 no-op。 */
+function actions(): WeKnoraPageActions {
+	return {
+		cancel: noop,
+		deleteSession: async () => true,
+		deleteSessions: async () => ({ succeeded: [], failed: [] }),
+		exportSession: async () => undefined,
+		exportSessions: async () => ({ succeeded: [], failed: [] }),
+		newConversation: noop,
+		openSession: async () => undefined,
+		reloadAgents: noop,
+		reloadSessions: noop,
+		resizeSidebar: noop,
+		saveSetup: async () => undefined,
+		selectAgent: noop,
+		send: noop,
+		toggleSettings: noop,
+		toggleSidebar: noop,
+	};
+}
+
 /** 页面根节点(实现里是 `WeKnoraPageView` 最外层 div)。 */
-function renderRoot(overrides: Partial<WeKnoraPageViewProps> = {}): HTMLElement {
-	return render(<WeKnoraPageView {...props(overrides)} />).container.firstElementChild as HTMLElement;
+function renderRoot(overrides: Partial<WeKnoraPageViewModel> = {}): HTMLElement {
+	return render(<WeKnoraPageView viewModel={viewModel(overrides)} actions={actions()} />).container
+		.firstElementChild as HTMLElement;
 }
 
 beforeAll(() => {
@@ -85,10 +105,14 @@ describe("WeKnoraPageView · 顶部 48px 空白带删除（AC-1）", () => {
 		const root = renderRoot();
 		const header = root.querySelector("header");
 		expect(header).toBeTruthy();
-		expect(root.firstElementChild).toBe(header);
-		expect(root.firstElementChild?.tagName).toBe("HEADER");
-		// 页头之前不存在任何兄弟节点——旧的空白带正是 header 的前一个兄弟。
-		expect(header?.previousElementSibling).toBeNull();
+		// TASK-0506：页头移进内容行的详情列内部。等价事实——根的第一个直接子元素是
+		// 内容行 `div`（其前不存在任何兄弟节点，旧的空白带正是这个位置），
+		// 页头是详情列（内容行末列）的第一个子元素。
+		const contentRow = root.firstElementChild as HTMLElement;
+		expect(contentRow.tagName).toBe("DIV");
+		expect(contentRow.previousElementSibling).toBeNull();
+		const detailColumn = contentRow.lastElementChild as HTMLElement;
+		expect(detailColumn.firstElementChild).toBe(header);
 	});
 
 	it("AC-1：根节点的直接子元素里没有 `h-12`（48px）——等效空白带不得以任何名字加回来", () => {

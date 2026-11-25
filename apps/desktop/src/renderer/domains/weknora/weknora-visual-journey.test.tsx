@@ -44,8 +44,6 @@ vi.mock("@shared/components/ui/select", () => ({
 type WeKnoraApi = DesktopApi["weknora"];
 
 const CONFIGURED = { baseUrl: "http://host:8083", defaultAgentId: "", pageSize: 50, hasApiKey: true };
-/** 退出动画（实现里 SIDEBAR_ANIMATION_MS = 200）加余量，等它播完再断言终态。 */
-const ANIMATION_SETTLE_MS = 260;
 const DOTS_SELECTOR = ".weknora-thinking-dot-1, .weknora-thinking-dot-2, .weknora-thinking-dot-3";
 
 function agent(id: string): WeKnoraAgent {
@@ -114,12 +112,6 @@ async function ask(text: string): Promise<void> {
 	});
 }
 
-async function settleAnimation(): Promise<void> {
-	await act(async () => {
-		await new Promise((resolve) => setTimeout(resolve, ANIMATION_SETTLE_MS));
-	});
-}
-
 /** 内容行（页头与拖拽区之外的直接子元素）：收起终态「不占宽」就断言在它的直接子元素数上。 */
 function contentRow(container: HTMLElement): HTMLElement {
 	const root = container.firstElementChild as HTMLElement;
@@ -163,17 +155,20 @@ describe("智能客服 · 视觉打磨用户流程（AC-4/5/6/7/8/10/11）", () 
 		expect(container.querySelectorAll(".weknora-stream-char")).toHaveLength(1);
 		expect(screen.getByText("甲")).toBeTruthy();
 
-		// ③ 生成中收起侧栏：先进入过渡（槽仍在 DOM，但对辅助技术已收起）。
+		// ③ 生成中收起侧栏（TASK-0506 抽屉式）：占位宽度归零、面板滑出且对辅助技术已收起；
+		//    子树留在树上不卸载（纯 CSS 过渡，无卸载等待）。
 		const row = contentRow(container);
 		expect(row.children).toHaveLength(2);
 		await userEvent.setup().click(toggleButton());
-		expect(row.children).toHaveLength(2); // 过渡期槽仍在（证明是动画而非硬切）
-		expect(screen.queryByRole("navigation", { name: "历史会话" })).toBeNull();
+		const slot = screen.getByTestId("weknora-sidebar-slot");
+		expect(slot.style.width).toBe("0px");
+		expect(slot.hasAttribute("inert")).toBe(true);
+		expect(slot.getAttribute("aria-hidden")).toBe("true");
 
-		// ④ 动画结束：整栏从 DOM 卸载，不占宽（内容行只剩消息列一个直接子元素）。
-		await settleAnimation();
-		expect(row.children).toHaveLength(1);
-		expect(screen.queryByRole("navigation", { name: "历史会话", hidden: true })).toBeNull();
+		// ④ 终态：占位不占宽（宽度 0），面板滑出；导航对辅助技术不可见（hidden 查询仍能在 DOM 找到
+		//    留存的子树，但 inert/aria-hidden 保证它不被当成可用界面）。
+		expect(row.children).toHaveLength(2);
+		expect(screen.queryByRole("navigation", { name: "历史会话" })).toBeNull();
 
 		// ⑤ 收起侧栏不影响生成：继续流式追加。
 		act(() => harness.emit({ type: "answer.delta", requestId: "r1", text: "乙丙" }));
