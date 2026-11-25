@@ -10,3 +10,5 @@ export type { SidebarDockProps } from "./SidebarDock";
 export { SIDEBAR_DOCK_ANIMATION_MS, SidebarDock } from "./SidebarDock";
 export type { SidebarOverlayProps } from "./SidebarOverlay";
 export { SidebarOverlay } from "./SidebarOverlay";
+export type { SplitDetailLayoutProps, SplitPaneState } from "./SplitDetailLayout";
+export { SplitDetailLayout } from "./SplitDetailLayout";
