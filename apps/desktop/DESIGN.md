@@ -413,6 +413,8 @@ Size：`default`(h-8) / `xs`(h-6) / `sm`(h-7) / `lg`(h-9) / `icon`(size-8) / `ic
 > Command Menu 启动器面板的移植原语同口径登记：`CommandMenuRow` 的会话归属 chip 用上游 `rounded-[5px]`（D05，跟随上游 badge 曲率而非本地圆角表）。P3b 玻璃外壳移植后，`CommandMenuRow`/`CommandMenuView`/`SplashParts` 的选中态玻璃底（`bg-foreground/[0.06]` + `dark:shadow-[inset_0_1px_0_…]`）与浮动 `ButtonGroup` 的浅色玻璃叠层都属上游视觉语言（D02 任意阴影），`SplashParts` 的返回键在原语层用 `<button>`（D03，按钮封装自身）、标题用 `text-[17px]`（D07，跟随上游面板标题阶梯而非本地字号表）——均登记在同一基线文件，改写回归本地设计时删除对应条目。
 >
 > 自动化页分屏布局的移植原语同口径登记：`TaskListView` 的列表行与 `AutomationPageView` 的推荐模板卡片在原语层用 `<button>`（D03，整行/整卡即一个语义化点击目标，替换为 `Button` 会引入按钮样式并破坏上游的整行 hover/选中态几何）——均登记在同一基线文件，改写回归本地设计时删除对应条目。
+>
+> 顶栏按钮组的移植原语同口径登记：`HeaderActionBarView` 与 `HeaderActionOverflowMenu`（`@vetta-org/theme-ui/chat`）沿用上游视觉语言——字面色 `bg-red-500`/`bg-sky-500` 及配对 `text-red-500`/`text-sky-500` 做角标与状态点（D01）、拖拽占位 probe 用 `rgba(128,128,128,0.35)` 中性灰（D01）、原语层直接用 `<button>`（D03，按钮封装自身）、收纳托盘面板用上游 `rounded-[18px]` 曲率（D05）——均登记在同一基线文件，改写回归本地设计时删除对应条目，超出计数的新增 token 仍判负。
 
 ### TabBar
 

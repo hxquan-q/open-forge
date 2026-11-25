@@ -37,6 +37,14 @@
 		},
 		"packages/theme-ui/src/scheduler/AutomationPageView.tsx": {
 			"D03": 1
+		},
+		"packages/theme-ui/src/chat/HeaderActionBarView.tsx": {
+			"D01": 8,
+			"D03": 4,
+			"D05": 1
+		},
+		"packages/theme-ui/src/chat/HeaderActionOverflowMenu.tsx": {
+			"D01": 1
 		}
 	}
 }

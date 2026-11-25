@@ -127,16 +127,32 @@ export default defineConfig(({ mode }) => {
 		root: "src/renderer",
 		base: "./",
 		resolve: {
-			alias: {
-				"@shared": path.resolve(__dirname, "./src/renderer/shared"),
-				"@domains": path.resolve(__dirname, "./src/renderer/domains"),
-				"@cloud": path.resolve(__dirname, "./src/renderer/cloud"),
-				"@vetta-org/theme-sdk": path.resolve(__dirname, "../../packages/theme-sdk/src"),
-				"@vetta-org/theme-ui": path.resolve(__dirname, "../../packages/theme-ui/src"),
-				"@vetta-org/ui": path.resolve(__dirname, "../../packages/ui/src/index.ts"),
-				"@vetta/remote-desktop": path.resolve(__dirname, "../../packages/remote-desktop/src/index.ts"),
-				"@": path.resolve(__dirname, "./src"),
-			},
+			// 字符串 alias 是前缀替换：`@vetta-org/ui` 直接指向 index.ts 时，
+			// 子路径 `@vetta-org/ui/utils` 会被拼成 `index.ts/utils` 而解析失败。
+			// 因此子路径单独映射到目录，再回落到包入口。
+			alias: [
+				{ find: "@shared", replacement: path.resolve(__dirname, "./src/renderer/shared") },
+				{ find: "@domains", replacement: path.resolve(__dirname, "./src/renderer/domains") },
+				{ find: "@cloud", replacement: path.resolve(__dirname, "./src/renderer/cloud") },
+				{
+					find: "@vetta-org/theme-sdk",
+					replacement: path.resolve(__dirname, "../../packages/theme-sdk/src"),
+				},
+				{
+					find: "@vetta-org/theme-ui",
+					replacement: path.resolve(__dirname, "../../packages/theme-ui/src"),
+				},
+				{
+					find: /^@vetta-org\/ui\/(.+)$/,
+					replacement: `${path.resolve(__dirname, "../../packages/ui/src")}/$1`,
+				},
+				{ find: /^@vetta-org\/ui$/, replacement: path.resolve(__dirname, "../../packages/ui/src/index.ts") },
+				{
+					find: "@vetta/remote-desktop",
+					replacement: path.resolve(__dirname, "../../packages/remote-desktop/src/index.ts"),
+				},
+				{ find: "@", replacement: path.resolve(__dirname, "./src") },
+			],
 		},
 		worker: {
 			format: "es",
