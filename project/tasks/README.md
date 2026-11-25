@@ -30,6 +30,9 @@ rg -n '^status: (draft|ready|in_progress|blocked|verifying)$' project/tasks -g '
 
 | Task ID | 状态 | Plan | 任务（详情见原记录） |
 |---|---|---|---|
+| `TASK-0508` | `ready` | PLAN-0032 | [Work 右栏按容器宽度切换布局 + 窄屏抽屉入口 + CollapsePanel 分节](TASK-0508-work-right-panel-layout.md)：PLAN-0032 P5b；并行 worktree，仅 `WorkWorkspacePanel.tsx` 独占，待派工。 |
+| `TASK-0507` | `ready` | PLAN-0032 | [Allstar 页头「打开项目/新建会话」迁入 ButtonGroup](TASK-0507-allstar-header-button-group.md)：PLAN-0032 P5a；并行 worktree，仅 `AllstarDevHomePageView.tsx` 独占，待派工。 |
+| `TASK-0506` | `ready` | PLAN-0032 | [WeKnora 接入 SplitDetailLayout，平铺 props 收 view model](TASK-0506-weknora-split-detail-and-view-model.md)：PLAN-0032 P4d；最大回归面（68 个测试文件），并行 worktree，`weknora/` 整目录独占，待派工。 |
 | `TASK-0492` | `verifying` | — | [版块会话行接入三项操作菜单](TASK-0492-allstar-session-row-menu.md)：BUG-0194，抽 `AllstarSessionRow`（标题按钮 + `···` 菜单：重命名/在文件夹打开/删除），20/20 + 4/4 + `check:quick` 全绿，待实机走查。 |
 | `TASK-0491` | `verifying` | — | [版块首页卡片放大 125% 并拉开左右间距](TASK-0491-allstar-home-card-density.md)：REQ-0030，列宽 13rem→16.25rem、`gap-x` 12→32px，契约测试 18/18 + `check:quick` 全绿，待用户目视。 |
 | `TASK-0490` | `verifying` | — | [Allstar 版块首页未撑满内容区宽度](TASK-0490-allstar-home-width-fill.md)：BUG-0193，页面根补 `w-full`（与 `min-w-0` 并存），定向测试 22/22 + `check:quick` 全绿，待用户实机走查。 |
