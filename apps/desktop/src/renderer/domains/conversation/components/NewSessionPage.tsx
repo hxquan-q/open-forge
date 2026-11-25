@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { OrphanRemoteProjectGuard } from "@domains/project/components/orphan-remote/OrphanRemoteProjectGuard";
 import { pageHeaderRightSlotAtom } from "@shared/store/atoms";
 import { useSearch } from "@tanstack/react-router";
@@ -26,6 +27,7 @@ function NewSessionPageContent(): JSX.Element {
 		() => (
 			<NewSessionHeaderActions
 				activityOpen={model.activityOpen}
+				cwd={model.cwd}
 				onToggleActivity={model.onToggleActivity}
 				onTogglePin={model.onTogglePin}
 				panelTitle={model.panelTitle}
@@ -35,6 +37,7 @@ function NewSessionPageContent(): JSX.Element {
 		),
 		[
 			model.activityOpen,
+			model.cwd,
 			model.onToggleActivity,
 			model.onTogglePin,
 			model.panelTitle,

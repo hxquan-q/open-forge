@@ -14,29 +14,46 @@ related_issues: []
 related_bugs: []
 execution: parallel
 branch: task/TASK-0510-header-actions-plugin
-worktree: unassigned（待创建）
-base_commit: 126727f3f
+worktree: ../open-forge-wt/task-0510-header-actions-plugin
+base_commit: 16bc1ccd6ca0beb2043d73ec51a729919dfe5706
 read_paths:
   - apps/desktop/src/renderer/domains/conversation/components/chat-view/ChatHeaderActionsView.tsx
   - apps/desktop/src/main/plugins/plugin-api-version.ts
   - apps/desktop/src/main/plugins/
-  - packages/plugin-sdk/
+  - packages/plugins/plugin-sdk/
   - packages/theme-ui/src/
 write_paths:
+  - apps/desktop/src/renderer/domains/abilities/lib/plugin-permission-labels.ts
+  - apps/desktop/src/renderer/domains/conversation/components/NewSessionPage.tsx
+  - apps/desktop/src/renderer/domains/conversation/components/new-session/NewSessionHeaderActions.tsx
+  - apps/desktop/src/renderer/domains/conversation/components/agent-controls.test.tsx
+  - apps/desktop/src/renderer/domains/plugins/components/PluginGlobalSlotHost.tsx
+  - apps/desktop/src/renderer/domains/plugins/components/plugin-header-action-publication.ts
+  - apps/desktop/src/renderer/domains/plugins/components/WorkspaceViewHeaderSlot.tsx
+  - apps/desktop/src/renderer/domains/plugins/components/plugin-workspace-view-publication.test.ts
+  - apps/desktop/src/renderer/domains/plugins/runtime/plugin-header-action.test.tsx
+  - apps/desktop/src/renderer/domains/plugins/runtime/plugin-local-contributions.ts
+  - apps/desktop/src/renderer/domains/plugins/runtime/plugin-ui-context.ts
+  - apps/desktop/src/renderer/shared/store/plugin-atoms.ts
   - apps/desktop/src/renderer/domains/header-actions/
   - apps/desktop/src/renderer/domains/conversation/components/chat-view/ChatHeaderActionsView.tsx
   - apps/desktop/src/main/plugins/plugin-api-version.ts
   - apps/desktop/src/main/plugins/
   - apps/desktop/src/shared/i18n/locales/en/
   - apps/desktop/src/shared/i18n/locales/zh/
-  - packages/plugin-sdk/
+  - packages/plugins/plugin-sdk/
   - packages/theme-ui/src/
-  - docs/plugins/
+  - docs/plugin/
+  - bun.lock
+  - apps/docs-site/content/docs/plugins/extension-points.mdx
+  - apps/docs-site/content/docs/plugins/manifest-and-permissions.mdx
+  - apps/docs-site/content/docs/en/plugins/extension-points.mdx
+  - apps/docs-site/content/docs/en/plugins/manifest-and-permissions.mdx
   - project/tasks/TASK-0510-header-actions-plugin.md
 exclusive_paths:
   - apps/desktop/src/renderer/domains/header-actions/
 depends_on: [TASK-0505]
-conflicts_with: [TASK-0509]
+conflicts_with: [TASK-0509, TASK-0197]
 integration_status: pending
 created: 2026-11-25
 updated: 2026-11-25
@@ -50,9 +67,9 @@ updated: 2026-11-25
 参照上游 `7e0a8b130` 重写本地顶栏：
 
 - 新增 `apps/desktop/src/renderer/domains/header-actions/` 与 theme-ui 顶栏视图组件；替换 `ChatHeaderActionsView.tsx` 的固定按钮。
-- 插件可声明 `ui.slot.header-action` 动作（最小集合权限声明，与宿主授权取交集）。
+- 插件可在普通会话和新会话页声明 `ui.slot.header-action` 动作（最小集合权限声明，与宿主授权取交集）。
 - 扩展字段（`b669f73ae`）、收纳与调整模式（`234885a88` / `8efa385a8` / `ffe0d5e90`）、过窄收进更多菜单（`25c43ece2`）。
-- Plugin API 按 D3 拍板**升 2.14.0**，登记新增的 `registerHeaderAction` 与 `useMeta` 能力。
+- Plugin API 按 D3 拍板**升 2.14.0**，登记新增的 `registerHeaderAction` 能力。`useMeta` 由 PLAN-0032 P9 交付。
 - 排序持久化键名用本仓品牌前缀（Open Forge / `forge`），不用上游 `vetta`。
 
 ## 范围
@@ -85,7 +102,7 @@ updated: 2026-11-25
 
 ## Given / When / Then
 
-- Given：用户打开任意会话
+- Given：用户打开普通会话
 - When：查看会话顶栏 / 拖动动作排序 / 收窄窗口
 - Then：动作以统一按钮组呈现；可拖动排序、跨重启保持；过窄时溢出动作进「更多」菜单；插件能通过 SDK 注册新动作
 
@@ -111,7 +128,7 @@ updated: 2026-11-25
 
 ## 功能验收包
 
-- 入口：Desktop → 任意会话
+- 入口：Desktop → 普通会话
 - 用例 1：默认动作按钮组排列整齐，键帽正确显示快捷键
 - 用例 2：拖动改变顺序，关闭并重开 Desktop 顺序保持
 - 用例 3：把窗口拖到很窄，溢出动作出现在「更多」菜单中

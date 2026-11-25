@@ -25,6 +25,7 @@ Every `ctx.ui` registration maps to its own permission:
 | Task Artifact renderer | `registerArtifactRenderer` | `ui.slot.artifact-renderer`; file reads also require `fs.read` |
 | Activity panel tab | `registerActivityTab`, `openActivityTab`, `setActivityTabVisible` | `ui.slot.activity-tab` |
 | Composer action and attachment | `registerInputAction`, `setPromptAttachment` | `ui.slot.input-action` |
+| Session header action | `registerHeaderAction` | `ui.slot.header-action` |
 | New-session context block | `registerNewSessionContext` | `ui.slot.new-session-context` |
 | Message card renderer | `registerCardRenderer` | `ui.slot.message` |
 | Inline tool-call rendering | `registerToolCallSlot` | `ui.slot.tool-call` |
@@ -42,6 +43,8 @@ Components use the host's shared React runtime and design tokens. Registration f
 </Callout>
 
 Panel-style slots (file preview, activity tab, workspace view) must not use viewport-filling fixed overlays, which cover the host's own chrome.
+
+Session header actions require Plugin API `^2.14.0` and the `ui.slot.header-action` grant. The default surface is `conversation` in a standard chat. Include `new-session` in `surfaces` if the action is useful before a session starts. Users can move actions between the header and its tray.
 
 ## File explorer
 
