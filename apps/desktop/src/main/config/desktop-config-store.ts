@@ -72,7 +72,6 @@ export interface DesktopConfig {
 	imageGeneration?: ImageGenerationConfig;
 	knowledgeBase?: KnowledgeBaseConfig;
 	shortcuts?: ShortcutsConfig;
-	quickPanel?: QuickPanelConfig;
 	appshot?: AppshotConfig;
 	remoteControl?: {
 		relayBaseUrl?: string;
@@ -96,13 +95,6 @@ export type AppshotGesture = "both-shift" | "both-mod" | "both-alt";
 export interface AppshotConfig {
 	enabled?: boolean;
 	gesture?: AppshotGesture;
-}
-
-export type QuickPanelTrigger = "none" | "mod" | "alt" | "shift";
-
-export interface QuickPanelConfig {
-	trigger?: QuickPanelTrigger;
-	postSendBehavior?: "foreground" | "background";
 }
 
 export interface KnowledgeBaseConfig {
@@ -147,7 +139,6 @@ const DEFAULT_CONFIG: DesktopConfig = {
 	proxy: { ...DEFAULT_PROXY_CONFIG },
 	imageGeneration: {},
 	shortcuts: { bindings: {} },
-	quickPanel: { trigger: "none", postSendBehavior: "foreground" },
 	appshot: { enabled: false, gesture: "both-shift" },
 };
 
@@ -188,19 +179,6 @@ export function normalizeKnowledgeBase(value: unknown): KnowledgeBaseConfig {
 			typeof input.processingModelReasoningLevel === "string" ? input.processingModelReasoningLevel : undefined,
 		agentConcurrency: clampInt(input.agentConcurrency, 3, 1),
 		ocrConcurrency: clampInt(input.ocrConcurrency, 1, 1),
-	};
-}
-
-export function normalizeQuickPanel(value: unknown): QuickPanelConfig {
-	if (typeof value !== "object" || value === null) {
-		return { trigger: "none", postSendBehavior: "foreground" };
-	}
-	const input = value as Record<string, unknown>;
-	const trigger: QuickPanelTrigger =
-		input.trigger === "mod" || input.trigger === "alt" || input.trigger === "shift" ? input.trigger : "none";
-	return {
-		trigger,
-		postSendBehavior: input.postSendBehavior === "background" ? "background" : "foreground",
 	};
 }
 
@@ -315,7 +293,6 @@ function parseDesktopConfig(parsed: Record<string, unknown>): DesktopConfig {
 		imageGeneration: normalizeImageGeneration(parsed.imageGeneration),
 		knowledgeBase: normalizeKnowledgeBase(parsed.knowledgeBase),
 		shortcuts: normalizeShortcuts(parsed.shortcuts),
-		quickPanel: normalizeQuickPanel(parsed.quickPanel),
 		appshot: normalizeAppshot(parsed.appshot),
 		remoteControl: normalizeRemoteControl(parsed.remoteControl),
 		sshHosts: readSshHostsSync(parsed.sshHosts),

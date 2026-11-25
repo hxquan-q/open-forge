@@ -112,18 +112,10 @@ export interface DesktopConfigData {
 	};
 	/**
 	 * 全局应用快捷键自定义绑定（设置 → 快捷键 → 全局快捷键）。
-	 * 与 quickPanel 无关。
 	 */
 	shortcuts?: {
 		/** actionId → 序列化组合键；缺省 id 表示使用默认键。 */
 		bindings?: Record<string, string>;
-	};
-	/** 快捷面板（双击功能键唤出 Spotlight 式面板）设置。缺省不启用。 */
-	quickPanel?: {
-		/** 呼出触发：none=不启用；mod=双击 ⌘/Ctrl；alt=双击 ⌥/Alt；shift=双击 ⇧。缺省 none。 */
-		trigger?: "none" | "mod" | "alt" | "shift";
-		/** 发送后行为：foreground=打开主窗定位新会话；background=后台运行仅关面板。缺省 foreground。 */
-		postSendBehavior?: "foreground" | "background";
 	};
 	remoteControl?: {
 		relayBaseUrl?: string;

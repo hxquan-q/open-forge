@@ -163,7 +163,7 @@ const CHANNELS = {
 	RUNNING_CHANGED: "vetta:session:running-changed",
 	/** Main → Renderer：中断续接判定结果（notify / auto-retried）。 */
 	INTERRUPT_HEALTH: "vetta:session:interrupt-health",
-	// 某 session 是否有待回答的 ask_user_question；广播给所有窗口（侧栏 + 快捷面板）。
+	// 某 session 是否有待回答的 ask_user_question；广播给所有窗口。
 	PENDING_QUESTION_CHANGED: "vetta:session:pending-question-changed",
 	/** 仍在等用户处理的会话快照；窗口重载后用它收敛，事件只带增量。 */
 	PENDING_QUESTION_LIST: "vetta:session:pending-question-list",
@@ -187,7 +187,7 @@ const CHANNELS = {
 	PLUGIN_SYSTEM_PROMPT_RESPONSE: PLUGIN_CONTRIBUTION_CHANNELS.SYSTEM_PROMPT_RESPONSE,
 } as const;
 
-/** 向所有存活窗口（含独立的快捷面板窗口）广播一个事件。 */
+/** 向所有存活窗口广播一个事件。 */
 function broadcastToAllWindows(channel: string, payload: unknown): void {
 	for (const win of BrowserWindow.getAllWindows()) {
 		if (win.isDestroyed()) continue;
@@ -199,7 +199,7 @@ function broadcastToAllWindows(channel: string, payload: unknown): void {
 
 /**
  * 各 session 当前是否有待回答的 ask_user_question。模块级（跨 registerSessionIpc 调用共享），
- * 状态变化时广播给所有窗口——侧栏与快捷面板据此显示「待答」。
+ * 状态变化时广播给所有窗口，各窗口据此显示「待答」。
  */
 /**
  * 所有窗口共享的「这条会话在等用户」账本（模块级，跨 `registerSessionIpc` 调用存活）。
@@ -209,7 +209,7 @@ const pendingInteractions = new PendingInteractions();
 
 /**
  * `sessionPath` 上某个交互请求开始/结束等待，并把最新计数广播给所有窗口。
- * 广播字段沿用 `hasPendingQuestion`，兼容快捷面板既有订阅。
+ * 广播字段沿用 `hasPendingQuestion`，兼容既有订阅。
  */
 function setPendingInteraction(sessionPath: string, requestId: string, pending: boolean): void {
 	const changed = pending
@@ -419,7 +419,7 @@ export function registerSessionIpc(webContents: WebContents): () => void {
 				return;
 			}
 			webContents.send(CHANNELS.QUESTION_REQUEST, request);
-			// 广播「待答」给所有窗口（侧栏 + 快捷面板）。
+			// 广播「待答」给所有窗口。
 			const sessionPath = runtime.getSessionPath(request.sessionId);
 			if (sessionPath) setPendingInteraction(sessionPath, `question:${request.requestId}`, true);
 			// 同时发系统通知「有问题待确认」（点击跳转该 session）；前台看着该 session 时自动抑制。
@@ -1031,7 +1031,7 @@ export function registerSessionIpc(webContents: WebContents): () => void {
 		reason?: "agent_end" | "aborted" | "error";
 	}) => {
 		// 主窗口经 Host 事件面 session.subscribeGlobal 收运行态（TASK-0479），
-		// 这里只投递给共享旧通道的其它窗口（如独立的快捷面板窗口）。
+		// 这里只投递给共享旧通道的其它窗口。
 		for (const win of BrowserWindow.getAllWindows()) {
 			if (win.isDestroyed()) continue;
 			const wc = win.webContents;

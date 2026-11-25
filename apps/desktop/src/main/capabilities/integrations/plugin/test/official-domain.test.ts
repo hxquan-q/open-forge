@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import {
 	CAPABILITY_ERROR_CODES,
 	DOMAIN_AGENT_SETTINGS_CAPABILITIES,
@@ -9,7 +10,6 @@ import {
 	DOMAIN_MCP_CAPABILITIES,
 	DOMAIN_MODEL_CAPABILITIES,
 	DOMAIN_PROJECT_CAPABILITIES,
-	DOMAIN_QUICK_PANEL_CAPABILITIES,
 	DOMAIN_SCHEDULER_CAPABILITIES,
 	DOMAIN_SESSION_CAPABILITIES,
 	DOMAIN_SHORTCUT_CAPABILITIES,
@@ -49,7 +49,6 @@ describe("PluginCapabilityAdapter official domain capabilities", () => {
 			...Object.values(DOMAIN_SESSION_CAPABILITIES).map((capability) => capability.id),
 			...Object.values(DOMAIN_SKILL_CAPABILITIES).map((capability) => capability.id),
 			...Object.values(DOMAIN_SHORTCUT_CAPABILITIES).map((capability) => capability.id),
-			...Object.values(DOMAIN_QUICK_PANEL_CAPABILITIES).map((capability) => capability.id),
 			...Object.values(DOMAIN_SCHEDULER_CAPABILITIES).map((capability) => capability.id),
 			...Object.values(DOMAIN_WEBHOOK_CAPABILITIES).map((capability) => capability.id),
 		]);
@@ -124,10 +123,7 @@ describe("PluginCapabilityAdapter official domain capabilities", () => {
 			enabled: false,
 		});
 		await expect(adapter.uninstallSkill(sessionId, "review")).resolves.toBeUndefined();
-		await expect(adapter.getShortcutSettings(sessionId)).resolves.toHaveProperty(
-			"quickPanel.postSendBehavior",
-			"foreground",
-		);
+		await expect(adapter.getShortcutSettings(sessionId)).resolves.toHaveProperty("bindings.0.id", "new-session");
 		await expect(adapter.setShortcutBinding(sessionId, "new-session", "mod+shift+n")).resolves.toEqual({
 			bindings: [],
 		});
@@ -136,14 +132,6 @@ describe("PluginCapabilityAdapter official domain capabilities", () => {
 			shortcut: "mod+n",
 		});
 		await expect(adapter.resetAllShortcutBindings(sessionId)).resolves.toEqual({ bindings: [] });
-		await expect(adapter.setQuickPanelTrigger(sessionId, "mod")).resolves.toEqual({
-			trigger: "mod",
-			postSendBehavior: "foreground",
-		});
-		await expect(adapter.setQuickPanelPostSendBehavior(sessionId, "background")).resolves.toEqual({
-			trigger: "mod",
-			postSendBehavior: "foreground",
-		});
 		await expect(adapter.listDownloads(sessionId)).resolves.toEqual([
 			{
 				id: "download",

@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { resolve } from "node:path";
 import { defineConfig, loadEnv } from "vite";
 import { createSentryBuildSetup, readValue } from "./sentry-vite";
@@ -5,7 +6,6 @@ import { createSentryBuildSetup, readValue } from "./sentry-vite";
 const preloadEntries = {
 	index: "src/preload/index.ts",
 	pet: "src/preload/pet.ts",
-	quickpanel: "src/preload/quickpanel.ts",
 	onboarding: "src/preload/onboarding.ts",
 	"remote-desktop": "src/preload/remote-desktop.ts",
 } as const;

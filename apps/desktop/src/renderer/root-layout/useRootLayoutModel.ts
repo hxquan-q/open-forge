@@ -129,7 +129,7 @@ export function useRootLayoutModel(): RootLayoutModel {
 	// 队列的出队/续发已收归主进程 kernel（ADR-0060）：followUp 在 turn 自然停止点
 	// 接力消费，renderer 不再需要全局出队调度器。
 	// 会话打开/发送的唯一挂载点。ChatPage 与新会话页走模块级 ref，避免再挂一份。
-	const { openSession, sendMessage } = useSessionManager();
+	const { openSession } = useSessionManager();
 	const sessionRestoreState = useLastSessionRestore(currentPath);
 
 	useEffect(() => {
@@ -195,23 +195,6 @@ export function useRootLayoutModel(): RootLayoutModel {
 			}
 		});
 	}, [openSession]);
-
-	// 快捷面板回车 → 主进程已据 postSendBehavior 处理窗口聚焦，这里在默认「对话」目录下
-	// 新建会话并直接发送 prompt（复用通知路由同款 openSession + sendMessage）。
-	useEffect(() => {
-		return window.vetta.quickPanel.onRunPrompt(({ text }) => {
-			const cwd = defaultConversationCwd;
-			if (!cwd || !text.trim()) return;
-			void (async () => {
-				try {
-					await openSession(cwd);
-					await sendMessage(text);
-				} catch (error) {
-					console.warn("[RootLayout] quick panel run prompt failed", error);
-				}
-			})();
-		});
-	}, [openSession, sendMessage, defaultConversationCwd]);
 
 	useEffect(() => {
 		const store = getDefaultStore();
@@ -465,7 +448,7 @@ export function useRootLayoutModel(): RootLayoutModel {
 						break;
 					}
 					case "open-command-menu": {
-						// 面板内自己绑了一条 mod+k 关闭；能走到这里说明面板是关着的。
+						// 面板内自己绑了一条开关键用于关闭；能走到这里说明面板是关着的。
 						setCommandMenuOpen(true);
 						break;
 					}

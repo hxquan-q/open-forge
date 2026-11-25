@@ -33,7 +33,6 @@ import type { DesktopNotificationApi } from "./api-types/notification.js";
 import type { DesktopPetApi } from "./api-types/pet.js";
 import type { DesktopPluginsApi } from "./api-types/plugins.js";
 import type { DesktopProjectApi } from "./api-types/project.js";
-import type { DesktopQuickPanelApi } from "./api-types/quick-panel.js";
 import type { RemotePairingApi } from "./api-types/remote-pairing.js";
 import type { DesktopReviewChangesApi } from "./api-types/review-changes.js";
 import type { DesktopRuntimeConfigurationApi } from "./api-types/runtime-configuration.js";
@@ -86,7 +85,6 @@ export type * from "./api-types/notification.js";
 export type * from "./api-types/pet.js";
 export type * from "./api-types/plugins.js";
 export type * from "./api-types/project.js";
-export type * from "./api-types/quick-panel.js";
 export type * from "./api-types/review-changes.js";
 export type * from "./api-types/runtime-configuration.js";
 export type * from "./api-types/scheduler.js";
@@ -169,7 +167,6 @@ export interface DesktopApi {
 	archivedSessions: DesktopArchivedSessionsApi;
 	reviewChanges: DesktopReviewChangesApi;
 	task: DesktopTaskApi;
-	quickPanel: DesktopQuickPanelApi;
 	runtimeConfiguration: DesktopRuntimeConfigurationApi;
 	appshot: DesktopAppshotApi;
 }

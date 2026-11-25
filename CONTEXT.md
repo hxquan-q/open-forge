@@ -168,14 +168,6 @@
 ### 推理档位（reasoning level）
 [分册](docs/glossary/interaction.md)
 
-### 快捷面板（Quick Panel）
-[分册](docs/glossary/interaction.md)
-
-### 快捷面板触发器（Quick Panel trigger）
-[分册](docs/glossary/interaction.md)
-
-### 最近会话面板（Quick Panel recent list）
-[分册](docs/glossary/interaction.md)
 
 ## 个性化与 Provider 配置
 

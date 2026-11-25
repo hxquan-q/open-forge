@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { JSX, ReactNode } from "react";
 import { Button } from "@vetta-org/ui";
 import { SettingRow, SettingSection, type SettingSectionMeta } from "./SettingChrome";
@@ -18,7 +19,6 @@ export interface ShortcutsSettingsViewProps {
 	readonly aiAssistSlot: ReactNode;
 	readonly onResetAll: () => void;
 	readonly shortcutActions: readonly ShortcutActionRowView[];
-	readonly quickPanelSection: ReactNode;
 }
 
 export function ShortcutsSettingsView({
@@ -30,7 +30,6 @@ export function ShortcutsSettingsView({
 	aiAssistSlot,
 	onResetAll,
 	shortcutActions,
-	quickPanelSection,
 }: ShortcutsSettingsViewProps): JSX.Element {
 	return (
 		<div className="mx-auto w-full max-w-[680px] px-8 pt-2 pb-4">
@@ -57,8 +56,6 @@ export function ShortcutsSettingsView({
 					</SettingRow>
 				))}
 			</SettingSection>
-
-			{quickPanelSection}
 
 			<p className="mt-4 text-[12px] leading-relaxed text-muted-foreground/50">{shortcutHint}</p>
 		</div>

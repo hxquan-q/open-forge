@@ -11129,8 +11129,7 @@
         "additionalProperties": false,
         "type": "object",
         "required": [
-          "bindings",
-          "quickPanel"
+          "bindings"
         ],
         "properties": {
           "bindings": {
@@ -11157,48 +11156,6 @@
                 "isDefault": {
                   "type": "boolean"
                 }
-              }
-            }
-          },
-          "quickPanel": {
-            "additionalProperties": false,
-            "type": "object",
-            "required": [
-              "trigger",
-              "postSendBehavior"
-            ],
-            "properties": {
-              "trigger": {
-                "anyOf": [
-                  {
-                    "const": "none",
-                    "type": "string"
-                  },
-                  {
-                    "const": "mod",
-                    "type": "string"
-                  },
-                  {
-                    "const": "alt",
-                    "type": "string"
-                  },
-                  {
-                    "const": "shift",
-                    "type": "string"
-                  }
-                ]
-              },
-              "postSendBehavior": {
-                "anyOf": [
-                  {
-                    "const": "foreground",
-                    "type": "string"
-                  },
-                  {
-                    "const": "background",
-                    "type": "string"
-                  }
-                ]
               }
             }
           }
@@ -11366,152 +11323,6 @@
                 }
               }
             }
-          }
-        }
-      },
-      "version": 1
-    },
-    {
-      "id": "cap.domain.vetta.quick-panel.trigger.set",
-      "inputSchema": {
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "trigger"
-        ],
-        "properties": {
-          "trigger": {
-            "anyOf": [
-              {
-                "const": "none",
-                "type": "string"
-              },
-              {
-                "const": "mod",
-                "type": "string"
-              },
-              {
-                "const": "alt",
-                "type": "string"
-              },
-              {
-                "const": "shift",
-                "type": "string"
-              }
-            ]
-          }
-        }
-      },
-      "kind": "command",
-      "layer": "domain",
-      "outputSchema": {
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "trigger",
-          "postSendBehavior"
-        ],
-        "properties": {
-          "trigger": {
-            "anyOf": [
-              {
-                "const": "none",
-                "type": "string"
-              },
-              {
-                "const": "mod",
-                "type": "string"
-              },
-              {
-                "const": "alt",
-                "type": "string"
-              },
-              {
-                "const": "shift",
-                "type": "string"
-              }
-            ]
-          },
-          "postSendBehavior": {
-            "anyOf": [
-              {
-                "const": "foreground",
-                "type": "string"
-              },
-              {
-                "const": "background",
-                "type": "string"
-              }
-            ]
-          }
-        }
-      },
-      "version": 1
-    },
-    {
-      "id": "cap.domain.vetta.quick-panel.post-send-behavior.set",
-      "inputSchema": {
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "behavior"
-        ],
-        "properties": {
-          "behavior": {
-            "anyOf": [
-              {
-                "const": "foreground",
-                "type": "string"
-              },
-              {
-                "const": "background",
-                "type": "string"
-              }
-            ]
-          }
-        }
-      },
-      "kind": "command",
-      "layer": "domain",
-      "outputSchema": {
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "trigger",
-          "postSendBehavior"
-        ],
-        "properties": {
-          "trigger": {
-            "anyOf": [
-              {
-                "const": "none",
-                "type": "string"
-              },
-              {
-                "const": "mod",
-                "type": "string"
-              },
-              {
-                "const": "alt",
-                "type": "string"
-              },
-              {
-                "const": "shift",
-                "type": "string"
-              }
-            ]
-          },
-          "postSendBehavior": {
-            "anyOf": [
-              {
-                "const": "foreground",
-                "type": "string"
-              },
-              {
-                "const": "background",
-                "type": "string"
-              }
-            ]
           }
         }
       },

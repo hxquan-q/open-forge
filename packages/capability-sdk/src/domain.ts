@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { CAPABILITY_PREFIXES } from "./contracts.js";
 
 /** Stable prefix for Vetta-owned domain capabilities. Prefixes are never authorization rules. */
@@ -245,17 +246,8 @@ export {
 	type SessionRuntimeProject,
 } from "./domain/session.js";
 export {
-	DOMAIN_QUICK_PANEL_CAPABILITIES,
-	DOMAIN_QUICK_PANEL_CAPABILITY_CATALOG,
 	DOMAIN_SHORTCUT_CAPABILITIES,
 	DOMAIN_SHORTCUT_CAPABILITY_CATALOG,
-	QUICK_PANEL_POST_SEND_BEHAVIORS,
-	QUICK_PANEL_TRIGGERS,
-	type QuickPanelPostSendBehavior,
-	type QuickPanelPostSendBehaviorInput,
-	type QuickPanelSettings,
-	type QuickPanelTrigger,
-	type QuickPanelTriggerInput,
 	type ShortcutActionInput,
 	type ShortcutBinding,
 	type ShortcutBindingInput,

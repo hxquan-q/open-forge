@@ -5,7 +5,7 @@
  * 主进程启动序列里的工作按「首帧是否需要」分相位：
  *
  * - `blocking`：首帧可见内容前必须完成（窗口、菜单、IPC、协议注册等）。
- * - `postFirstPaint`：首帧内容绘制完成后立即顺序执行（App Monitor 初始化、桌宠、快捷面板同步）。
+ * - `postFirstPaint`：首帧内容绘制完成后立即顺序执行（App Monitor 初始化、桌宠）。
  * - `idle` / `eventually`：在空闲时间片里跑，时间片用尽就让出继续排队，并有
  *   `forcedTimeoutMs` 兜底防止长任务或忙时把它们饿死。
  *

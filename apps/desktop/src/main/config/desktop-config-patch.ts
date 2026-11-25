@@ -10,7 +10,6 @@ import {
 	normalizeExperimental,
 	normalizeImageGeneration,
 	normalizeKnowledgeBase,
-	normalizeQuickPanel,
 	normalizeShortcuts,
 } from "./desktop-config-store.js";
 
@@ -64,10 +63,6 @@ export function mergeDesktopConfigPatch(current: DesktopConfig, patch: DesktopCo
 				: current.knowledgeBase,
 		// bindings 整表替换（支持 reset 删键）；GUI/Action 均传完整 map。
 		shortcuts: patch.shortcuts !== undefined ? normalizeShortcuts(patch.shortcuts) : current.shortcuts,
-		quickPanel:
-			patch.quickPanel !== undefined
-				? normalizeQuickPanel({ ...current.quickPanel, ...patch.quickPanel })
-				: current.quickPanel,
 		appshot:
 			patch.appshot !== undefined ? normalizeAppshot({ ...current.appshot, ...patch.appshot }) : current.appshot,
 		// 补丁省略 password 即沿用已存口令，渲染层不必回传明文。

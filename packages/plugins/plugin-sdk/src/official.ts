@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { PluginPermission } from "./permissions.js";
 
 export interface PluginOfficialGeneralSettings {
@@ -129,11 +130,6 @@ export interface PluginOfficialShortcutBinding {
 	defaultShortcut: string;
 	shortcut: string;
 	isDefault: boolean;
-}
-
-export interface PluginOfficialQuickPanelSettings {
-	trigger: "none" | "mod" | "alt" | "shift";
-	postSendBehavior: "foreground" | "background";
 }
 
 export interface PluginOfficialImStatus {
@@ -494,14 +490,10 @@ export interface PluginOfficialApi {
 	};
 	shortcuts: {
 		listAvailableActions(): Array<{ id: string; defaultShortcut: string }>;
-		get(): Promise<{ bindings: PluginOfficialShortcutBinding[]; quickPanel: PluginOfficialQuickPanelSettings }>;
+		get(): Promise<{ bindings: PluginOfficialShortcutBinding[] }>;
 		setBinding(id: string, shortcut: string): Promise<{ bindings: PluginOfficialShortcutBinding[] }>;
 		resetBinding(id: string): Promise<{ bindings: PluginOfficialShortcutBinding[]; shortcut: string }>;
 		resetAllBindings(): Promise<{ bindings: PluginOfficialShortcutBinding[] }>;
-		setQuickPanelTrigger(trigger: PluginOfficialQuickPanelSettings["trigger"]): Promise<PluginOfficialQuickPanelSettings>;
-		setQuickPanelBehavior(
-			behavior: PluginOfficialQuickPanelSettings["postSendBehavior"],
-		): Promise<PluginOfficialQuickPanelSettings>;
 	};
 	im: {
 		getStatus(): Promise<PluginOfficialImStatus>;

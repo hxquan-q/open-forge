@@ -1,3 +1,4 @@
+<!-- Modified by The Open Forge contributors. -->
 # Capability Catalog
 
 > 此文件由 `packages/capability-sdk/scripts/generate-catalog.ts` 从 Capability Token 自动生成，请勿手工编辑。
@@ -133,8 +134,6 @@
 | `cap.domain.vetta.shortcut.binding.set` | domain | command | 1 |
 | `cap.domain.vetta.shortcut.binding.reset` | domain | command | 1 |
 | `cap.domain.vetta.shortcut.binding.reset-all` | domain | command | 1 |
-| `cap.domain.vetta.quick-panel.trigger.set` | domain | command | 1 |
-| `cap.domain.vetta.quick-panel.post-send-behavior.set` | domain | command | 1 |
 | `cap.domain.vetta.skill.list` | domain | query | 1 |
 | `cap.domain.vetta.skill.installed.list` | domain | query | 1 |
 | `cap.domain.vetta.skill.installed.set-enabled` | domain | command | 1 |

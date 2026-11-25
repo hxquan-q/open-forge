@@ -68,7 +68,6 @@ import {
 	registerSchedulerIpc,
 	teardownAllIpc,
 } from "./ipc/index.js";
-import { syncQuickPanelTrigger } from "./ipc/quickpanel.js";
 import { disposeAllTerminals } from "./ipc/terminal.js";
 import { registerKnowledgeIpc } from "./knowledge/ipc.js";
 import { reloadKnowledgePoller, shutdownKnowledgePoller } from "./knowledge/poller.js";
@@ -88,7 +87,6 @@ import { migrateLegacyPluginSettings } from "./plugins/plugin-legacy-settings-mi
 import { createDesktopPluginPackageOpenService } from "./plugins/plugin-package-open.js";
 import { PLUGIN_PROTOCOL_PRIVILEGES, registerPluginProtocols } from "./plugins/plugin-protocol.js";
 import { refreshDesktopProxy } from "./proxy/proxy-host.js";
-import { stopAllUiohookConsumers } from "./quickpanel-trigger.js";
 import { isQuitCleanupStarted, runQuitCleanup, setQuitCleanup } from "./quit-cleanup.js";
 import { startDesktopRemoteAccess, stopDesktopRemoteAccess } from "./remote-control/desktop-remote-access-service.js";
 import {
@@ -115,6 +113,7 @@ import {
 	rebuildTrayContextMenu,
 	setHideToTrayOnClose,
 } from "./tray-manager.js";
+import { stopAllUiohookConsumers } from "./uiohook-gestures.js";
 import { consumePendingUpdateRelaunch } from "./update-relaunch-marker.js";
 import { getAppVersion, runUpgradeE2e, updaterService } from "./updater.js";
 import {
@@ -877,13 +876,7 @@ if (!gotSingleLock) {
 					initializePetWindow();
 					startPetIdleGuard();
 				}
-				// 快捷面板：窗口在首次触发（双击功能键）时惰性创建、创建后常驻 hide/show 复用，
-				// 这里仅据配置启停 uiohook 双击监听（与窗口是否存在无关）。
-				// registerAllIpc 已注册快捷面板 IPC（含 RELOAD_HOTKEY）。
-				void syncQuickPanelTrigger().catch((err) => {
-					mainLog.error("failed to sync quick panel trigger", err);
-				});
-				// Appshot：据配置启停「双键同按」手势监听（与快捷面板共享 uiohook 单例）。
+				// Appshot：据配置启停「双键同按」手势监听。
 				void syncAppshotGesture().catch((err) => {
 					mainLog.error("failed to sync appshot gesture", err);
 				});
@@ -913,7 +906,7 @@ if (!gotSingleLock) {
 		// 插件 dev server 延后到 renderer 依赖图转换完成（module-loaded）后再启动。
 		// dev 下 18 个独立 Vite 子进程并发抢占 CPU，若在首屏前启动会把 renderer 转换从
 		// ~2.5s 拖到 ~41s；插件 activation 本就在首屏之后。保持裸 void，不注册成
-		// postFirstPaint 相位任务，以免阻塞同相位的桌宠/快捷面板/updater。
+		// postFirstPaint 相位任务，以免阻塞同相位的桌宠/updater。
 		void rendererModulesLoadedPromise.then(() => {
 			if (mainWindow.isDestroyed() || app.isPackaged) return;
 			void startConfiguredPluginDevWatches(appRoot)
@@ -974,7 +967,7 @@ setQuitCleanup(async () => {
 		teardownBatchTasksIpc = undefined;
 	}
 
-	// 退出前注销全部全局键盘监听消费者（快捷面板双击 + appshot 双键同按）。
+	// 退出前注销全部全局键盘监听消费者（appshot 双键同按）。
 	// 必须等它完成：uiohook worker 要自己跑完 uIOhook.stop()，否则进程退出时
 	// uiohook-napi 的 env cleanup hook 会 SIGTRAP（macOS「意外退出」弹窗）。
 	const uiohookShutdown = stopAllUiohookConsumers();

@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { Type } from "@sinclair/typebox";
 import { describe, expect, it } from "vitest";
 import { createCapabilityCatalog } from "../src/catalog.js";
@@ -48,8 +49,8 @@ describe("capability catalog", () => {
 		const catalog = [...FOUNDATION_CAPABILITY_CATALOG, ...DOMAIN_CAPABILITY_CATALOG];
 
 		expect(FOUNDATION_CAPABILITY_CATALOG).toHaveLength(39);
-		expect(DOMAIN_CAPABILITY_CATALOG).toHaveLength(110);
-		expect(new Set(catalog.map(({ id }) => id)).size).toBe(149);
+		expect(DOMAIN_CAPABILITY_CATALOG).toHaveLength(108);
+		expect(new Set(catalog.map(({ id }) => id)).size).toBe(147);
 		expect(() => JSON.stringify(catalog)).not.toThrow();
 	});
 });

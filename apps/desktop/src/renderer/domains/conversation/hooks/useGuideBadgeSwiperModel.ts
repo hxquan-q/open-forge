@@ -1,5 +1,4 @@
 // Modified by The Open Forge contributors.
-import { useNavigate } from "@tanstack/react-router";
 import type { GuideBadgeSwiperViewProps, GuideBadgeViewItem } from "@vetta-org/theme-ui/chat";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -43,27 +42,10 @@ export type GuideBadgeSwiperModel = GuideBadgeSwiperViewProps | null;
 
 export function useGuideBadgeSwiperModel(mounted: boolean): GuideBadgeSwiperModel {
 	const { t } = useTranslation("chat");
-	const navigate = useNavigate();
 	const [dismissed, setDismissed] = useState<Set<string>>(loadDismissed);
 	const [index, setIndex] = useState(0);
 
-	const allBadges = useMemo<GuideBadge[]>(
-		() => [
-			{
-				id: "quick-panel-feature",
-				type: "once",
-				icon: "icon-[solar--magnifer-linear]",
-				text: t("guideBadgeSwiper.quickPanelText"),
-				onClick: () =>
-					void navigate({
-						to: "/settings/$tab",
-						params: { tab: "shortcuts" },
-						search: { section: "shortcuts-quickpanel" },
-					}),
-			},
-		],
-		[navigate, t],
-	);
+	const allBadges = useMemo<GuideBadge[]>(() => [], []);
 
 	const badges = useMemo(
 		() => allBadges.filter((b) => b.type === "persistent" || !dismissed.has(b.id)),

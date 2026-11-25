@@ -18,9 +18,9 @@ function renderBadge(dismissible: boolean) {
 		<GuideBadgeSwiperView
 			mounted
 			current={{
-				id: "quick-panel",
+				id: "guide-badge",
 				icon: "icon-[solar--magnifer-linear]",
-				text: "开启快捷面板",
+				text: "开启新功能",
 				dismissible,
 				onClick,
 			}}
@@ -35,7 +35,7 @@ describe("GuideBadgeSwiperView 的控件边界", () => {
 	it("正文动作里没有嵌套的可聚焦控件，点击走自己的回调", async () => {
 		const { onClick, onDismiss } = renderBadge(true);
 
-		const action = screen.getByRole("button", { name: "开启快捷面板" });
+		const action = screen.getByRole("button", { name: "开启新功能" });
 		expect(action.querySelector("button,[role='button']")).toBeNull();
 
 		await userEvent.setup().click(action);
@@ -48,7 +48,7 @@ describe("GuideBadgeSwiperView 的控件边界", () => {
 
 		await userEvent.setup().click(screen.getByRole("button", { name: "不再提示" }));
 
-		expect(onDismiss).toHaveBeenCalledExactlyOnceWith("quick-panel");
+		expect(onDismiss).toHaveBeenCalledExactlyOnceWith("guide-badge");
 		expect(onClick).not.toHaveBeenCalled();
 	});
 

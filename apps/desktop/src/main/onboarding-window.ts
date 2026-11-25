@@ -1,6 +1,6 @@
 // Modified by The Open Forge contributors.
 // Open Forge Computer Use 授权引导窗：无边框、居中、置顶的实心背景小窗。
-// 照抄 quickpanel-window.ts 的建窗骨架，但去掉液态玻璃与 blur 自动隐藏——
+// 独立的建窗骨架，但去掉液态玻璃与 blur 自动隐藏——
 // 授权过程中用户需要切到「系统设置」，切走时不应自动关闭引导窗。
 
 import { join } from "node:path";
@@ -37,7 +37,7 @@ function loadOnboardingEntry(win: BrowserWindow): void {
 	});
 }
 
-// 居中于光标所在显示器（与 quickpanel 一致的多屏策略）。
+// 居中于光标所在显示器（多屏策略）。
 function centerOnboardingWindow(win: BrowserWindow): void {
 	const display = screen.getDisplayNearestPoint(screen.getCursorScreenPoint());
 	const { workArea } = display;

@@ -193,11 +193,6 @@ export type {
 } from "./QrBindDialogView";
 export { QrBindDialogView } from "./QrBindDialogView";
 export type {
-	QuickPanelOptionView,
-	QuickPanelSettingsSectionViewProps,
-} from "./QuickPanelSettingsSectionView";
-export { QuickPanelSettingsSectionView } from "./QuickPanelSettingsSectionView";
-export type {
 	RemoteMcpSectionViewLabels,
 	RemoteMcpSectionViewModel,
 	RemoteMcpSectionViewProps,

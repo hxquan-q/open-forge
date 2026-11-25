@@ -11,7 +11,7 @@ import { OnboardingApp } from "./OnboardingApp";
 
 initializeRendererErrorMonitoring("onboarding");
 
-// 挂载前同步注入主题变量与 i18n，避免冷启动闪烁（对齐 quickpanel/entry.tsx）。
+// 挂载前同步注入主题变量与 i18n，避免冷启动闪烁。
 applyInitialTheme();
 initOnboardingI18n();
 // 引导窗标题随品牌口径（onboarding.html 静态标题只覆盖默认口径）。

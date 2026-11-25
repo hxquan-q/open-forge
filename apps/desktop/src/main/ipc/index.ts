@@ -43,7 +43,6 @@ import { registerPluginOcrProvidersIpc } from "./plugin-ocr-providers.js";
 import { registerPluginsIpc } from "./plugins.js";
 import { registerProjectExportIpc } from "./project-export.js";
 import { registerProjectsIpc } from "./projects.js";
-import { registerQuickPanelIpc } from "./quickpanel.js";
 import { registerRemotePairingIpc } from "./remote-pairing.js";
 import { registerReviewChangesIpc } from "./review-changes.js";
 import { registerRuntimeConfigurationIpc } from "./runtime-configuration.js";
@@ -105,7 +104,6 @@ interface IpcTeardown {
 	teardownTerminal: () => void;
 	teardownConversationTags: () => void;
 	teardownArchivedSessions: () => void;
-	teardownQuickPanel: () => void;
 	teardownTask: () => void;
 	teardownCanvas: () => void;
 	teardownBrowserTab: () => void;
@@ -175,7 +173,6 @@ export function registerAllIpc(
 		teardownTerminal: registerTerminalIpc(),
 		teardownConversationTags: registerConversationTagsIpc(webContents),
 		teardownArchivedSessions: registerArchivedSessionsIpc(webContents),
-		teardownQuickPanel: registerQuickPanelIpc(),
 		teardownTask: registerTaskIpc(webContents),
 		teardownCanvas: registerCanvasIpc(),
 		teardownBrowserTab: registerBrowserTabIpc(),
@@ -231,7 +228,6 @@ export function teardownAllIpc(teardown: IpcTeardown): void {
 	teardown.teardownTerminal();
 	teardown.teardownConversationTags();
 	teardown.teardownArchivedSessions();
-	teardown.teardownQuickPanel();
 	teardown.teardownTask();
 	teardown.teardownCanvas();
 	teardown.teardownBrowserTab();

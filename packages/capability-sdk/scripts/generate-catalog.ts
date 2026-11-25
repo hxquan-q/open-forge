@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { DOMAIN_CAPABILITY_CATALOG, FOUNDATION_CAPABILITY_CATALOG } from "../src/index.js";
@@ -23,7 +24,8 @@ function catalogRows(): string {
 		.join("\n");
 }
 
-const markdownContent = `# Capability Catalog
+const markdownContent = `<!-- Modified by The Open Forge contributors. -->
+# Capability Catalog
 
 > 此文件由 \`packages/capability-sdk/scripts/generate-catalog.ts\` 从 Capability Token 自动生成，请勿手工编辑。
 > 完整输入输出 JSON Schema 见 [catalog.json](./catalog.json)。

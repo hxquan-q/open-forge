@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { PluginOfficialApi } from "@vetta-org/plugin-sdk";
 import { SHORTCUT_ACTIONS } from "../../../../shared/shortcuts";
 
@@ -29,14 +30,6 @@ export function createOfficialShortcutsApi(
 		resetAllBindings: async () => {
 			assertOfficial();
 			return shortcuts.resetAllBindings(capabilitySessionId);
-		},
-		setQuickPanelTrigger: async (trigger) => {
-			assertOfficial();
-			return shortcuts.setQuickPanelTrigger(capabilitySessionId, trigger);
-		},
-		setQuickPanelBehavior: async (behavior) => {
-			assertOfficial();
-			return shortcuts.setQuickPanelPostSendBehavior(capabilitySessionId, behavior);
 		},
 	};
 }

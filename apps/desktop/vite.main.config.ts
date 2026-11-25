@@ -105,7 +105,7 @@ export default defineConfig(({ mode }) => {
 				entry: {
 					index: resolve(process.cwd(), "src/main/main.ts"),
 					// uiohook 宿主 worker 线程独立入口：与 index.js 同目录输出，
-					// 运行时由 quickpanel-trigger.ts 按同目录路径拼接后交给 new Worker()。
+					// 运行时由 uiohook-gestures.ts 按同目录路径拼接后交给 new Worker()。
 					"uiohook-worker": resolve(process.cwd(), "src/main/uiohook-worker.ts"),
 					"session-search-worker": resolve(process.cwd(), "src/main/session-search-worker.ts"),
 					// Host 子进程独立入口（TASK-0464）：ipc/host.ts 按同目录路径 fork。

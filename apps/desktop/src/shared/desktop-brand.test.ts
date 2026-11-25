@@ -62,7 +62,6 @@ describe("Desktop brand layer", () => {
 		for (const entrypoint of [
 			"src/main/i18n/index.ts",
 			"src/renderer/shared/i18n/index.ts",
-			"src/renderer/quickpanel/i18n.ts",
 			"src/renderer/onboarding/i18n.ts",
 		]) {
 			expect(readDesktopSource(entrypoint)).toContain("initDesktopI18n(");
@@ -141,7 +140,6 @@ describe("Desktop brand layer", () => {
 			"src/renderer/index.html",
 			"src/renderer/onboarding.html",
 			"src/renderer/pet.html",
-			"src/renderer/quickpanel.html",
 			"src/renderer/remote-desktop-host.html",
 			"src/renderer-ocr/index.html",
 		]) {
