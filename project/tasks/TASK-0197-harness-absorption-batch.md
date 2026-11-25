@@ -20,7 +20,7 @@ read_paths: [packages/coding-agent, packages/runtime-core, packages/agent, proje
 write_paths: [project/decisions/waivers/WAIVER-0004-harness-dev-candidate-validation.md, project/requirements/REQ-0002-runtime-performance.md, project/tasks, project/plans/PLAN-0015-harness-absorption.md, project/research/RESEARCH-0021-pi-deepseek-harness-absorption.md, .github/release-notes/v0.1.3.md]
 exclusive_paths: []
 depends_on: []
-conflicts_with: [TASK-0181, TASK-0122, TASK-0123, TASK-0196, TASK-0039, TASK-0154, TASK-0159]
+conflicts_with: [TASK-0181, TASK-0122, TASK-0123, TASK-0196, TASK-0039, TASK-0154, TASK-0159, TASK-0506, TASK-0507, TASK-0508]
 integration_status: pending
 created: 2026-10-03
 updated: 2026-10-03

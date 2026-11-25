@@ -1,7 +1,7 @@
 ---
 id: TASK-0506
 type: task
-status: ready
+status: verifying
 priority: P2
 owner: apps/desktop + packages/theme-ui
 requirement: REQ-0008
@@ -13,9 +13,9 @@ related_tasks: [TASK-0505]
 related_issues: []
 related_bugs: []
 execution: parallel
-branch: task/TASK-0506-weknora-split-detail
-worktree: unassigned（待创建）
-base_commit: 8ec047808
+branch: task/TASK-0506-weknora-split-detail-and-view-model
+worktree: unassigned（已集成，待推送后清理）
+base_commit: 7ae82222bd97add9ef8adeff4aeb321335163256
 read_paths:
   - apps/desktop/src/renderer/domains/weknora/
   - packages/theme-ui/src/scheduler/
@@ -28,7 +28,7 @@ exclusive_paths:
   - apps/desktop/src/renderer/domains/weknora/
 depends_on: [TASK-0505]
 conflicts_with: []
-integration_status: pending
+integration_status: integrated
 created: 2026-11-25
 updated: 2026-11-25
 ---
@@ -88,9 +88,9 @@ updated: 2026-11-25
 
 ## 验收分层
 
-- 工程验证：待执行
+- 工程验证：worker 自验 desktop 全包测试 68 文件 495 通过（round2 终态）；Coordinator 集成后 weknora 定向 5 文件 18/18 通过。域内唯一失败 `weknoraExport.cp3-reverify.test.ts` AC-7（UTF-8 字节截断组合上限）在干净 base commit `7ae82222b` 上同样复现，属 pre-existing，与本切片无关。
 - 技术评审：独立评审
-- 集成：pending
+- 集成：integrated；Worker 提交 `7add1f22d`（task/TASK-0506-weknora-split-detail-and-view-model），由 Coordinator 于 2026-11-25 合入本地 main。
 - 人工功能验收：待验收（用户实机走查 WeKnora 页布局、拖宽、折叠、批量操作）
 - 发布：未授权（沿用 TASK 批次推送授权，不另行发布）
 
