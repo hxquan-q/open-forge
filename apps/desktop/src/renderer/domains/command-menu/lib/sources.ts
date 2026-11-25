@@ -187,7 +187,7 @@ export function buildWorkspaceViewEntries(
 
 /**
  * 只收本地已装能力，不碰市场目录——`listOpenMarketplaces()` 对 autoUpdate 源仍会
- * 走网络，挂在 ⌘K 上代价不可接受。市场由恒定置底的逃生行承接。
+ * 走网络，挂在命令面板上代价不可接受。市场由恒定置底的逃生行承接。
  *
  * 条目动作统一是「跳能力页并预填名称」而不是直接开详情抽屉：详情需要 catalog id，
  * 而它的合成规则（台账 catalogId 回退、市场 id、本地 id）散在 build-ability-items
