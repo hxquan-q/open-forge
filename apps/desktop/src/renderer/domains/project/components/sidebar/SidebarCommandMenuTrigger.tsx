@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { formatShortcut } from "@shared/lib/platform";
 import { getEffectiveShortcut, loadShortcutBindings } from "@shared/lib/shortcuts";
 import { commandMenuOpenAtom } from "@shared/store/atoms";
