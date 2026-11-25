@@ -1492,6 +1492,7 @@
 		"work": {
 			"panelTitle": "文档与研究",
 			"panelLead": "这个会话的计划、来源资料和产物都在这里",
+			"openPanel": "打开面板",
 			"artifacts": {
 				"empty": "生成的文档、表格等产物会出现在这里",
 				"title": "产物",
