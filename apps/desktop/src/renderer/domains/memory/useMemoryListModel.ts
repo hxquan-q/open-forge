@@ -52,7 +52,7 @@ export function useMemoryListModel() {
 					: await memoryControlClient.listMemories({ scope, page: nextPage, pageSize: 20 });
 				if (token !== refreshToken.current) return;
 				const nextItems: readonly MemoryListItem[] = response.items;
-				setItems(append ? [...items, ...nextItems] : nextItems);
+				setItems((prev) => (append ? [...prev, ...nextItems] : nextItems));
 				setDegraded("degraded" in response && response.degraded === true);
 				setHasMore("hasMore" in response && response.hasMore === true);
 				setPage(nextPage);
@@ -65,7 +65,7 @@ export function useMemoryListModel() {
 				if (token === refreshToken.current) setLoading(false);
 			}
 		},
-		[items, query, scope],
+		[query, scope],
 	);
 
 	useEffect(() => {

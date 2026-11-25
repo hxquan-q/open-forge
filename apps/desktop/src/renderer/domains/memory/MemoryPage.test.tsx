@@ -8,6 +8,14 @@ import { beforeAll, describe, expect, it, vi } from "vitest";
 import { MemoryPage } from "./MemoryPage.js";
 import type { MemoryListItem, MemoryListResult, MemoryPolicyState } from "@/shared/memory";
 
+// jsdom 无 ResizeObserver；SplitDetailLayout 内的 ScrollFade 依赖它。
+class ResizeObserverStub {
+	observe(): void {}
+	unobserve(): void {}
+	disconnect(): void {}
+}
+vi.stubGlobal("ResizeObserver", ResizeObserverStub);
+
 type MemoryApi = DesktopApi["memoryControl"];
 
 function memoryItem(overrides: Partial<MemoryListItem> = {}): MemoryListItem {

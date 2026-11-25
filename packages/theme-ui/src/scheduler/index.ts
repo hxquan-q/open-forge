@@ -19,6 +19,12 @@ export type {
 } from "./ExecutionHistoryView";
 export { ExecutionHistoryView } from "./ExecutionHistoryView";
 export type {
+	MemoryPageViewLabels,
+	MemoryPageViewProps,
+	MemorySegmentItem,
+} from "./MemoryPageView";
+export { MemoryPageView } from "./MemoryPageView";
+export type {
 	TaskListItemTone,
 	TaskListItemView,
 	TaskListViewProps,
