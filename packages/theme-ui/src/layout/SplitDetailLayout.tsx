@@ -16,11 +16,17 @@ export interface SplitPaneState {
 }
 
 export interface SplitDetailLayoutProps {
-	/** 左列（列表）。窄屏下详情打开时此列隐藏，详情独占整页。 */
+	/**
+	 * 左列（列表）内容，放进底部渐隐的滚动区。
+	 * 窄屏下详情打开时此列隐藏，详情独占整页。
+	 */
 	readonly list: ReactNode;
+	/** 列表列顶部不随滚动收起的部分（标题、筛选、搜索），渲染在滚动区之上。 */
+	readonly listHeader?: ReactNode;
 	/**
 	 * 右列（详情）。`undefined` 表示未打开——列表吃满整行，把手与详情列不渲染。
-	 * 打开时宽度受控，由 `detailWidth` 指定。
+	 * 打开时宽度受控，由 `detailWidth` 指定。详情侧自带 header/body/footer 结构，
+	 * 滚动由详情内部管理，本组件不再套渐隐。
 	 */
 	readonly detail?: ReactNode;
 	/** 详情列当前宽度（px）。仅在 `detail` 存在时有意义。 */
@@ -71,10 +77,11 @@ function PaneStateView({ state }: { readonly state: SplitPaneState }): JSX.Eleme
  *
  * 宽度受控：组件只持有把手并把拖拽折算成绝对宽度回传，实际 `detailWidth`
  * state 由消费方持有，三个面板各自持久化互不干扰。列表/详情均可独立给
- * `listState`/`detailState` 占位（加载/空/错误/降级），滚动区底部渐隐。
+ * `listState`/`detailState` 占位（加载/空/错误/降级）。
  */
 export function SplitDetailLayout({
 	list,
+	listHeader,
 	detail,
 	detailWidth,
 	minDetailWidth = DEFAULT_MIN_DETAIL_WIDTH,
@@ -89,17 +96,12 @@ export function SplitDetailLayout({
 	detailClassName,
 }: SplitDetailLayoutProps): JSX.Element {
 	const paneOpen = detail != null;
-	// 记录拖拽起始宽度：ResizeHandle 给的是增量 delta，组件内折算成绝对宽度回传。
-	const dragStartWidth = useRef(detailWidth);
+	// ResizeHandle 每次回调给的是「自上次回调以来的增量」，组件内对受控宽度做增量收敛。
 	const liveWidth = useRef(detailWidth);
 	liveWidth.current = detailWidth;
 
-	const handleResizeStart = () => {
-		dragStartWidth.current = liveWidth.current;
-		onDetailResizeStart?.();
-	};
 	const handleResize = (delta: number) => {
-		const next = clamp(dragStartWidth.current + delta, minDetailWidth, maxDetailWidth);
+		const next = clamp(liveWidth.current + delta, minDetailWidth, maxDetailWidth);
 		liveWidth.current = next;
 		onDetailWidthChange?.(next);
 	};
@@ -109,37 +111,47 @@ export function SplitDetailLayout({
 
 	return (
 		<div className={cn("@container flex h-full w-full flex-1 overflow-hidden", className)}>
-			{/* 列表列：详情打开且够宽时左侧定宽；窄屏下让位给详情独占。 */}
+			{/* 列表列：详情打开时给详情让出固定宽；窄屏下隐藏让详情独占。 */}
 			<section
 				className={cn(
 					"min-w-0 flex-col",
-					paneOpen ? `hidden shrink-0 ${NARROW_BREAKPOINT}:flex` : "flex flex-1",
+					paneOpen
+						? `hidden min-w-0 flex-1 ${NARROW_BREAKPOINT}:flex`
+						: "flex flex-1",
 					listClassName,
 				)}
 			>
-				{listState ? <PaneStateView state={listState} /> : <ScrollFade className="min-h-0 flex-1">{list}</ScrollFade>}
+				{listHeader ? <div className="shrink-0">{listHeader}</div> : null}
+				{listState ? (
+					<PaneStateView state={listState} />
+				) : (
+					<ScrollFade className="min-h-0 flex-1">{list}</ScrollFade>
+				)}
 			</section>
 			{paneOpen ? (
 				<section
 					className={cn(
-						"relative flex min-w-0 flex-1 flex-col",
-						// ≥780px 时详情吃剩余宽度；宽度仍受控，把手在左缘拖宽。
-						`${NARROW_BREAKPOINT}:shrink-0`,
+						"relative flex min-w-0 flex-col",
+						// 窄屏独占整页（flex-1），≥780px 时回到受控定宽（flex-none + width）。
+						`flex-1 ${NARROW_BREAKPOINT}:flex-none ${NARROW_BREAKPOINT}:shrink-0`,
 						detailClassName,
 					)}
 					style={{ width: detailWidth }}
 				>
-					<ResizeHandle
-						side="left"
-						onResizeStart={handleResizeStart}
-						onResize={handleResize}
-						onResizeEnd={handleResizeEnd}
-					/>
+					{/* 把手只在 ≥780px 可拖；窄屏详情独占整页，拖拽无意义。 */}
+					<span className={cn("hidden", `${NARROW_BREAKPOINT}:block`)}>
+						<ResizeHandle
+							side="left"
+							onResizeStart={onDetailResizeStart}
+							onResize={handleResize}
+							onResizeEnd={handleResizeEnd}
+						/>
+					</span>
 					<div className="drag-region h-6 shrink-0" />
 					{detailState ? (
 						<PaneStateView state={detailState} />
 					) : (
-						<ScrollFade className="min-h-0 flex-1">{detail}</ScrollFade>
+						<div className="flex min-h-0 flex-1 flex-col">{detail}</div>
 					)}
 				</section>
 			) : null}
