@@ -1,7 +1,7 @@
 ---
 id: TASK-0505
 type: task
-status: ready
+status: in_progress
 priority: P2
 owner: packages/theme-ui + apps/desktop
 requirement: REQ-0008
@@ -73,7 +73,14 @@ updated: 2026-11-25
 - 三处面板窄容器下详情独占整页、可拖宽详情。
 - 记忆页三层结构（Page/Model/View）落成。
 
-## 待确认
+## 已确认（2026-11-25）
 
-- 切片顺序 P4a→自动化→记忆→WeKnora（原计划 P4b/c/d，按可验证性建议自动化提前）。
-- 共享布局为净新建组件（上游无对应物），确认按本地设计实现。
+- 共享布局：**新建可复用组件** `SplitDetailLayout`（theme-ui/layout）：`ResizeHandle` 可拖宽 + `@[780px]` 窄屏详情独占 + 四态（加载/空/错误/降级）+ 滚动渐隐，三面板共用。
+- 切片顺序：**P4a 布局 → P4b 自动化 → P4c 记忆 → P4d WeKnora**。
+- WeKnora：**本轮全做**（重写自写动画 + 改 68 测试）。
+
+## 切片进度
+
+- P4a 共享布局：完成（`10410561b` 新增、`5f13c033c` 修正）。
+- P4b 自动化分屏：完成（`12d79c636`；含 `automation-status.ts`、`useAutomationDetailModel`/`AutomationDetailPane`、删除 `HistoryDrawer*`/`TaskFormDialog*`/`useTaskFormModel*`，D03 例外已登记 DESIGN.md 与 design-exceptions.json）。
+- P4c 记忆、P4d WeKnora：待做。
