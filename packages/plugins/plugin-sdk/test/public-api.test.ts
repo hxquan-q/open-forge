@@ -22,6 +22,7 @@ describe("plugin-sdk public API", () => {
 		expect(PLUGIN_PERMISSIONS).toContain("browser.open");
 		expect(PLUGIN_PERMISSIONS).toContain("browser.interact");
 		expect(PLUGIN_PERMISSIONS).toContain("ui.slot.artifact-renderer");
+		expect(PLUGIN_PERMISSIONS).toContain("ui.slot.header-action");
 		expect(PluginArtifactRendererDescriptorSchema.properties).not.toHaveProperty("uri");
 		expect(PLUGIN_PERMISSIONS).toContain("shell.openExternal");
 	});

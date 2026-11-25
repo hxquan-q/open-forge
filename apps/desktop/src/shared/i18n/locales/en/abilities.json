@@ -429,6 +429,7 @@
 			"settingsWrite": "Changes app settings the host exposes to plugins and may alter app behavior.",
 			"shellOpenExternal": "Opens a plugin-selected external link in the system browser or default app.",
 			"uiSlotNewSessionContext": "Lets the plugin show a block beneath the new-session input, only when you pick one of its agents or teams, or mention one of its abilities.",
+			"uiSlotHeaderAction": "Lets the plugin add one declarative action to the conversation header's host-managed button group (icon, badge, click / menu / popover).",
 			"conversationDraftRead": "Lets the plugin read what you have typed but not yet sent. Provided only while that plugin's context block is on screen.",
 			"terminalRun": null
 		},
@@ -493,6 +494,7 @@
 		"settingsWrite": "Modify settings",
 		"shellOpenExternal": "Open links in the system browser",
 		"uiSlotNewSessionContext": "New Session Context Slot",
+		"uiSlotHeaderAction": "Header Action Slot",
 		"conversationDraftRead": "Read input draft",
 		"terminalRun": null
 	},

@@ -14,8 +14,14 @@
  * - 2.12.0：Skill 展示策略可声明工作区模式归属；只过滤 `/` 候选列表，不影响 Skill 加载或调用。
  * - 2.13.0：智能体委任生命周期标记（`agent.agents[].lifecycle`，`resident` / `oneshot`）：
  *   声明即 worker 型（默认会话保持驾驶+按域委派），缺省 = 主控/接管型（现状）。
+ * - 2.14.0：会话页与新会话页顶栏动作贡献点（`registerHeaderAction`）与
+ *   `ui.slot.header-action` 权限；宿主统一管理的按钮组（上限 7 格、收纳托盘、
+ *   拖拽排序持久化于本机键 `forge.headerActions.order`），对应上游能力集
+ *   `7e0a8b130`（顶栏重写）+ `b669f73ae`（label/tone/pin/surfaces 扩展字段）+
+ *   `234885a88`/`8efa385a8`/`ffe0d5e90`（收纳托盘与调整模式）+ `25c43ece2`（过窄收进更多菜单）。
+ *   活动面板插件 `useMeta`（上游 `62b2749f8`）由 PLAN-0032 P9 登记。
  *
  * 清单校验对未知字段 fail-closed。作者把 `pluginApiVersion` 写成用到的那一档，
  * 旧宿主才能给出明确的版本错误。
  */
-export const PLUGIN_API_VERSION = "2.13.0";
+export const PLUGIN_API_VERSION = "2.14.0";

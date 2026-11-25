@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { pluginWorkspaceViewHeadersAtom, workspaceViewHeaderKey } from "@shared/store/atoms";
 import { useMatches } from "@tanstack/react-router";
 import { useAtomValue } from "jotai";
@@ -29,7 +30,7 @@ class HeaderSlotErrorBoundary extends Component<{ slotKey: string; children: Rea
  * 插件 CSS 被编译成 `@scope([data-vetta-plugin-root=<id>])`，脱离这层包装
  * 时插件的 Tailwind 类会全部失效。
  */
-function HeaderSlot({ pluginId, slotKey, children }: { pluginId: string; slotKey: string; children: ReactNode }) {
+export function HeaderSlot({ pluginId, slotKey, children }: { pluginId: string; slotKey: string; children: ReactNode }) {
 	return (
 		<HeaderSlotErrorBoundary slotKey={slotKey}>
 			<PluginInlineI18nBoundary pluginId={pluginId}>{children}</PluginInlineI18nBoundary>
