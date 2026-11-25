@@ -5,6 +5,8 @@ import { describe, expect, it, vi } from "vitest";
 import { WorkPanelSection, WorkWorkspacePanel } from "./WorkWorkspacePanel";
 
 vi.mock("react-i18next", () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
+// SSR 渲染没有 window：useNarrowScreen 的初始 useState 会抛 ReferenceError，mock 成宽屏档。
+vi.mock("@shared/hooks/useNarrowScreen", () => ({ useNarrowScreen: () => false }));
 
 describe("WorkWorkspacePanel", () => {
 	it("默认渲染四节插槽空态（plan/sources/artifacts/review），dataset 预留不出节", () => {

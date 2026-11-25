@@ -1492,6 +1492,7 @@
 		"work": {
 			"panelTitle": "Docs & research",
 			"panelLead": "This session’s plans, sources, and deliverables live here",
+			"openPanel": "Open panel",
 			"artifacts": {
 				"empty": "Generated documents, sheets and other artifacts appear here",
 				"title": "Artifacts",

@@ -1,7 +1,7 @@
 ---
 id: TASK-0508
 type: task
-status: ready
+status: verifying
 priority: P2
 owner: apps/desktop
 requirement: REQ-0008
@@ -14,8 +14,8 @@ related_issues: []
 related_bugs: []
 execution: parallel
 branch: task/TASK-0508-work-right-panel-layout
-worktree: unassigned（待创建）
-base_commit: 8ec047808
+worktree: unassigned（已集成，待推送后清理）
+base_commit: 7ae82222bd97add9ef8adeff4aeb321335163256
 read_paths:
   - apps/desktop/src/renderer/domains/workspace-mode/
   - packages/theme-ui/src/
@@ -26,7 +26,7 @@ exclusive_paths:
   - apps/desktop/src/renderer/domains/workspace-mode/components/WorkWorkspacePanel.tsx
 depends_on: [TASK-0505]
 conflicts_with: []
-integration_status: pending
+integration_status: integrated
 created: 2026-11-25
 updated: 2026-11-25
 ---
@@ -87,9 +87,9 @@ updated: 2026-11-25
 
 ## 验收分层
 
-- 工程验证：待执行
+- 工程验证：Coordinator 集成后 `WorkWorkspacePanel.test.tsx` 定向 4/4 通过。
 - 技术评审：独立评审
-- 集成：pending
+- 集成：integrated；Worker 提交 `803792a7c`（task/TASK-0508-work-right-panel-layout），由 Coordinator 于 2026-11-25 合入本地 main。
 - 人工功能验收：待验收（用户实机调整窗口宽度走查）
 - 发布：未授权
 
