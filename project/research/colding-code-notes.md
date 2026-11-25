@@ -61,4 +61,4 @@ Notes 不记录模型猜测作为事实。结论要绑定源码、类型、测�
 
 - [Colding Code Notes](https://coldingcode.github.io/notes/)
 - [Colding Code](https://coldingcode.github.io/)
-- 工程控制论方法：`C:\Users\xquan\.agents\skills\engineering-cybernetics-essence\SKILL.md`
+- 工程控制论方法：见仓库内 [RESEARCH-0017](RESEARCH-0017-development-paradigm-synthesis.md) 的研究摘要；原始本地 Skill 材料未随仓库分发。

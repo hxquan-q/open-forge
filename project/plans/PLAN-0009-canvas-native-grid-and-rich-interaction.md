@@ -32,21 +32,21 @@ related_tasks: [TASK-0096, TASK-0097, TASK-0098, TASK-0099, TASK-0100]
 ## 当前事实与约束
 
 1. **渲染分支事实**：
-   [`canvas-preview-kind.ts`](file:///c:/Users/xquan/Desktop/open-forge/apps/desktop/src/renderer/domains/activity-panel/services/canvas-preview-kind.ts) 目前仅支持 `"markdown" | "html" | "code"` 三种 `CanvasPreviewKind`。
+   [`canvas-preview-kind.ts`](../../apps/desktop/src/renderer/domains/activity-panel/services/canvas-preview-kind.ts) 目前仅支持 `"markdown" | "html" | "code"` 三种 `CanvasPreviewKind`。
 2. **工具与元数据事实**：
-   [`artifact-tool-contract.ts`](file:///c:/Users/xquan/Desktop/open-forge/packages/coding-agent/src/features/artifacts/artifact-tool-contract.ts) 的 `ArtifactCreateInputSchema` 中，`kind` 已原生支持 `"dataset"` 与 `"analysis"`，`contentType` 为开放字符串。
+   [`artifact-tool-contract.ts`](../../packages/coding-agent/src/features/artifacts/artifact-tool-contract.ts) 的 `ArtifactCreateInputSchema` 中，`kind` 已原生支持 `"dataset"` 与 `"analysis"`，`contentType` 为开放字符串。
 3. **版本控制事实**：
-   [`CanvasArtifactService`](file:///c:/Users/xquan/Desktop/open-forge/apps/desktop/src/main/artifacts/canvas-artifact-service.ts) 已具备单调自增 `version`、`baseVersion` 校验与 SHA-256 Checksum 乐观锁机制，能天然拦截外部修改冲突（`stale_version`），但当前仅通过 Agent 工具调用 `update`，缺少前端用户直接触发的 IPC 通道。
+   [`CanvasArtifactService`](../../apps/desktop/src/main/artifacts/canvas-artifact-service.ts) 已具备单调自增 `version`、`baseVersion` 校验与 SHA-256 Checksum 乐观锁机制，能天然拦截外部修改冲突（`stale_version`），但当前仅通过 Agent 工具调用 `update`，缺少前端用户直接触发的 IPC 通道。
 4. **安全与沙箱事实**：
-   [`CanvasHtmlSandbox`](file:///c:/Users/xquan/Desktop/open-forge/apps/desktop/src/renderer/domains/activity-panel/components/canvas-tab/CanvasHtmlSandbox.tsx) 基于独立进程 `<webview>`，默认 CSP deny、禁用 Node/window.vetta；内置 Browser Tab 遵循 ADR-0129 仅接收 HTTP/HTTPS 页面，禁止向 Browser 注入匿名 HTML。
+   [`CanvasHtmlSandbox`](../../apps/desktop/src/renderer/domains/activity-panel/components/canvas-tab/CanvasHtmlSandbox.tsx) 基于独立进程 `<webview>`，默认 CSP deny、禁用 Node/window.vetta；内置 Browser Tab 遵循 ADR-0129 仅接收 HTTP/HTTPS 页面，禁止向 Browser 注入匿名 HTML。
 5. **已有组件资产**：
-   [`EditDiffView.tsx`](file:///c:/Users/xquan/Desktop/open-forge/apps/desktop/src/renderer/domains/conversation/components/blocks/tool-views/EditDiffView.tsx) 与 [`parse-diff.ts`](file:///c:/Users/xquan/Desktop/open-forge/apps/desktop/src/renderer/domains/conversation/components/blocks/tool-views/shared/parse-diff.ts) 已经具备完整、高性能的 Unified Diff 解析与染色渲染能力（`DiffPreviewView` 由 `@vetta-org/ui` 提供）。
+   [`EditDiffView.tsx`](../../apps/desktop/src/renderer/domains/conversation/components/blocks/tool-views/EditDiffView.tsx) 与 [`parse-diff.ts`](../../apps/desktop/src/renderer/domains/conversation/components/blocks/tool-views/shared/parse-diff.ts) 已经具备完整、高性能的 Unified Diff 解析与染色渲染能力（`DiffPreviewView` 由 `@vetta-org/ui` 提供）。
 6. **锚点校正（评审期核实）**：
-   - 预览容器不是独立文件 `CanvasPreview.tsx`，而是 [`CanvasTabPanel.tsx`](file:///c:/Users/xquan/Desktop/open-forge/apps/desktop/src/renderer/domains/activity-panel/components/canvas-tab/CanvasTabPanel.tsx) 内的局部组件 `CanvasPreview` / `CanvasPreviewBody`（全文 185 行）。编辑态与跳转按钮必须落在该文件，涉及它的 Task 需串行。
+   - 预览容器不是独立文件 `CanvasPreview.tsx`，而是 [`CanvasTabPanel.tsx`](../../apps/desktop/src/renderer/domains/activity-panel/components/canvas-tab/CanvasTabPanel.tsx) 内的局部组件 `CanvasPreview` / `CanvasPreviewBody`（全文 185 行）。编辑态与跳转按钮必须落在该文件，涉及它的 Task 需串行。
    - `CanvasArtifactService` 没有公开的 `update()` 方法：自增与乐观锁逻辑内联在 `invokeTool()` 的 `"update"` 分支中（`canvas-artifact-service.ts:292-340`）。用户写入通道必须先把该分支抽成可复用方法，不得复制一份写入实现。
    - `stale_version` 已是 `DesktopCanvasErrorCode` 的既有成员，用户写入的冲突反馈无需新增错误码。
    - `mod+shift+d` 元素选取器与 `openUrlInActivityWorkspaceAtom` 均已存在（`browser-atoms.ts`），P2 只接线，不新建原子。
-   - `vetta.canvas.artifact-selection` capsule 合同位于 [`canvas-selection-attachment.ts`](file:///c:/Users/xquan/Desktop/open-forge/apps/desktop/src/renderer/domains/activity-panel/services/canvas-selection-attachment.ts)。
+   - `vetta.canvas.artifact-selection` capsule 合同位于 [`canvas-selection-attachment.ts`](../../apps/desktop/src/renderer/domains/activity-panel/services/canvas-selection-attachment.ts)。
 
 ---
 
@@ -146,7 +146,7 @@ related_tasks: [TASK-0096, TASK-0097, TASK-0098, TASK-0099, TASK-0100]
 * **架构可行性证明**：
   ADR-0129 已在主进程存储层实现了基于 `artifactId + baseVersion` 和 SHA-256 校验的自增版本状态机。用户手动修改只是写入者身份由 Agent 变为用户，底层版本流转完全一致。
 * **IPC 通道扩充**：
-  在 [`canvas-ipc.ts`](file:///c:/Users/xquan/Desktop/open-forge/apps/desktop/src/shared/canvas-ipc.ts) 中增加 `CANVAS_CHANNELS.UPDATE`：
+  在 [`canvas-ipc.ts`](../../apps/desktop/src/shared/canvas-ipc.ts) 中增加 `CANVAS_CHANNELS.UPDATE`：
   ```typescript
   export interface DesktopCanvasUpdateRequest {
     readonly workspaceId: string;

@@ -44,7 +44,7 @@
 | 上游 Agent 协同/Notes 方法 | [`colding-code-notes.md`](colding-code-notes.md)、[Colding Code Notes](https://coldingcode.github.io/notes/) |
 | Agent 产品性能实践 | [`RESEARCH-0002-agent-product-performance.md`](RESEARCH-0002-agent-product-performance.md) |
 | 桌面端内存足迹优化路线 | [`RESEARCH-0003-desktop-memory-footprint.md`](RESEARCH-0003-desktop-memory-footprint.md) |
-| 工程控制论方法 | `C:\Users\xquan\.agents\skills\engineering-cybernetics-essence\SKILL.md` |
+| 工程控制论方法 | [RESEARCH-0017 的研究摘要](RESEARCH-0017-development-paradigm-synthesis.md)；原始本地转录未随仓库分发 |
 | Canvas / Browser / Terminal 支持面 | [`RESEARCH-0005`](RESEARCH-0005-canvas-browser-terminal-support.md) |
 | Cursor Agent Workspace 对照与报告表面 | [`RESEARCH-0006`](RESEARCH-0006-cursor-agent-workspace-and-report-surfaces.md) |
 | 内核上下文管理三家对标（magic-context / pi / CometixCode） | [`RESEARCH-0007`](RESEARCH-0007-context-cache-stability-references.md) |

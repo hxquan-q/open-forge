@@ -3,10 +3,12 @@
 
 真机不能由开发 Agent 直接替代验证，因此采用分层测试：快速纯逻辑测试覆盖协议，Worker 合同测试覆盖真实连接顺序，Chromium E2E 覆盖视频像素和输入，Android 构建/设备测试覆盖 Kotlin 集成，最后才用实体手机验证厂商系统和网络差异。
 
+下面的 PowerShell 命令块假设在**仓库根目录**启动同一会话，先执行 `$repo = (Get-Location).Path`；其他位置先进入自己的检出根目录。设备、真实服务及部署相关操作仍需相应授权。
+
 ## 1. Remote Desktop 包
 
 ```powershell
-Set-Location "C:\develop\yiyun\vetta\open-forge\packages\remote-desktop"
+Set-Location (Join-Path $repo 'packages/remote-desktop')
 bun run build
 bun run test
 bun run test:e2e
@@ -24,7 +26,7 @@ bun run test:e2e
 ## 2. Cloudflare Worker
 
 ```powershell
-Set-Location "C:\develop\yiyun\vetta\open-forge\apps\remote-relay"
+Set-Location (Join-Path $repo 'apps/remote-relay')
 bun run test
 bun run typecheck
 bun run deploy:dry
@@ -43,7 +45,7 @@ Worker 测试必须覆盖：
 ## 3. Android 构建和测试
 
 ```powershell
-Set-Location "C:\develop\yiyun\vetta\open-forge\apps\kotlin"
+Set-Location (Join-Path $repo 'apps/kotlin')
 .\gradlew.bat :shared:testAndroidHostTest :androidApp:assembleDebug --no-daemon
 ```
 
@@ -58,7 +60,7 @@ Set-Location "C:\develop\yiyun\vetta\open-forge\apps\kotlin"
 ## 4. 仓库质量门禁
 
 ```powershell
-Set-Location "C:\develop\yiyun\vetta\open-forge"
+Set-Location $repo
 bun run check:quick
 bun run check
 ```

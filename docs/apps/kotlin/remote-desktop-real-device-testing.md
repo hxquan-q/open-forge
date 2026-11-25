@@ -54,18 +54,18 @@ $adb = "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe"
 
 ## 3. 构建和安装 APK
 
-从仓库根目录进入移动端：
+在仓库根目录启动 PowerShell，并在同一会话保存检出根目录后进入移动端：
 
 ```powershell
-Set-Location "C:\develop\yiyun\vetta\open-forge\apps\kotlin"
+$repo = (Get-Location).Path
+Set-Location (Join-Path $repo 'apps/kotlin')
 .\gradlew.bat :androidApp:assembleDebug --no-daemon
 ```
 
 安装当前 Debug APK：
 
 ```powershell
-$repo = "C:\develop\yiyun\vetta\open-forge"
-$apk = "$repo\apps\kotlin\androidApp\build\outputs\apk\debug\androidApp-debug.apk"
+$apk = Join-Path $repo 'apps/kotlin/androidApp/build/outputs/apk/debug/androidApp-debug.apk'
 & $adb install -r $apk
 & $adb shell am force-stop org.vetta.android
 & $adb shell monkey -p org.vetta.android -c android.intent.category.LAUNCHER 1
@@ -110,7 +110,7 @@ $testApk = "$repo\apps\kotlin\shared\build\outputs\apk\androidTest\shared-androi
 真实 UI 验证使用仓库提供的隔离实例，避免读取或修改日常 Desktop 配置：
 
 ```powershell
-Set-Location "C:\develop\yiyun\vetta\open-forge"
+Set-Location $repo
 bun run verify:ui:start:fresh
 bun run verify:ui:status
 ```

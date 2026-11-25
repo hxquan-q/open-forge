@@ -6,7 +6,7 @@ priority: P1
 owner: desktop
 requirement: REQ-0031
 plan: PLAN-0030
-source: D:/Coding/WorkSpace/Vetta/vetta-code-mode-ai-workspace-isolation.md
+source: user-confirmed requirement discussion; REQ-0031
 related_requirement: [REQ-0030]
 related_plan: [PLAN-0030]
 related_tasks: [TASK-0423, TASK-0425]
@@ -88,7 +88,7 @@ updated: 2026-11-18
 
 ## 目标
 
-依据已确认需求 `D:/Coding/WorkSpace/Vetta/vetta-code-mode-ai-workspace-isolation.md`，为每个 Code 项目提供位于 Vetta 用户数据目录的持久 AI 工作区；项目源码和 AI 辅助材料分离，并让单 Agent、Team 主控与成员 Agent 共享正确工作区。
+依据仓库内已确认需求 [REQ-0031](../requirements/REQ-0031-code-project-ai-workspace-isolation.md)，为每个 Code 项目提供位于 Vetta 用户数据目录的持久 AI 工作区；项目源码和 AI 辅助材料分离，并让单 Agent、Team 主控与成员 Agent 共享正确工作区。原始讨论稿曾保存在维护者工作区，不作为仓库可访问前置资料。
 
 ## 范围
 

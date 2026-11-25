@@ -37,7 +37,7 @@ related_tasks: [TASK-0480]
 
 ## 不做什么
 
-- 不把 `D:\Coding\WorkSpace\CustomDev\workshop` 当作二开目标；Workshop 只可作清晰标注范围的参考。
+- 不把 Workshop 标准功能模块当作二开目标；Workshop 只可作清晰标注范围的参考，具体目标目录以会话 Runtime 为准。
 - 不迁移旧 `draft→saved→approved`、localStorage、静态 HTML/mock 六件套、锚点/JS 桩函数、演示账号或组件注入协议为 CustomDev 合同。
 - 不默认将原型或展示稿写入 CustomDev 项目；不把 AI 辅助材料放入 CustomDev 根目录。
 - 当前不实施生产 `main` PR、生产打包、发布或部署；本 Task 也不操作 Codeup、Nacos、DBX、CustomDev 服务器或远程分支。
@@ -54,7 +54,7 @@ related_tasks: [TASK-0480]
 
 - Manifest Schema 已支持五个 Agent、角色 `roles`、team members 与 workflow；不改 `plugin-sdk`、Manifest Schema、`PLUGIN_API_VERSION` 或宿主。
 - `skillPaths` 是 plugin 级共享路径；用职责说明与触发条件控制 Skill 调用，不宣称 per-agent 隔离。
-- CustomDev 新二开表用 `creator_id`/`modifier_id`（BIGINT → `t_sys_user.id`），Service 从可信 `UserContextHolder` 取值且忽略 DTO 提交；逻辑删除使用秒级 `UNIX_TIMESTAMP()`；以 2026-11-06 工作区核实材料为证据，不从 Workshop 推断。
+- CustomDev 新二开表用 `creator_id`/`modifier_id`（BIGINT → `t_sys_user.id`），Service 从可信 `UserContextHolder` 取值且忽略 DTO 提交；逻辑删除使用秒级 `UNIX_TIMESTAMP()`。该决策来自用户确认和 2026-11-06 的只读环境核实；原始材料未随仓库分发，不从 Workshop 推断，也不替代对当前目标环境的核实。
 - 不复制或输出测试数据库凭据；测试 DB 配置仅从 Runtime 所属 AI workspace 获取，且只限测试。
 - 旧 `@esign` 与 `@eaudit` 不再作为成员，其领域内容按触发条件保留为 Skills；迁移提示说明自建 Team/配置须改绑至新角色。
 

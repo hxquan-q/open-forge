@@ -45,7 +45,7 @@ updated: 2026-10-30
 ## 执行与权限
 
 - 当前检出 chenxvhua 串行；工具/页签修复与审计共享热点，不派多 Agent，不新增并行工作树。
-- 所有主动文件写入仅工作区 `D:/Coding/WorkSpace/Vetta` 或主仓 `D:/Coding/vetta/open-forge`；验证进程 TEMP/TMP/TMPDIR 指向工作区证据目录。
+- 当时的主动写入仅限授权的辅助工作区或主仓；验证进程 TEMP/TMP/TMPDIR 指向当时的工作区证据目录。该本机目录不是其他检出可访问的仓库路径。
 - 报告交付：工作区 `code-mode-audit-2026-10-30.md`；可复核证据与必要探针放 `code-mode-audit-evidence/`，不保留无用临时产物。
 - 输入：当前源码/合同/测试/本地 Git、用户反馈与相关日志；输出：行为矩阵、真实测试结果、已确认/待验证问题及优先级。
 - 归属：Open-Forge-only（内部审计）。
@@ -73,7 +73,7 @@ updated: 2026-10-30
 
 ## 检测记录
 
-- 主报告：`D:/Coding/WorkSpace/Vetta/code-mode-audit-2026-10-30.md`；证据目录 `code-mode-audit-evidence/`，报告含具体表现、源码位置、复现输入/输出、问题分级、建议与未验证范围。
+- 当时主报告与独立探针保存在维护者辅助工作区，**未随本仓库分发**；不能仅凭下列摘要声称已完整归档或让其他检出复现原报告。仓库内可直接核对下列检测摘要和关联的 [REQ-0030](../requirements/REQ-0030-allstar-dev-section.md)、[BUG-0165](../bugs/BUG-0165-git-branch-status-parse.md) 及相关 Bug/Task；其他原始证据如需跨机器复核须先获得并经脱敏整理。
 - 正常 code 基线 24 文件/115 例通过；模式/浏览器补验 6 文件/77 例通过；页签 impact 27 文件/113 例通过；浏览器工具域 42 例通过；最终完整 bun run check exit 0。
 - test:changed 四包实跑约 2351 秒：coding-agent 3 失败、desktop 7 失败；runtime-desktop 51 例/cli-host 238 例通过。10 失败中 1 条旧 file 断言已对齐，3 条市场超时隔离复跑通过，6 条稳定复现；原批次 exit 1 不改写为绿色。
 - 独立诊断探针（工作区自有配置，不进入正常 CI 发现）：12 场景，2 对照通过/10 个测试失败；包含初始化漏触发/重复触发、旧编辑目标串项目、同文件不跟回、终端混流/完成态悬留/无流式输出、开发册历史/创建候选遗漏、coding 增量行漏过滤及页签偏好不重置。F08/F09 同一测试含多条 soft 失败断言。

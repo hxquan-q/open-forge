@@ -4,7 +4,7 @@ type: requirement
 status: ready
 priority: P1
 owner: desktop
-source: user-confirmed workspace requirement D:/Coding/WorkSpace/Vetta/vetta-code-mode-ai-workspace-isolation.md
+source: user-confirmed requirement discussion
 created: 2026-11-05
 updated: 2026-11-05
 related_requirement: [REQ-0030]

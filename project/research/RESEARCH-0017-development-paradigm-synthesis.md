@@ -38,7 +38,7 @@ depends_on: []
   - [TDD](https://github.com/mattpocock/skills/blob/d81f3a183412e71a5b1e84ca21bc1a35eea03a60/skills/engineering/tdd/SKILL.md)
   - [纵向切片任务](https://github.com/mattpocock/skills/blob/d81f3a183412e71a5b1e84ca21bc1a35eea03a60/skills/engineering/to-tickets/SKILL.md)
 - [AI Coding Dictionary](https://github.com/mattpocock/dictionary-of-ai-coding/blob/ed1ebed3975cba04ed5e74c6ca73659274beb754/README.md)，`main@ed1ebed3975cba04ed5e74c6ca73659274beb754`，重点核对 Harness、Progressive disclosure、Automated check、Automated review、Human review、Software factory。
-- 工程控制论：本机 `C:\Users\xquan\.agents\skills\engineering-cybernetics-essence\` 的 Skill、原文索引及 `references/chapters/chapter_001.md`、`chapter_021.md`。第 1 章讨论工程近似，第 21 章区分大系统与系统工程并讨论分层协调。此为本地转录，未核对纸本页码；索引采用 1983 修订版章节号，不能直接当作 1954 原版或第三版的页码引用。本轮不宣称覆盖钱学森完整的系统工程思想体系。
+- 工程控制论：当时本地安装的工程控制论 Skill、原文索引及第 1、21 章转录（原始本地材料未随仓库分发）。第 1 章讨论工程近似，第 21 章区分大系统与系统工程并讨论分层协调。此为本地转录，未核对纸本页码；索引采用 1983 修订版章节号，不能直接当作 1954 原版或第三版的页码引用。本轮不宣称覆盖钱学森完整的系统工程思想体系。
 - 本地：[规则](../../AGENTS.md)、[管理入口](../README.md)、[协作合同](../collaboration/development-workflow.md)、[质量门禁](../../docs/dev/quality-gates.md)、[任务样本](../tasks/TASK-0096-canvas-native-data-grid.md)。
 
 ## 当前结论

@@ -1,6 +1,6 @@
 # Copyright The Open Forge contributors.
 param(
-    [string]$GeneratedDirectory = 'C:\Users\xquan\Tools\AliyunCLI\allstar-flow',
+    [string]$GeneratedDirectory,
     [switch]$SelfTest,
     [switch]$Probe,
     [switch]$Update
@@ -114,6 +114,8 @@ if ($SelfTest) {
     return
 }
 
+if ([string]::IsNullOrWhiteSpace($GeneratedDirectory)) {throw 'GeneratedDirectory is required; pass the existing directory containing the reviewed pipeline definitions.'}
+if (-not (Test-Path -LiteralPath $GeneratedDirectory -PathType Container)) {throw 'GeneratedDirectory must be an existing directory.'}
 if (-not $env:ALIBABA_CLOUD_YUNXIAO_ACCESS_TOKEN) {throw 'Run in the existing PowerShell window containing your Yunxiao token.'}
 
 function Invoke-Flow([string]$Method, [string]$Path, $Payload) {

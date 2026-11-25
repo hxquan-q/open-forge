@@ -6,7 +6,7 @@ priority: P2
 owner: apps/desktop agent-teams + runtime-core
 requirement:
 plan:
-source: 用户 dev 运行日志（C:\Users\Chenxuhua\.openforge-dev\desktop-app\logs，2026-10-13）+ 源码静态追踪
+source: 用户 dev 运行日志（2026-10-13，原始日志未随仓库分发）+ 源码静态追踪
 related_requirement: [REQ-0001]
 related_plan: []
 related_tasks: [TASK-0286]

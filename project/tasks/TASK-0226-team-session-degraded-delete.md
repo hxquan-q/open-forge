@@ -106,7 +106,7 @@ updated: 2026-11-18
 
 - 来源：用户在左侧对话列表确认删除 Agent Team 会话后条目不消失；主进程日志显示无法认领 coordination 文件、转降级清理并停止团队。只读核验两条目标会话各留有 1 条 coordination + 3 条 member 所有权登记，但登记所指文件及 legacy 文档均缺失。此处不记录私有正文或真实路径。
 - 归属：Upstreamable；本次仅补回归证据，不修改生产删除实现、不清理真实数据、不访问远端，也不把历史通过记录当作本轮验证。
-- 执行：serial；沿用用户当前主仓工作区 `D:/Coding/vetta/open-forge` 和现有 `task/TASK-0486-delegation-mechanism` 分支，不切分支、不集成其他任务。现有 `bun.lock` 改动保留。此次读域为团队删除、所有权索引与团队列表；写域仅 `team-session-delete.test.ts`、本 Task、Task 焦点表、BUG-0087 补记与 Bug 状态索引；测试发布说明候选暂记本 Task，独占本次测试改动。
+- 执行：serial；沿用用户当时的主仓检出和现有 `task/TASK-0486-delegation-mechanism` 分支，不切分支、不集成其他任务。现有 `bun.lock` 改动保留。此次读域为团队删除、所有权索引与团队列表；写域仅 `team-session-delete.test.ts`、本 Task、Task 焦点表、BUG-0087 补记与 Bug 状态索引；测试发布说明候选暂记本 Task，独占本次测试改动。
 - 输入 → 输出：文档与会话文件均缺失、索引仍在 → 可稳定揭示遗漏清理的回归测试。直接补充现有测试即可，无需重构生产代码。
 - Given：真实临时所有权索引内有目标团队会话的主控与成员登记，以及同团队的另一条会话；目标会话文件、内存文档和 legacy 文档均缺失。
 - When：经 `AgentTeamSessionService.listSessions` 查询、调用产品删除服务公共入口，再次查询并重新读取持久索引。
@@ -170,7 +170,7 @@ updated: 2026-11-18
 - 未修改路径的现存阻断：`packages/coding-agent/test/composition/spawn-agent-resident-guard.test.ts` 5 处缺 RuntimeToolExecutionRequest 的 sessionId/turnId/signal；`desktop-conversation-service.ts` 2 处 delegationTeamId 未定义、`session-delegation.ts` readonly 数组 push、`useSessionEventController.terminal-settle.test.tsx` 4 处事件类型不匹配；WAIVER-0011/0012 2026-11-11 过期；`useProjectsPanelModel.newSession.test.tsx`、`useProjectsPanelModel.selectSession.test.tsx`、`useTeamSidebarConversations.test.tsx` 3 个非本次修改文件缺声明头。另有 Claude skills symlink placeholder 的非失败提示。不修改这些路径、不续期 waiver、不降基线。
 - 下一未发布版本候选碎片经 `release-notes.mjs` 导出的 fragmentProblems 单独校验通过；未运行 --assemble，不改变 manifest 或已发布说明。完整 check 已覆盖当前版本发布说明状态检查。
 - 工程状态：实现和定向回归完成，但全仓必需门禁未满足；Task/Bug 保持 in_progress，integration_status=pending，人工功能验收未进行。**未暂存、未提交、未集成**，不强行提交，不进行任何远程 Git。最终仅追加记录与只读校验，不再修改已验证生产实现/测试。
-- 收尾：`git diff --check` 通过；追加最终结果后 Project 索引与 Task worktree 合同再次通过（478 Task、0 warning）。已核实 `D:/Coding/WorkSpace/Vetta/.task-0226-tests` 为本轮 15:25 创建的普通目录、非链接，清理本轮临时数据/家目录/缓存并确认目录不存在；不清理其他缓存或用户文件。
+- 收尾：`git diff --check` 通过；追加最终结果后 Project 索引与 Task worktree 合同再次通过（478 Task、0 warning）。已核实当时辅助工作区的 `.task-0226-tests` 为本轮 15:25 创建的普通目录、非链接，清理本轮临时数据/家目录/缓存并确认目录不存在；该历史目录不随仓库分发，不清理其他缓存或用户文件。
 
 ### 2026-11-16 用户黑盒反馈与本地保存
 

@@ -41,7 +41,7 @@ SDK 的 roles 是 slug 而非固定枚举白名单，当前 Schema 支持这五�
 | `electronic-signature-field-implementation` | 开发：最终规格含 signature 且本次明确增改电子签；需求先确认 | 吸收 esign 的领域问题，移除演示身份/组件注入，不承诺合规签署 |
 | `operation-audit-domain` | 需求先确认、开发/测试按范围：仅明确增改审计功能 | 吸收 eaudit 的本记录事件问题，不保留固定五事件/全量快照平台 |
 
-候选来源是工作区 `eformSkill-extraction-draft/<同名目录>/SKILL.md` 及 comparison.md；它们是整编依据，不直接称为批准的外部开发合同。
+五项候选来自此前的用户需求讨论和工作区提取材料；原始提取材料未随仓库分发。当前整编结果以本目录 `agent/skills/` 中对应 Skill、[REQ-0032](../../../../project/requirements/REQ-0032-eform-craft-aimes-customdev-team.md) 与 [TASK-0480](../../../../project/tasks/TASK-0480-eform-craft-customdev-team.md) 为准，不将历史候选稿当作外部开发合同。
 
 ### eformSkill 全量 14 项
 
@@ -64,7 +64,7 @@ SDK 的 roles 是 slug 而非固定枚举白名单，当前 Schema 支持这五�
 
 无为了数量删减非重复约定。Workshop 专属 UI/SQL 路径/CRUD/幂等与运行参数保留范围标签；Practice 示例不升级成会话 CustomDev 已实现事实。重复运行参数集中在项目事实 Skill，类型/用户元数据/逻辑删除/构建各有单一权威，不保留旧新两套同名规则。
 
-基础资料映射与测试配置证据取自工作区 `eform/CustomDev测试环境核实-2026-11-06.md` 的非敏感结论，当前改造没有重连 Nacos/DBX。历史配置不是未来授权；具体新字段映射、实际 qiankun 注册、Codeup/服务器/签名/审计合同仍待验证。
+基础资料映射与测试配置基于 2026-11-06 获准只读核实的历史环境证据；原始材料未随仓库分发，可复用的非敏感结论见 [项目架构与事实地图](agent/skills/project-architecture-and-runtime-map/SKILL.md)。本次改造没有重连 Nacos/DBX。历史配置不是未来授权；具体新字段映射、实际 qiankun 注册、Codeup/服务器/签名/审计合同仍待验证。
 
 ## 从旧三成员 preset 迁移
 

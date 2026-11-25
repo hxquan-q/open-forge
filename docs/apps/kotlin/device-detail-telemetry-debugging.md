@@ -153,9 +153,12 @@ Set-Location apps/kotlin
 
 ### 7.1 安装并启动
 
+在仓库根目录启动 PowerShell 后执行；设备安装需获得相应授权：
+
 ```powershell
 $adb = "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe"
-$apk = "C:\develop\yiyun\vetta\open-forge\apps\kotlin\androidApp\build\outputs\apk\debug\androidApp-debug.apk"
+$repo = (Get-Location).Path
+$apk = Join-Path $repo 'apps/kotlin/androidApp/build/outputs/apk/debug/androidApp-debug.apk'
 
 & $adb devices
 & $adb install -r $apk

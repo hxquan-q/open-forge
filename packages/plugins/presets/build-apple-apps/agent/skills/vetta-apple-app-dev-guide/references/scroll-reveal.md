@@ -1,3 +1,4 @@
+<!-- Modified by The Open Forge contributors. -->
 # Scroll-reveal detail surfaces
 
 ## Intent
@@ -127,7 +128,6 @@ This keeps the motion coherent and avoids duplicate-hit-target bugs.
 - Do not store derived state like `isSecondaryVisible` unless another API requires it. Prefer deriving it from `progress` or visible scroll targets.
 - Beware of layout feedback loops when measuring heights. Clamp zero values and update only when the measured height actually changes.
 
-## Concrete example
+## Example context
 
-- Pool iOS tile detail reveal: `/Users/dimillian/Documents/Dev/Pool/pool-ios/Pool/Sources/Features/Tile/Detail/TileDetailView.swift`
-- Secondary content anchor example: `/Users/dimillian/Documents/Dev/Pool/pool-ios/Pool/Sources/Features/Tile/Detail/TileDetailIntentListView.swift`
+An earlier design reference used an iOS tile-detail reveal and a secondary-content anchor. Its source files were referenced through a developer's local checkout and are not included in this repository; use the interaction patterns above rather than depending on that checkout.

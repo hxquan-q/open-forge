@@ -1,3 +1,4 @@
+<!-- Modified by The Open Forge contributors. -->
 # 应用内可见会话复测（2026-07-18）
 
 ## 问题纠正
@@ -55,5 +56,5 @@ Playwright闭环验收
 ## 清理说明
 
 - 验收用的 `.vetta/claude-hooks.json` 与 `.vetta/claude-hooks/*.cjs` 目前在 monorepo 根目录，**未 gitignore**，会显示为 untracked  
-- 若不希望仓库出现这些本地文件：删除 `C:\develop\yiyun\vetta-mono\.vetta\`，或把 `.vetta/` 加入 gitignore  
+- 历史环境曾为验收创建这些文件；**不要直接删除整个 `.vetta/` 目录或照搬旧机器路径**。若需清理，应先确认当前检出和目标文件确由本次验收创建、检查是否含用户数据，并取得对应授权后仅处理明确的文件。
 - 文档向 fixture 仍在 `docs/adapter/claude/fixtures/hook-smoke/`（可提交）  

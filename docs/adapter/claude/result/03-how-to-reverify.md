@@ -1,11 +1,14 @@
+<!-- Modified by The Open Forge contributors. -->
 # 如何本地复验 Claude Hook 适配
+
+> 本文保留历史复验步骤；当前环境、CLI 命令及授权要求需先核对。以下 PowerShell 示例从当前仓库根目录开始，同一会话先执行 `$repo = (Get-Location).Path`。真实 Desktop、模型、UI 和外部仓库仅在当次获授权后使用；本次仅修正路径，不代表重新运行或验证通过。
 
 ## A. 最快路径：单元测试
 
 ```powershell
-cd C:\develop\yiyun\vetta-mono\packages\ecosystem-adapter
+Set-Location (Join-Path $repo 'packages/ecosystem-adapter')
 bun run build
-bunx vitest --run test/claude-hooks.test.ts
+bun ../../scripts/quality/run-vitest.mjs --run test/claude-hooks.test.ts
 ```
 
 期望：`10 passed`。
@@ -15,14 +18,14 @@ bunx vitest --run test/claude-hooks.test.ts
 ### 1. 启动
 
 ```powershell
-cd C:\develop\yiyun\vetta-mono\apps\desktop
+Set-Location (Join-Path $repo 'apps/desktop')
 bun dev
 ```
 
 ### 2. 确认 Debug / CDP
 
 ```powershell
-cd C:\develop\yiyun\vetta-mono
+Set-Location $repo
 bun apps/cli-host/src/cli.ts debug run ui.info
 ```
 
@@ -30,7 +33,7 @@ bun apps/cli-host/src/cli.ts debug run ui.info
 
 ```powershell
 $payload = @{
-  cwd = "C:\develop\yiyun\vetta-mono\docs\adapter\claude\fixtures\hook-smoke"
+  cwd = (Join-Path $repo 'docs/adapter/claude/fixtures/hook-smoke')
   prompt = "ClaudeHook验收。只回复：session hooks ok。不要调用工具。"
   executionMode = "full-access"   # win32 sandbox 不可用时
   timeoutMs = 180000
@@ -72,11 +75,16 @@ bun apps/cli-host/src/cli.ts debug run conversation.continue $payload
 
 ## C. 加载原始 cc-skills hooks（不执行 .sh）
 
+该外部仓库不随本项目分发；仅在已获授权并自行准备对应 checkout 时，设置 `CC_SKILLS_ROOT` 为它的 `plugins/council` 目录。不要将私有配置或凭据写入仓库。
+
 ```powershell
+$env:CC_SKILLS_ROOT = '<你已准备的 cc-skills/plugins/council 目录>'
+Set-Location $repo
 bun -e "
 import { discoverClaudeHookHandlers } from './packages/ecosystem-adapter/src/claude-code/hooks/config.ts';
 import { join } from 'node:path';
-const root = 'C:/develop/github/cc-skills/plugins/council';
+const root = process.env.CC_SKILLS_ROOT;
+if (!root) throw new Error('Set CC_SKILLS_ROOT to an authorized council directory');
 const r = await discoverClaudeHookHandlers([{
   directory: root,
   enabled: true,
