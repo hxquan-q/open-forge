@@ -30,7 +30,7 @@ rg -n '^status: (draft|ready|in_progress|blocked|verifying)$' project/tasks -g '
 
 | Task ID | 状态 | Plan | 任务（详情见原记录） |
 |---|---|---|---|
-| `TASK-0510` | `ready` | PLAN-0032 | [顶栏按钮组（registerHeaderAction + 拖动排序 + 更多菜单）](TASK-0510-header-actions-plugin.md)：PLAN-0032 P7；升 Plugin API 2.14.0；conflicts_with TASK-0509，需协调集成顺序。 |
+| `TASK-0510` | `verifying` | PLAN-0032 | [顶栏按钮组（registerHeaderAction + 拖动排序 + 更多菜单）](TASK-0510-header-actions-plugin.md)：PLAN-0032 P7；升 Plugin API 2.14.0；conflicts_with TASK-0509，需协调集成顺序。 |
 | `TASK-0509` | `ready` | PLAN-0032 | [本机用量页（app-monitor + chart.js）](TASK-0509-usage-page-app-monitor.md)：PLAN-0032 P6；新增 `main/usage/` + `settings/components/usage/` 独占；conflicts_with TASK-0510。 |
 | `TASK-0508` | `verifying` | PLAN-0032 | [Work 右栏按容器宽度切换布局 + 窄屏抽屉入口 + CollapsePanel 分节](TASK-0508-work-right-panel-layout.md)：PLAN-0032 P5b；并行 worktree，仅 `WorkWorkspacePanel.tsx` 独占，待派工。 |
 | `TASK-0507` | `verifying` | PLAN-0032 | [Allstar 页头「打开项目/新建会话」迁入 ButtonGroup](TASK-0507-allstar-header-button-group.md)：PLAN-0032 P5a；并行 worktree，仅 `AllstarDevHomePageView.tsx` 独占，待派工。 |

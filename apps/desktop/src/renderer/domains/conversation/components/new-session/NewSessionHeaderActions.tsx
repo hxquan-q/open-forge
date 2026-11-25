@@ -1,7 +1,11 @@
-import { ChatHeaderActions } from "@vetta-org/theme-ui/chat";
+// Modified by The Open Forge contributors.
+import { useMemo } from "react";
+import { ConversationHeaderActions } from "@domains/header-actions/ConversationHeaderActions";
+import { ChatHeaderActions, type HeaderActionBarItem } from "@vetta-org/theme-ui/chat";
 
 interface NewSessionHeaderActionsProps {
 	activityOpen: boolean;
+	cwd: string;
 	onToggleActivity: () => void;
 	onTogglePin: () => void;
 	panelTitle: string;
@@ -15,16 +19,31 @@ interface NewSessionHeaderActionsProps {
  */
 export function NewSessionHeaderActions({
 	activityOpen,
+	cwd,
 	onToggleActivity,
 	onTogglePin,
 	panelTitle,
 	pinTitle,
 	pinned,
 }: NewSessionHeaderActionsProps): JSX.Element {
+	const builtins = useMemo<HeaderActionBarItem[]>(
+		() => [{
+			key: "builtin:pin",
+			title: pinTitle,
+			icon: <span className={pinned ? "icon-[solar--pin-bold]" : "icon-[solar--pin-linear]"} />,
+			active: pinned,
+			promoteWhenActive: true,
+			retainWhenNarrow: true,
+			behavior: { type: "click", onClick: onTogglePin },
+		}],
+		[onTogglePin, pinTitle, pinned],
+	);
 	return (
-		<>
-			<ChatHeaderActions.Pin title={pinTitle} pinned={pinned} onClick={onTogglePin} />
-			<ChatHeaderActions.Panel title={panelTitle} open={activityOpen} onClick={onToggleActivity} />
-		</>
+		<ConversationHeaderActions
+			builtins={builtins}
+			cwd={cwd}
+			surface="new-session"
+			pinned={<ChatHeaderActions.Panel title={panelTitle} open={activityOpen} onClick={onToggleActivity} />}
+		/>
 	);
 }

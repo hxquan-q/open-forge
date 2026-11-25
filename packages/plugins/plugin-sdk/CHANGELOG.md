@@ -5,6 +5,8 @@ All notable changes to `@vetta-org/plugin-sdk` are documented in this file.
 
 ## [Unreleased]
 
+- 新增 `ctx.ui.registerHeaderAction()` 和权限 `ui.slot.header-action`，要求 Plugin API `^2.14.0`。插件可以在普通会话或新会话页提供常用操作，用户可以把它们放在顶栏或收纳区并调整顺序。
+
 - **清单新增 `agent.agents[].lifecycle`（`resident` / `oneshot`）——委任生命周期标记**：声明即表示该智能体是 worker 型，用户在新会话选择器选中它时不再由它的人格接管会话，而是由默认会话保持驾驶、任务落在其域内时按定义委派（`resident` 常驻：spawn 一次 durable 会话，后续任务 followup_task 顺序排队，绝不重复起实例；`oneshot` 一次性：每个任务起 one-shot 子代理）。**缺省不带标记 = 主控/接管型，行为与现状完全一致**；团队是否有主控由队长的 `lifecycle` 推导，成员各自的标记决定被委派时的生命周期。存量清单零迁移。使用者应声明 `pluginApiVersion: ^2.13.0`（清单校验 fail-closed，旧宿主会整份拒绝带该字段的清单）。
 
 - **Skill 展示策略可声明工作区模式**：`agent.skillPresentation.workspaceMode` 或按 Skill 覆盖的 `skills.<name>.workspaceMode` 只控制输入区 `/` 候选列表的显示；未标记默认两种模式都可见。它不限制 Skill 加载、LLM 调用或权限，使用此字段的插件应声明 `pluginApiVersion: ^2.12.0`。

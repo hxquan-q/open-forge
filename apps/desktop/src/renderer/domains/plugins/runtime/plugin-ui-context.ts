@@ -32,6 +32,8 @@ import type {
 	PluginContext,
 	PluginFilePreviewContribution,
 	PluginGlobalSlotContribution,
+	PluginHeaderActionContribution,
+	PluginHeaderActionSurface,
 	PluginImageRef,
 	PluginInputActionContribution,
 	PluginNavBadge,
@@ -49,6 +51,10 @@ import type {
 import { getDefaultStore } from "jotai";
 import QRCode from "qrcode";
 import type { ComponentType } from "react";
+
+/** 顶栏动作能声明的页面；其余页面即使声明了也不会渲染。 */
+const HEADER_ACTION_SURFACES = new Set<PluginHeaderActionSurface>(["conversation", "new-session"]);
+
 import { explicitTabVisibility, withPluginTabVisibility } from "./attached-tabs";
 import type { PluginAgentApiRegistration } from "./plugin-agent-context";
 import { createPluginArtifactRenderer } from "./plugin-artifact-renderer-contribution";
@@ -238,6 +244,7 @@ export function createPluginUiApi({
 		bottomPanels,
 		inputActions,
 		newSessionContexts,
+		headerActions,
 		cardRenderers,
 		artifactRenderers,
 		toolCallSlots,
@@ -455,6 +462,55 @@ export function createPluginUiApi({
 			dispose: () => {
 				const index = newSessionContexts.findIndex((entry) => entry.id === normalized.id);
 				if (index >= 0) newSessionContexts.splice(index, 1);
+				onChanged();
+			},
+		};
+	};
+
+	const registerHeaderAction = (contribution: PluginHeaderActionContribution): Disposable => {
+		if (!hasPluginPermission(plugin, "ui.slot.header-action")) {
+			warnSkippedPluginContribution(plugin, "ui.slot.header-action", "header action");
+			return noopDisposable;
+		}
+		if (typeof contribution.id !== "string" || contribution.id.trim().length === 0) {
+			throw new Error("Header action id is required");
+		}
+		if (contribution.id.length > 64) {
+			throw new Error("Header action id must be at most 64 characters");
+		}
+		if (headerActions.some((existing) => existing.id === contribution.id)) {
+			throw new Error(`Header action id already registered: ${contribution.id}`);
+		}
+		if (typeof contribution.useAction !== "function") {
+			throw new Error("Header action `useAction` must be a function (a React hook returning the action state)");
+		}
+		if (contribution.order !== undefined && !Number.isFinite(contribution.order)) {
+			throw new Error("Header action order must be a finite number");
+		}
+		if (contribution.surfaces !== undefined) {
+			if (
+				!Array.isArray(contribution.surfaces) ||
+				contribution.surfaces.some((surface) => !HEADER_ACTION_SURFACES.has(surface))
+			) {
+				throw new Error(`Header action surfaces must be an array of ${[...HEADER_ACTION_SURFACES].join(" | ")}`);
+			}
+		}
+		if (contribution.pin !== undefined && contribution.pin !== "normal" && contribution.pin !== "prefer") {
+			throw new Error('Header action pin must be "normal" or "prefer"');
+		}
+		const normalized: PluginHeaderActionContribution = {
+			id: contribution.id,
+			order: contribution.order,
+			...(contribution.surfaces ? { surfaces: [...new Set(contribution.surfaces)] } : {}),
+			...(contribution.pin === "prefer" ? { pin: "prefer" as const } : {}),
+			useAction: contribution.useAction,
+		};
+		headerActions.push(normalized);
+		onChanged();
+		return {
+			dispose: () => {
+				const index = headerActions.indexOf(normalized);
+				if (index >= 0) headerActions.splice(index, 1);
 				onChanged();
 			},
 		};
@@ -965,6 +1021,7 @@ export function createPluginUiApi({
 		registerBottomPanel,
 		registerInputAction,
 		registerNewSessionContext,
+		registerHeaderAction,
 		registerArtifactRenderer,
 		registerCardRenderer,
 		registerToolCallSlot,

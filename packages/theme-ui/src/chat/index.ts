@@ -130,6 +130,21 @@ export type {
 	GuideBadgeViewItem,
 } from "./GuideBadgeSwiperView";
 export { GuideBadgeSwiperView } from "./GuideBadgeSwiperView";
+export type {
+	HeaderActionBarItem,
+	HeaderActionBarLabels,
+	HeaderActionBarViewProps,
+	HeaderActionBehavior,
+	HeaderActionPopoverApi,
+	HeaderActionTone,
+	HeaderActionZone,
+} from "./HeaderActionBarView";
+export {
+	HeaderActionBarView,
+	LABELED_TOP_ACTIONS_MAX,
+} from "./HeaderActionBarView";
+export type { NarrowHeaderAction, NarrowHeaderSplit } from "./header-action-narrow";
+export { narrowOverflowBadge, partitionHeaderActionsForNarrow } from "./header-action-narrow";
 export type { InlineTokenChipProps } from "./InlineTokenChip";
 export { InlineTokenChip } from "./InlineTokenChip";
 export type {

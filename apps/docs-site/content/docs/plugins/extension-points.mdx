@@ -25,6 +25,7 @@ description: 按产品目标选择界面、文件、Agent、Provider 或 App Act
 | Task Artifact Renderer | `registerArtifactRenderer` | `ui.slot.artifact-renderer`；读文件另需 `fs.read` |
 | 活动面板 Tab | `registerActivityTab`、`openActivityTab`、`setActivityTabVisible` | `ui.slot.activity-tab` |
 | 输入栏动作与附件 | `registerInputAction`、`setPromptAttachment` | `ui.slot.input-action` |
+| 会话顶栏动作 | `registerHeaderAction` | `ui.slot.header-action` |
 | 新会话上下文区 | `registerNewSessionContext` | `ui.slot.new-session-context` |
 | 消息卡片渲染器 | `registerCardRenderer` | `ui.slot.message` |
 | 工具调用行内渲染 | `registerToolCallSlot` | `ui.slot.tool-call` |
@@ -42,6 +43,8 @@ Task Artifact Renderer requires Plugin API `^2.8.0`; the `schema` validates a UR
 </Callout>
 
 面板类槽位（文件预览、活动 Tab、工作区视图）禁止使用铺满视口的固定定位浮层，它们会盖住宿主自己的界面。
+
+会话顶栏动作要求 Plugin API `^2.14.0`，并取得 `ui.slot.header-action` 授权。默认出现在普通会话的 `conversation` 页头。会话开始前可用的动作可以在 `surfaces` 中指定 `new-session`。用户可以在顶栏与收纳区之间移动动作。
 
 ## 文件浏览器扩展点
 

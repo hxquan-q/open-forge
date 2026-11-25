@@ -71,6 +71,8 @@ describe("conversation controls", () => {
 		const user = userEvent.setup();
 		await user.click(screen.getByRole("button", { name: "Export" }));
 		await user.click(screen.getByRole("button", { name: "Panel" }));
+		// 窗口置顶默认收在收纳托盘里：先开托盘再点。
+		await user.click(screen.getByRole("button", { name: "chatView.headerActions.customize" }));
 		await user.click(screen.getByRole("button", { name: "Pin" }));
 		await user.click(screen.getByRole("button", { name: "Terminal" }));
 		expect(actions.openExport).toHaveBeenCalledOnce();

@@ -12,6 +12,7 @@ export const PLUGIN_PERMISSIONS = [
 	"ui.slot.turn-card",
 	"ui.slot.workspace-view",
 	"ui.slot.new-session-context",
+	"ui.slot.header-action",
 	"ui.shortcuts.register",
 	"conversation.draft.read",
 	"ui.file-explorer.decorations",

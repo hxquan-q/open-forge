@@ -712,6 +712,113 @@ interface PluginNewSessionContext {
 
 团队会话与单智能体会话一样会把**工作区**与**轮次开始**报给插件，因此本区里挂的东西（附件、插入的文本）在团队会话里同样有去处。
 
+## 会话页顶栏动作 registerHeaderAction
+
+在页面顶栏右侧的**宿主统一按钮组**里加一格，例如「用外部应用打开」，或把分支 / 待提交数这类状态摊在顶栏上。
+
+- 权限：`ui.slot.header-action`（缺权限 = warn + noop）
+- 需要 Plugin API `^2.14.0`
+- 出现在会话页与新会话页（由 `surfaces` 决定）
+
+### 它是声明式的：你只决定「是什么」，不决定「长什么样」
+
+顶栏右侧是**一个**按钮组，内置按钮（导出 / 置顶 / 终端 / 底部面板）和所有插件动作排在同一组里。外观、间距、弹层皮肤全部由宿主渲染，插件**不能**传 `className` / `style`，也不能替换按钮本身，更不能在顶栏里画自己的控件。你能给的只有：
+
+| 字段 | 说明 |
+| --- | --- |
+| `title`（必填） | 悬浮提示与无障碍名称。**默认按钮上没有文字**，用户靠图标 + 这条提示认出它；最长 40 字，超出截断 |
+| `icon`（必填） | 图标节点。宿主放进 16px 固定方框、忽略指针事件，建议用 iconify：`<span className="icon-[solar--folder-linear]" />` |
+| `label` | 图标右侧的文字（最长 24 字）。给「状态本身就是文字」的动作用，比如分支名、落后几个提交。只在顶栏上、且顶栏不超过 4 格、页头不拥挤时显示；被收纳或挤窄时自动退回纯图标 |
+| `badge` | 数字（≥ 1，超过 99 显示 `99+`）或 `true`（红点）；其它值被忽略 |
+| `tone` | `neutral`（默认）/ `info` / `success` / `warning` / `danger`，作用于角标与图标颜色。**别把所有数字都染成红色**：红色留给真正需要人处理的状态（冲突、失败） |
+| `active` / `disabled` | 选中态 / 禁用态 |
+| `disabledReason` | 禁用原因。禁用时取代 `title` 显示，用户才知道为什么点不了 |
+| `promoteWhenActive` | 选中时即使被收纳，也在活动面板开关左侧露出来（适合「正在录制」这类必须可见的状态） |
+| `onClick` / `menuItems` / `popover` | **三选一**的点击行为，见下 |
+
+三种点击行为按 `menuItems` > `popover` > `onClick` 取第一个存在的；一个都没有，这个动作不显示并在控制台打一条 warn。
+
+- `menuItems`：下拉菜单，最多 20 项，`{ id, kind?, label, icon?, onSelect?, children?, checked?, disabled?, disabledReason?, destructive?, separatorBefore? }`，`id` 在菜单内唯一，非法项被丢弃；
+- `popover`：一个 React 组件（props `{ close }`），或 `{ component, size?: "sm" | "md" | "lg", host?: "popover" | "dialog", title? }`。**这是唯一允许自定义内容的地方**。气泡的背景、圆角、投影由宿主固定；`size` 决定宽度档位（约 16 / 24 / 32rem），`host: "dialog"` 换成宿主居中对话框（内容有输入框、长列表时更合适）；
+- `onClick`：点击直接执行。
+
+#### 菜单项类型：让「列表就是状态」
+
+`kind` 省略即普通命令项。给列表、开关、加载中这些场景用，比把状态写进文案更清楚：
+
+| `kind` | 行为 |
+| --- | --- |
+| `item` | 普通命令项，必须给 `onSelect` |
+| `checkbox` / `radio` | 带勾选标记（`checked`），点击后**菜单不关**（勾选变化就是反馈）；必须给 `onSelect` |
+| `label` | 分组标题，不可点 |
+| `loading` / `empty` | 占位行，自动禁用（「正在加载」「没有本地分支」） |
+| `submenu` | 展开 `children`；**只支持一层**，第二层会被丢弃 |
+
+用户可以拖拽顶栏按钮重排顺序，过窄时多余按钮自动收进「更多」菜单；布局跨重启保持。
+
+### 注册：`useAction` 是一个 hook
+
+```ts
+interface PluginHeaderActionContribution {
+  id: string;        // 本插件内唯一，≤ 64 字符；用户布局按 `${pluginId}:${id}` 记忆，别随意改名
+  order?: number;    // 只决定「用户没调整过时」的初始位置，小的靠左
+  surfaces?: readonly ("conversation" | "new-session")[]; // 默认 ["conversation"]
+  pin?: "normal" | "prefer"; // prefer = 用户没调整过时优先占顶栏一格；仍是用户可改的默认值
+  useAction: (context: { surface; cwd }) => PluginHeaderActionState | null; // null = 此刻不适用
+}
+```
+
+宿主在页面顶栏挂载期间一直调用 `useAction`，所以里面可以用任意 hook（`useTranslation()`、你自己的 store），数据变化就自然重新声明。入参 `context` 给出当前页面（`surface`）与工作目录（`cwd`，没有项目时为 `null`）：
+
+```tsx
+import { useTranslation } from "@vetta-org/plugin-sdk";
+
+function useOpenInApp({ cwd }: { cwd: string | null }) {
+  const { t } = useTranslation();
+  if (!cwd) return null; // 没有项目目录：不显示
+  return {
+    title: t("action.title"),
+    icon: <span className="icon-[solar--square-arrow-right-up-linear]" />,
+    menuItems: [
+      { id: "finder", label: "Finder", onSelect: () => openIn("Finder", cwd) },
+      { id: "vscode", label: "VS Code", onSelect: () => openIn("Visual Studio Code", cwd) },
+    ],
+  };
+}
+
+// activate 里注册
+ctx.ui.registerHeaderAction({ id: "open-in-app", order: 100, useAction: useOpenInApp });
+```
+
+把状态摊在按钮上的例子（分支名 + 待提交数 + 角标语义色，点开是快捷操作）：
+
+```tsx
+function useStatus({ cwd }) {
+  const status = useMyRepoStatus(cwd); // 你自己的 store，渲染期只读缓存
+  if (!cwd || !status) return null;
+  return {
+    title: `${status.branch} · ${status.files} 个未提交变更`,
+    label: status.branch ?? "分离 HEAD",
+    icon: <span className="icon-[mdi--source-branch]" />,
+    badge: status.conflict > 0 ? status.conflict : status.files || undefined,
+    tone: status.conflict > 0 ? "danger" : status.behind > 0 ? "info" : undefined,
+    popover: { component: QuickActions, size: "md", title: "Git" },
+  };
+}
+```
+
+### 工程限制一览
+
+| 项 | 限制 |
+| --- | --- |
+| 贡献 id | 本插件内唯一，≤ 64 字符，重复注册抛错 |
+| `title` / `label` | 必填 40 字 / 可选 24 字，超出截断 |
+| `icon` | 必填，16px 固定方框，忽略指针事件 |
+| `menuItems` | ≤ 20 项，id 不重复，`label` ≤ 40 字，子菜单只一层 |
+| `badge` | 数字 ≥ 1 或 `true` |
+| 点击行为 | `menuItems` / `popover` / `onClick` 三选一 |
+| 样式 | 不可自定义（仅 `popover` 组件内部自由） |
+
 ## 工具行内渲染 registerToolCallSlot
 
 按 **toolName** 替换宿主默认的工具调用行内 UI（transcript 内嵌渲染）。**首个注册胜**。

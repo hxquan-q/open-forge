@@ -15,6 +15,7 @@ import {
 	pluginI18nByIdAtom,
 	pluginInputActionsAtom,
 	pluginNewSessionContextsAtom,
+	pluginHeaderActionsAtom,
 	type RegisteredNewSessionContext,
 	pluginToolCallSlotsAtom,
 	pluginTurnCardsAtom,
@@ -41,6 +42,7 @@ import { installPluginHostShim } from "../runtime/plugin-host-shim";
 import { PluginI18nBoundary } from "../runtime/plugin-i18n";
 import { loadPlugin, type LoadedPlugin } from "../runtime/plugin-loader";
 import { loadPluginSnapshot } from "./plugin-snapshot";
+import { publishHeaderActions } from "./plugin-header-action-publication";
 import { publishWorkspaceViews } from "./plugin-workspace-view-publication";
 import { PluginSlotErrorBoundary } from "./PluginSlotErrorBoundary";
 import { collectFileExplorerContributions } from "./plugin-file-explorer-publication";
@@ -64,6 +66,7 @@ export function PluginGlobalSlotHost(): JSX.Element | null {
 	const setBottomPanels = useSetAtom(pluginBottomPanelsAtom);
 	const setInputActions = useSetAtom(pluginInputActionsAtom);
 	const setNewSessionContexts = useSetAtom(pluginNewSessionContextsAtom);
+	const setHeaderActions = useSetAtom(pluginHeaderActionsAtom);
 	const setCardRenderers = useSetAtom(pluginCardRenderersAtom);
 	const setArtifactRenderers = useSetAtom(pluginArtifactRenderersAtom);
 	const setToolCallSlots = useSetAtom(pluginToolCallSlotsAtom);
@@ -315,6 +318,12 @@ export function PluginGlobalSlotHost(): JSX.Element | null {
 		);
 		if (contexts.length > 0 || !hostLoading) setNewSessionContexts(contexts);
 	}, [plugins, revision, hostLoading, setNewSessionContexts]);
+
+	// Publish conversation-header actions, sorted once here so the header only renders.
+	useEffect(() => {
+		const actions = publishHeaderActions(plugins);
+		if (actions.length > 0 || !hostLoading) setHeaderActions(actions);
+	}, [plugins, revision, hostLoading, setHeaderActions]);
 
 	// Publish card renderers (keyed by type). The per-message card host resolves
 	// each card descriptor's `type` to one of these.
