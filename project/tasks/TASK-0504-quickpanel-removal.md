@@ -1,7 +1,7 @@
 ---
 id: TASK-0504
 type: task
-status: in_progress
+status: done
 priority: P2
 owner: apps/desktop + packages/*
 requirement: REQ-0008
@@ -38,7 +38,7 @@ write_paths:
   - project/tasks/TASK-0504-quickpanel-removal.md
 exclusive_paths: []
 depends_on: [TASK-0503]
-integration_status: pending
+integration_status: integrated
 created: 2026-11-25
 updated: 2026-11-25
 ---
