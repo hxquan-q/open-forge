@@ -7,7 +7,7 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@shared/components/ui/dropdown-menu";
-import { cn, Spin } from "@vetta-org/ui";
+import { ButtonGroup, ButtonGroupItem, cn, Spin } from "@vetta-org/ui";
 import { AllstarProjectConfigDialog } from "./AllstarProjectConfigDialog";
 import { AllstarDevSessionsDialog } from "./AllstarDevSessionsDialog";
 import { AllstarSessionRow } from "./AllstarSessionRow";
@@ -43,33 +43,36 @@ export function AllstarDevHomePageView({ model }: { model: AllstarDevHomePageMod
 					<h1 className="text-[15px] font-medium text-foreground">{model.labels.title}</h1>
 					<p className="text-[13px] text-muted-foreground">{model.labels.intro}</p>
 				</div>
-				<div className="flex shrink-0 items-center gap-2.5">
-					<Button
-						variant="outline"
-						onClick={model.onOpenExistingProject}
+				{/*
+				 * 页头右侧统一按钮组（PLAN-0032 P5a）：「打开项目 / 新建会话」收进一颗
+				 * ButtonGroup 胶囊，与自动化/记忆等面板头部操作区同一骨架。
+				 * 多项目时「新建会话」项兼任 DropdownMenu 触发器（asChild 直接落在
+				 * ButtonGroupItem 上，不破坏胶囊内的兄弟结构与分隔线）。
+				 */}
+				<ButtonGroup className="shrink-0">
+					<ButtonGroupItem
+						icon={<span aria-hidden className="icon-[solar--folder-open-linear]" />}
+						label={model.labels.openProject}
 						title={model.labels.openProject}
-					>
-						<span aria-hidden className="icon-[solar--folder-open-linear] h-3.5 w-3.5" />
-						{model.labels.openProject}
-					</Button>
+						onClick={model.onOpenExistingProject}
+					/>
 					{model.projects.length <= 1 ? (
 						// 唯一候选：点按即建，不必再弹选择层；无候选时禁用（走「打开已有项目」登记）。
-						<Button
-							variant="primary"
+						<ButtonGroupItem
+							icon={<span aria-hidden className="icon-[solar--add-circle-linear]" />}
+							label={model.labels.newSession}
+							title={model.labels.newSession}
 							disabled={model.projects.length === 0}
 							onClick={() => model.onStartNewSession(model.projects[0]?.cwd ?? "")}
-						>
-							<span aria-hidden className="icon-[solar--add-circle-linear] h-3.5 w-3.5" />
-							{model.labels.newSession}
-						</Button>
+						/>
 					) : (
 						<DropdownMenu>
 							<DropdownMenuTrigger asChild>
-								<Button variant="primary">
-									<span aria-hidden className="icon-[solar--add-circle-linear] h-3.5 w-3.5" />
-									{model.labels.newSession}
-									<span aria-hidden className="icon-[solar--alt-arrow-down-linear] h-3 w-3 opacity-60" />
-								</Button>
+								<ButtonGroupItem
+									icon={<span aria-hidden className="icon-[solar--add-circle-linear]" />}
+									label={model.labels.newSession}
+									title={model.labels.newSession}
+								/>
 							</DropdownMenuTrigger>
 							<DropdownMenuContent align="end">
 								{model.projects.map((project) => (
@@ -83,7 +86,7 @@ export function AllstarDevHomePageView({ model }: { model: AllstarDevHomePageMod
 							</DropdownMenuContent>
 						</DropdownMenu>
 					)}
-				</div>
+				</ButtonGroup>
 			</header>
 			<section className="flex min-h-0 flex-1 flex-col gap-3">
 				<div className="flex items-baseline gap-2">

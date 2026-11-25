@@ -1,7 +1,7 @@
 ---
 id: TASK-0507
 type: task
-status: ready
+status: verifying
 priority: P2
 owner: apps/desktop
 requirement: REQ-0008
@@ -14,8 +14,8 @@ related_issues: []
 related_bugs: []
 execution: parallel
 branch: task/TASK-0507-allstar-header-button-group
-worktree: unassigned（待创建）
-base_commit: 8ec047808
+worktree: unassigned（已集成，待推送后清理）
+base_commit: 7ae82222bd97add9ef8adeff4aeb321335163256
 read_paths:
   - apps/desktop/src/renderer/domains/allstar-dev/components/AllstarDevHomePageView.tsx
   - packages/ui/src/button-group.tsx
@@ -27,7 +27,7 @@ exclusive_paths:
   - apps/desktop/src/renderer/domains/allstar-dev/components/AllstarDevHomePageView.tsx
 depends_on: [TASK-0505]
 conflicts_with: []
-integration_status: pending
+integration_status: integrated
 created: 2026-11-25
 updated: 2026-11-25
 ---
@@ -84,9 +84,9 @@ updated: 2026-11-25
 
 ## 验收分层
 
-- 工程验证：待执行
+- 工程验证：定向契约测试 27/27；`test:impact` 17 文件 113/113；`check:quick` 全绿；`check` 的 desktop typecheck 与 guards 通过，整体 exit 1 仅因 pre-existing 的 docs-site/mobile install 缺失。Coordinator 集成后定向复跑 27/27 通过。
 - 技术评审：自审 + verifier 复查
-- 集成：pending
+- 集成：integrated；Worker 提交 `4bac1883b`（task/TASK-0507-allstar-header-button-group），由 Coordinator 于 2026-11-25 合入本地 main。
 - 人工功能验收：待验收（用户目视确认密度与按钮组外观）
 - 发布：未授权
 
