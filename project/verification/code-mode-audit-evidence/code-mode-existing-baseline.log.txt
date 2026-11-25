@@ -1,0 +1,9 @@
+$ bun ../../scripts/quality/run-vitest.mjs --run "--maxWorkers=1" src/renderer/domains/allstar-dev src/renderer/domains/project/services/sidebar-conversation-projection.test.ts src/renderer/domains/project/components/sidebar/useSidebarModel.workspace-view.test.tsx src/renderer/domains/conversation/components/new-session/NewSessionAgentSelector.test.tsx src/renderer/domains/conversation/components/new-session/NewSessionOptionsRow.test.tsx src/renderer/domains/conversation/components/new-session/project-selector/useNewSessionProjectSelection.test.tsx src/renderer/domains/workspace-mode/lib/session-axes.test.ts src/renderer/domains/workspace-mode/lib/workspace-session-flow.test.ts src/renderer/root-layout/useCodingSessionLayout.test.ts src/renderer/root-layout/useLastSessionRestore.test.ts src/renderer/root-layout/useLastSessionRestore.lifecycle.test.tsx src/renderer/shared/store/workspace-mode-atoms.test.ts src/renderer/shared/store/ai-activity-atoms.test.ts src/renderer/shared/store/ai-terminal-atoms.test.ts src/renderer/domains/activity-panel/hooks/useFollowAiActivity.test.tsx src/renderer/domains/activity-panel/hooks/useFollowAiFileEdits.test.ts src/renderer/domains/activity-panel/hooks/useActivityPanelModel.width.test.ts src/renderer/domains/activity-panel/builtins/terminal-tab.test.tsx src/renderer/domains/activity-panel/components/terminal-tab/AiTerminalReplayPanel.test.tsx src/renderer/domains/file-preview/components/EditableTextFileView.test.ts src/renderer/domains/activity-panel/components/BrowserPanel.agent-flow.test.tsx src/main/browser-automation/in-app-browser-tab-host.test.ts src/main/agent-teams/team-member-function-source.test.ts
+
+ RUN  v4.1.11 <REPO>/apps/desktop
+
+
+ Test Files  24 passed (24)
+      Tests  115 passed (115)
+   Start at  01:38:05
+   Duration  143.21s (transform 7.35s, setup 9.09s, import 105.48s, tests 2.29s, environment 18.56s)

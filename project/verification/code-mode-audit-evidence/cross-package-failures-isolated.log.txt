@@ -1,0 +1,66 @@
+$ bun ../../scripts/quality/run-vitest.mjs --run "--maxWorkers=1" src/main/git/git-repo-status.test.ts src/main/plugins/remote-command-runner.test.ts src/main/abilities/open-marketplace/marketplace-bundle-service.test.ts src/main/abilities/open-marketplace/open-marketplace-service.test.ts
+
+ RUN  v4.1.11 <REPO>/apps/desktop
+
+ ❯ src/main/plugins/remote-command-runner.test.ts (5 tests | 1 failed) 3415ms
+     × 非零退出照常返回，由插件自己检查退出码 509ms
+ ❯ src/main/git/git-repo-status.test.ts (4 tests | 2 failed) 10ms
+     × 提取本地分支名（含跟踪与 ahead 标记） 5ms
+     × detached HEAD 与缺行返回 null 1ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/main/git/git-repo-status.test.ts > parseStatusBranchLine > 提取本地分支名（含跟踪与 ahead 标记）
+AssertionError: expected 'main...origin/main' to be 'main' // Object.is equality
+
+Expected: "main"
+Received: "main...origin/main"
+
+ ❯ src/main/git/git-repo-status.test.ts:7:68
+      5| describe("parseStatusBranchLine", () => {
+      6|  it("提取本地分支名（含跟踪与 ahead 标记）", () => {
+      7|   expect(parseStatusBranchLine("## main...origin/main [ahead 1]")).toB…
+       |                                                                    ^
+      8|   expect(parseStatusBranchLine("## feat/x")).toBe("feat/x");
+      9|  });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+
+ FAIL  src/main/git/git-repo-status.test.ts > parseStatusBranchLine > detached HEAD 与缺行返回 null
+AssertionError: expected 'HEAD' to be null
+
+- Expected:
+null
+
++ Received:
+"HEAD"
+
+ ❯ src/main/git/git-repo-status.test.ts:12:56
+     10|
+     11|  it("detached HEAD 与缺行返回 null", () => {
+     12|   expect(parseStatusBranchLine("## HEAD (no branch)")).toBeNull();
+       |                                                        ^
+     13|   expect(parseStatusBranchLine("")).toBeNull();
+     14|  });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯
+
+ FAIL  src/main/plugins/remote-command-runner.test.ts > 插件命令在远程项目所在的机器上执行 > 非零退出照常返回，由插件自己检查退出码
+AssertionError: expected +0 not to be +0 // Object.is equality
+ ❯ src/main/plugins/remote-command-runner.test.ts:59:31
+     57|    cwd: `ssh://build-01${toLoopbackRemotePath(root)}`,
+     58|   });
+     59|   expect(result.exitCode).not.toBe(0);
+       |                               ^
+     60|  });
+     61|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/3]⎯
+
+
+ Test Files  2 failed | 2 passed (4)
+      Tests  3 failed | 42 passed (45)
+   Start at  01:58:20
+   Duration  16.92s (transform 768ms, setup 1.04s, import 3.06s, tests 11.88s, environment 0ms)
+
+error: script "test" exited with code 1

@@ -1,0 +1,6 @@
+{"probe":"copied-small-summary-control","count":3,"sourceBytesPerItem":16777216,"retainedCharacters":6144,"beforeMiB":9.13,"afterMiB":9.14,"deltaMiB":0.01}
+{"probe":"after-releasing-output","heapMiB":9.32}
+{"probe":"production-output-retention","count":3,"sourceBytesPerItem":16777216,"retainedCharacters":6144,"beforeMiB":9.32,"afterMiB":57.33,"deltaMiB":48.01}
+{"probe":"after-releasing-output","heapMiB":9.33}
+{"probe":"production-output-retention","count":100,"sourceBytesPerItem":51200,"retainedCharacters":204800,"beforeMiB":9.33,"afterMiB":14.23,"deltaMiB":4.9}
+{"probe":"after-releasing-output","heapMiB":9.35}

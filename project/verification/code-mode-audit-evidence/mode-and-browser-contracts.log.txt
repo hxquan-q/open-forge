@@ -1,0 +1,9 @@
+$ bun ../../scripts/quality/run-vitest.mjs --run "--maxWorkers=1" src/main/browser-automation/browser-view-host.test.ts src/main/browser-automation/in-app-browser-tab-host.test.ts src/main/conversations/resolve-session-config.test.ts src/main/conversations/session-agent-mode.test.ts src/main/conversations/session-agent-mode-batch.test.ts src/renderer/domains/activity-panel/hooks/useBrowserPanelModel.test.tsx
+
+ RUN  v4.1.11 <REPO>/apps/desktop
+
+
+ Test Files  6 passed (6)
+      Tests  77 passed (77)
+   Start at  02:02:31
+   Duration  43.52s (transform 9.45s, setup 1.57s, import 38.43s, tests 1.45s, environment 735ms)

@@ -1,0 +1,381 @@
+$ bun run scripts/quality/test-changed.mjs packages/coding-agent/src/features/browser-tab/browser-tab-tool-contract.ts packages/coding-agent/src/public-api/function-extensions.ts apps/desktop/src/renderer/domains/activity-panel/components/ActivityPanel.tsx
+[test:changed] scope=explicit files=3
+[test:changed] changed files: 3
+[test:changed] touched packages: coding-agent, desktop
+[test:changed] running: coding-agent, runtime-desktop, cli-host, desktop
+[test:pkg] building workspace dependencies: @vetta-org/capability-sdk, @vetta/capability-runtime, @vetta/ai, @vetta/agent-core, @vetta/ecosystem-adapter, @vetta/coding-agent, @vetta-org/plugin-sdk, @vetta/runtime-core, @vetta/action-rpc, @vetta/remote-control, @vetta/remote-desktop, @vetta/runtime-subagents, @vetta/agent-team, @vetta/runtime-knowledge, @vetta/runtime-tools, @vetta/runtime-mcp, @vetta/runtime-storage, @vetta/runtime-memory, @vetta/runtime-node, @vetta/runtime-telemetry, @vetta/runtime-desktop, @vetta/toolkit, @vetta/ssh-transport, @vetta/runtime-ssh, @vetta/cli-host
+• turbo 2.10.11
+
+   • Packages in scope: @vetta-org/capability-sdk, @vetta-org/plugin-sdk, @vetta/action-rpc, @vetta/agent-core, @vetta/agent-team, @vetta/ai, @vetta/capability-runtime, @vetta/cli-host, @vetta/coding-agent, @vetta/ecosystem-adapter, @vetta/remote-control, @vetta/remote-desktop, @vetta/runtime-core, @vetta/runtime-desktop, @vetta/runtime-knowledge, @vetta/runtime-mcp, @vetta/runtime-memory, @vetta/runtime-node, @vetta/runtime-ssh, @vetta/runtime-storage, @vetta/runtime-subagents, @vetta/runtime-telemetry, @vetta/runtime-tools, @vetta/ssh-transport, @vetta/toolkit
+   • Running build in 25 packages
+   • Remote caching disabled
+
+@vetta/runtime-knowledge:build: cache miss, executing 3328308195b72da2
+@vetta-org/capability-sdk:build: cache miss, executing d7b9f1cd22cf1850
+@vetta/remote-control:build: cache miss, executing b6a2e96e27803cc1
+@vetta/action-rpc:build: cache miss, executing fedd0096fdf8e58b
+@vetta/runtime-subagents:build: cache miss, executing 2a15ca36c46bf745
+@vetta/ai:build: cache miss, executing 61881bffb70ab85c
+@vetta/remote-desktop:build: cache miss, executing fc7872ca2c3dab51
+@vetta/toolkit:build: cache miss, executing ebd88d07c3c29a4e
+@vetta/ssh-transport:build: cache miss, executing 85566ae15e8c6ab4
+@vetta/runtime-memory:build: cache miss, executing e54f84c10e3617ce
+@vetta/runtime-subagents:build: $ tsgo -p tsconfig.build.json
+@vetta/action-rpc:build: $ tsgo -p tsconfig.build.json
+@vetta/runtime-knowledge:build: $ tsgo -p tsconfig.build.json
+@vetta-org/capability-sdk:build: $ tsgo -p tsconfig.build.json
+@vetta/remote-control:build: $ tsgo -p tsconfig.build.json
+@vetta/ai:build: $ tsgo -p tsconfig.build.json
+@vetta/remote-desktop:build: $ tsgo -p tsconfig.build.json
+@vetta/toolkit:build: $ tsgo -p tsconfig.build.json
+@vetta/runtime-memory:build: $ tsgo -p tsconfig.build.json
+@vetta/ecosystem-adapter:build: cache miss, executing 2d64c8cce501e3c8
+@vetta/ssh-transport:build: $ tsgo -p tsconfig.build.json
+@vetta/ecosystem-adapter:build: $ tsgo -p tsconfig.build.json
+@vetta/capability-runtime:build: cache miss, executing 5e368c32c9610ac7
+@vetta-org/plugin-sdk:build: cache miss, executing 9a5e9a6f6c158867
+@vetta/capability-runtime:build: $ tsgo -p tsconfig.build.json
+@vetta/agent-core:build: cache miss, executing d7e316f9d6a5df57
+@vetta-org/plugin-sdk:build: $ tsgo -p tsconfig.build.json && node scripts/bundle-docs.mjs
+@vetta/agent-core:build: $ tsgo -p tsconfig.build.json
+@vetta/runtime-core:build: cache miss, executing 1911aee7e3940b2c
+@vetta-org/plugin-sdk:build: {"ok":true,"skipped":false,"destDir":"<REPO>\\packages\\plugins\\plugin-sdk\\docs","fileCount":18}
+@vetta/runtime-core:build: $ tsgo -p tsconfig.build.json
+@vetta/runtime-storage:build: cache miss, executing 0f79c3d82490e856
+@vetta/agent-team:build: cache miss, executing 17b0cab98f22ed1b
+@vetta/runtime-tools:build: cache miss, executing 4a146846840e9ff3
+@vetta/runtime-mcp:build: cache miss, executing a45ae57ab06f710c
+@vetta/runtime-telemetry:build: cache miss, executing 7cafc2ca78981e1f
+@vetta/runtime-storage:build: $ tsgo -p tsconfig.build.json
+@vetta/agent-team:build: $ tsgo -p tsconfig.build.json
+@vetta/runtime-tools:build: $ tsgo -p tsconfig.build.json
+@vetta/runtime-mcp:build: $ tsgo -p tsconfig.build.json
+@vetta/runtime-telemetry:build: $ tsgo -p tsconfig.build.json
+@vetta/runtime-node:build: cache miss, executing 2a17efda49174857
+@vetta/runtime-node:build: $ tsgo -p tsconfig.build.json
+@vetta/coding-agent:build: cache miss, executing f15ac96a67921b22
+@vetta/runtime-ssh:build: cache miss, executing aec226b5cbd894c9
+@vetta/coding-agent:build: $ bun run generate:personas && bun run generate:themes && tsgo -p tsconfig.build.json && bun run copy-assets
+@vetta/coding-agent:build: $ node scripts/generate-personas.mjs
+@vetta/runtime-ssh:build: $ tsgo -p tsconfig.build.json
+@vetta/coding-agent:build: [generate-personas] wrote 2 personas to personas-data.ts
+@vetta/coding-agent:build: $ node scripts/generate-themes.mjs
+@vetta/coding-agent:build: [generate-themes] wrote 2 built-in themes to builtin-theme-documents.ts
+@vetta/coding-agent:build: $ shx mkdir -p dist/modes/interactive/theme && shx cp src/modes/interactive/theme/*.json dist/modes/interactive/theme/ && shx mkdir -p dist/export-html/vendor && shx cp src/export-html/assets/template.html src/export-html/assets/template.css src/export-html/assets/template.js dist/export-html/ && shx cp src/export-html/assets/vendor/*.js dist/export-html/vendor/
+@vetta/runtime-desktop:build: cache miss, executing 88a3f04ebf5c641e
+@vetta/cli-host:build: cache miss, executing b3d77cbcef6b16c7
+@vetta/runtime-desktop:build: $ tsgo -p tsconfig.build.json
+@vetta/cli-host:build: $ tsgo -p tsconfig.build.json
+
+  Tasks:    25 successful, 25 total
+ Cached:    0 cached, 25 total
+   Time:    10.951s
+Summary:    <REPO>\.turbo\runs\3LNUdtkKChJldTMKCO9SIZAv2Zs.json
+
+[test:pkg] workspace dependencies built in 16.3s
+[test:pkg] coding-agent → packages/coding-agent
+$ bun ../../scripts/quality/run-vitest.mjs --run
+
+ RUN  v4.1.11 <REPO>/packages/coding-agent
+
+ ❯ test/runtime-core/coding-tools-feature.test.ts (15 tests | 1 failed) 123ms
+     × runs the migrated grep tool through the real agent-core tool loop 24ms
+ ❯ test/runtime-core/session-initialization-profile.test.ts (2 tests | 1 failed) 12ms
+     × 只投影 Session 初始化需要的配置并保留动态来源引用 8ms
+From <WORKSPACE>\code-mode-audit-evidence\tmp\git-update-test-1793294133152-sbrtoa5kor\remote
+   fa48388..1702ba5  master     -> origin/master
+HEAD is now at 1702ba5 Second commit
+From <WORKSPACE>\code-mode-audit-evidence\tmp\git-update-test-1793294134902-f94t9cw60eg\remote
+   c875911..86dd5d1  master     -> origin/master
+HEAD is now at 86dd5d1 Fourth commit
+From <WORKSPACE>\code-mode-audit-evidence\tmp\git-update-test-1793294136734-gwum0m4oqei\remote
+   2442baf..995106b  master     -> origin/master
+fatal: HEAD does not point to a branch
+'origin/HEAD' is unchanged and points to 'master'
+HEAD is now at 995106b Third commit
+From <WORKSPACE>\code-mode-audit-evidence\tmp\git-update-test-1793294138608-c970aabwets\remote
+   4ab34b7..3073f82  master     -> origin/master
+HEAD is now at 3073f82 Commit to keep
+From <WORKSPACE>\code-mode-audit-evidence\tmp\git-update-test-1793294138608-c970aabwets\remote
+ + 3073f82...537dfe5 master     -> origin/master  (forced update)
+HEAD is now at 537dfe5 Rewritten commit
+From <WORKSPACE>\code-mode-audit-evidence\tmp\git-update-test-1793294140758-9rsc76pybid\remote
+   a75c497..dd0a046  master     -> origin/master
+HEAD is now at dd0a046 Commit B
+From <WORKSPACE>\code-mode-audit-evidence\tmp\git-update-test-1793294140758-9rsc76pybid\remote
+ + dd0a046...5df43e3 master     -> origin/master  (forced update)
+HEAD is now at 5df43e3 New commit replacing A and B
+From <WORKSPACE>\code-mode-audit-evidence\tmp\git-update-test-1793294143099-olwst99lxwd\remote
+   8d438f4..0466425  master     -> origin/master
+HEAD is now at 0466425 v3
+From <WORKSPACE>\code-mode-audit-evidence\tmp\git-update-test-1793294143099-olwst99lxwd\remote
+ + 0466425...f26ece2 master     -> origin/master  (forced update)
+HEAD is now at f26ece2 Rewrite B
+From <WORKSPACE>\code-mode-audit-evidence\tmp\git-update-test-1793294146707-2yl95zaj81n\remote
+   d4ea190..79979b1  master     -> origin/master
+HEAD is now at 79979b1 Second commit
+stdout | test/resource-loader.test.ts > SessionResourceRuntime > reload > should refresh prompt context resources created, changed, or deleted during a session
+[skills] loaded {
+  includeAgentSkills: true,
+  total: 1,
+  bySource: { path: 1 },
+  diagnosticCount: 3
+}
+
+ ❯ test/resource-loader.test.ts (23 tests | 1 failed) 533ms
+       × should refresh prompt context resources created, changed, or deleted during a session 32ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  test/resource-loader.test.ts > SessionResourceRuntime > reload > should refresh prompt context resources created, changed, or deleted during a session
+AssertionError: expected '[REDACTED WORKSPACE INSTRUCTION]' to be 'First project instruction' // Object.is equality
+
+Expected: "First project instruction"
+Received: "[REDACTED WORKSPACE INSTRUCTION]"
+
+ ❯ test/resource-loader.test.ts:448:60
+    446|    writeFileSync(appendPath, "First appended prompt");
+    447|    expect(await loader.refreshContextResourcesIfChanged()).toBe(true);
+    448|    expect(loader.getAgentsFiles().agentsFiles[0]?.content).toBe("First…
+       |                                                            ^
+    449|    expect(loader.getSystemPrompt()).toBe("First system prompt");
+    450|    expect(loader.getAppendSystemPrompt()).toEqual(["First appended pro…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+
+ FAIL  test/runtime-core/coding-tools-feature.test.ts > greenfield coding tools feature > runs the migrated grep tool through the real agent-core tool loop
+AssertionError: expected { role: 'toolResult', …(6) } to match object { isError: false, …(1) }
+(6 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+    "content": [
+      {
+-       "text": StringMatching /^message\.txt:2:[0-9a-z]{4}: needle line$/,
++       "text": "Failed to run ripgrep: spawn rg ENOENT",
+        "type": "text",
+      },
+    ],
+-   "isError": false,
++   "isError": true,
+  }
+
+ ❯ test/runtime-core/coding-tools-feature.test.ts:704:23
+    702|
+    703|    expect(await resolveTools(compiled.snapshot)).toEqual(["grep"]);
+    704|    expect(toolResult).toMatchObject({
+       |                       ^
+    705|     isError: false,
+    706|     content: [{ type: "text", text: expect.stringMatching(/^message\.t…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯
+
+ FAIL  test/runtime-core/session-initialization-profile.test.ts > Coding Agent session initialization profile > 只投影 Session 初始化需要的配置并保留动态来源引用
+AssertionError: expected [ 'activation', …(41) ] to deeply equal [ 'activation', …(40) ]
+
+- Expected
++ Received
+
+@@ -2,10 +2,11 @@
+    "activation",
+    "additionalHookAdapterFactories",
+    "agentDir",
+    "createCompactionExtensionRuntime",
+    "createContextRuntime",
++   "createExplicitMemoryRuntime",
+    "createMemoryRolloverRuntime",
+    "createPluginMcpRuntime",
+    "createPluginRuntime",
+    "createPromptResourceResolver",
+    "createPromptRuntimeSources",
+
+ ❯ test/runtime-core/session-initialization-profile.test.ts:41:39
+     39|   const profile = createCodingAgentSessionInitializationProfile(option…
+     40|
+     41|   expect(Object.keys(profile).sort()).toEqual([
+       |                                       ^
+     42|    "activation",
+     43|    "additionalHookAdapterFactories",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/3]⎯
+
+
+ Test Files  3 failed | 260 passed (263)
+      Tests  3 failed | 1677 passed | 3 skipped (1683)
+   Start at  01:15:15
+   Duration  207.38s (transform 15.00s, setup 0ms, import 299.94s, tests 39.28s, environment 26ms)
+
+error: script "test" exited with code 1
+[test:pkg] coding-agent failed in 208.4s
+[test:pkg] runtime-desktop → packages/runtime-desktop
+$ bun ../../scripts/quality/run-vitest.mjs --run --config vitest.config.ts
+
+ RUN  v4.1.11 <REPO>/packages/runtime-desktop
+
+
+ Test Files  13 passed (13)
+      Tests  51 passed (51)
+   Start at  01:18:43
+   Duration  25.74s (transform 10.08s, setup 0ms, import 37.87s, tests 9.88s, environment 1ms)
+
+[test:pkg] runtime-desktop passed in 26.8s
+[test:pkg] cli-host → apps/cli-host
+$ bun ../../scripts/quality/run-vitest.mjs --run --maxWorkers=1
+
+ RUN  v4.1.11 <REPO>/apps/cli-host
+
+Installing ./packages/local-package...
+Installing <WORKSPACE>\code-mode-audit-evidence\tmp\pi-package-commands-1793294670679-bbtf1gz9qk8\local-package/...
+Removing <WORKSPACE>\code-mode-audit-evidence\tmp\pi-package-commands-1793294670679-bbtf1gz9qk8\local-package/...
+
+ Test Files  51 passed | 1 skipped (52)
+      Tests  238 passed | 14 skipped (252)
+   Start at  01:19:10
+   Duration  347.19s (transform 8.72s, setup 0ms, import 87.64s, tests 245.79s, environment 5ms)
+
+[test:pkg] cli-host passed in 348.2s
+[test:pkg] desktop → apps/desktop
+$ bun ../../scripts/quality/run-vitest.mjs --run
+
+ RUN  v4.1.11 <REPO>/apps/desktop
+
+ ❯ src/main/plugins/remote-command-runner.test.ts (5 tests | 1 failed) 3996ms
+     × 非零退出照常返回，由插件自己检查退出码 598ms
+ ❯ src/main/abilities/open-marketplace/open-marketplace-service.test.ts (35 tests | 2 failed) 17713ms
+     × lists and installs the compatible plugin release from a catalog without committed build output 5009ms
+     × prepares an MCP from the active validated snapshot 5018ms
+ ❯ src/main/abilities/open-marketplace/marketplace-bundle-service.test.ts (1 test | 1 failed) 10020ms
+   × keeps installed identities and disabled state when top-level entries become bundle-only, including cache reload and upgrades 10016ms
+ ❯ src/main/browser-automation/browser-view-host.test.ts (19 tests | 1 failed) 167ms
+     × navigate 只放行 http/https；未知 workspace 返回 no_view 8ms
+ ❯ src/main/git/git-repo-status.test.ts (4 tests | 2 failed) 12ms
+     × 提取本地分支名（含跟踪与 ahead 标记） 5ms
+     × detached HEAD 与缺行返回 null 1ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 7 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/main/browser-automation/browser-view-host.test.ts > InAppBrowserViewHost > navigate 只放行 http/https；未知 workspace 返回 no_view
+AssertionError: expected { ok: true } to deeply equal { ok: false, code: 'policy_denied' }
+
+- Expected
++ Received
+
+  {
+-   "code": "policy_denied",
+-   "ok": false,
++   "ok": true,
+  }
+
+ ❯ src/main/browser-automation/browser-view-host.test.ts:234:61
+    232|   expect(await host.navigate("ws-ghost", "https://a.example")).toEqual…
+    233|   host.attach({ workspaceId: "ws-1", bounds: BOUNDS });
+    234|   expect(await host.navigate("ws-1", "file:///etc/passwd")).toEqual({ …
+       |                                                             ^
+    235|   expect(await host.navigate("ws-1", "javascript:alert(1)")).toEqual({…
+    236|   expect(await host.navigate("ws-1", "https://ok.example")).toEqual({ …
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/7]⎯
+
+ FAIL  src/main/git/git-repo-status.test.ts > parseStatusBranchLine > 提取本地分支名（含跟踪与 ahead 标记）
+AssertionError: expected 'main...origin/main' to be 'main' // Object.is equality
+
+Expected: "main"
+Received: "main...origin/main"
+
+ ❯ src/main/git/git-repo-status.test.ts:7:68
+      5| describe("parseStatusBranchLine", () => {
+      6|  it("提取本地分支名（含跟踪与 ahead 标记）", () => {
+      7|   expect(parseStatusBranchLine("## main...origin/main [ahead 1]")).toB…
+       |                                                                    ^
+      8|   expect(parseStatusBranchLine("## feat/x")).toBe("feat/x");
+      9|  });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/7]⎯
+
+ FAIL  src/main/git/git-repo-status.test.ts > parseStatusBranchLine > detached HEAD 与缺行返回 null
+AssertionError: expected 'HEAD' to be null
+
+- Expected:
+null
+
++ Received:
+"HEAD"
+
+ ❯ src/main/git/git-repo-status.test.ts:12:56
+     10|
+     11|  it("detached HEAD 与缺行返回 null", () => {
+     12|   expect(parseStatusBranchLine("## HEAD (no branch)")).toBeNull();
+       |                                                        ^
+     13|   expect(parseStatusBranchLine("")).toBeNull();
+     14|  });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/7]⎯
+
+ FAIL  src/main/plugins/remote-command-runner.test.ts > 插件命令在远程项目所在的机器上执行 > 非零退出照常返回，由插件自己检查退出码
+AssertionError: expected +0 not to be +0 // Object.is equality
+ ❯ src/main/plugins/remote-command-runner.test.ts:59:31
+     57|    cwd: `ssh://build-01${toLoopbackRemotePath(root)}`,
+     58|   });
+     59|   expect(result.exitCode).not.toBe(0);
+       |                               ^
+     60|  });
+     61|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/7]⎯
+
+ FAIL  src/main/abilities/open-marketplace/marketplace-bundle-service.test.ts > keeps installed identities and disabled state when top-level entries become bundle-only, including cache reload and upgrades
+Error: Test timed out in 10000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ src/main/abilities/open-marketplace/marketplace-bundle-service.test.ts:75:1
+     73| }
+     74|
+     75| it("keeps installed identities and disabled state when top-level entri…
+       | ^
+     76|  const root = await mkdtemp(join(tmpdir(), "vetta-bundle-service-test-…
+     77|  roots.push(root);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/7]⎯
+
+ FAIL  src/main/abilities/open-marketplace/open-marketplace-service.test.ts > OpenMarketplaceService > lists and installs the compatible plugin release from a catalog without committed build output
+Error: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ src/main/abilities/open-marketplace/open-marketplace-service.test.ts:319:2
+    317|
+    318| describe("OpenMarketplaceService", () => {
+    319|  it("lists and installs the compatible plugin release from a catalog w…
+       |  ^
+    320|   const source = versionedPluginArchive();
+    321|   const installed: string[] = [];
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/7]⎯
+
+ FAIL  src/main/abilities/open-marketplace/open-marketplace-service.test.ts > OpenMarketplaceService > prepares an MCP from the active validated snapshot
+Error: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ src/main/abilities/open-marketplace/open-marketplace-service.test.ts:574:2
+    572|   expect(fetchArchive).toHaveBeenCalledTimes(2);
+    573|  });
+    574|  it("prepares an MCP from the active validated snapshot", async () => {
+       |  ^
+    575|   const rootDir = await temporaryRoot();
+    576|   const prepareMcpAbility = vi.fn(async (_snapshotRoot: string, _abili…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/7]⎯
+
+
+ Test Files  5 failed | 1112 passed | 4 skipped (1121)
+      Tests  7 failed | 6241 passed | 19 skipped (6267)
+   Start at  01:24:59
+   Duration  1749.53s (transform 54.28s, setup 350.53s, import 2107.11s, tests 304.73s, environment 418.05s)
+
+error: script "test" exited with code 1
+[test:pkg] desktop failed in 1751.6s
+[test:pkg] duration summary (slowest first)
+  desktop                       1751.6s  failed
+  cli-host                       348.2s  passed
+  coding-agent                   208.4s  failed
+  runtime-desktop                 26.8s  passed
+[test:pkg] total 2351.2s
+error: script "test:changed" exited with code 1

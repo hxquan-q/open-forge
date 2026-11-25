@@ -30,7 +30,7 @@ rg -n '^status: (draft|ready|in_progress|blocked|verifying)$' project/tasks -g '
 
 | Task ID | 状态 | Plan | 任务（详情见原记录） |
 |---|---|---|---|
-| `TASK-0493` | `verifying` | — | [仓库个人路径引用盘点与可移植性修复](TASK-0493-portable-repository-references.md)：BUG-0198；仓内引用与云效脚本已修、定向验证及完整 check 通过；控制器配置按 BUG-0199 暂缓。 |
+| `TASK-0493` | `verifying` | — | [仓库个人路径引用盘点与可移植性修复](TASK-0493-portable-repository-references.md)：Code 审计完整报告、历史探针和脱敏输出已入仓并定向复核；用户自行以 xquan 为基线运行 impact；控制器配置按 BUG-0199 暂缓。 |
 | `TASK-0492` | `verifying` | — | [版块会话行接入三项操作菜单](TASK-0492-allstar-session-row-menu.md)：BUG-0194，抽 `AllstarSessionRow`（标题按钮 + `···` 菜单：重命名/在文件夹打开/删除），20/20 + 4/4 + `check:quick` 全绿，待实机走查。 |
 | `TASK-0491` | `verifying` | — | [版块首页卡片放大 125% 并拉开左右间距](TASK-0491-allstar-home-card-density.md)：REQ-0030，列宽 13rem→16.25rem、`gap-x` 12→32px，契约测试 18/18 + `check:quick` 全绿，待用户目视。 |
 | `TASK-0490` | `verifying` | — | [Allstar 版块首页未撑满内容区宽度](TASK-0490-allstar-home-width-fill.md)：BUG-0193，页面根补 `w-full`（与 `min-w-0` 并存），定向测试 22/22 + `check:quick` 全绿，待用户实机走查。 |

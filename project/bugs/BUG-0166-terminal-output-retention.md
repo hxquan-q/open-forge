@@ -28,7 +28,7 @@ updated: 2026-10-30
 
 ## 环境与失败证据
 
-- 基线 `dea8d55bf`（切片 1 后），Node --expose-gc 探针 `code-mode-audit-evidence/terminal-output-memory-probe.mts` 本轮复跑：production-output-retention deltaMiB=48（3×16MiB）、4.91（100×50KiB）；copied-small-summary-control deltaMiB=0.01。
+- 基线 `dea8d55bf`（切片 1 后），Node --expose-gc [探针](../verification/code-mode-audit-evidence/terminal-output-memory-probe.mts) 本轮复跑：production-output-retention deltaMiB=48（3×16MiB）、4.91（100×50KiB）；copied-small-summary-control deltaMiB=0.01。
 - 根因：V8 SlicedString 保留母串（`ai-terminal-atoms.ts:58-77`）；泵侧 `useSessionEventController.ts:510`、`useTeamChatModel.ts:389-392` 无条件调用提取。
 
 ## 最小复现
@@ -46,7 +46,7 @@ Feed 单条摘要 2KB 的合同名义下，每条可能实际钉住最高至整�
 ## 回归测试
 
 - 行为等价（单测）：多块预算边界、超大单块内容正确、预算后块不读取、输出与旧实现逐字符一致；惰性提取（未知 key 不调用提取器）。
-- 内存证据（探针，工作区）：修复后 production 路径 deltaMiB 回到对照量级（≤0.1MiB）。
+- 内存证据（历史探针，现已[入仓](../verification/code-mode-audit-evidence/terminal-output-memory-probe.mts)）：原修复记录的 production 路径大块样本 deltaMiB 回到对照量级（≤0.1MiB）；不同样本和本次迁入复验应分别记录。
 
 ## 修复与验证
 

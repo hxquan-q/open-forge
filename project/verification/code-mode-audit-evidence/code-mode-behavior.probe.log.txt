@@ -1,0 +1,298 @@
+
+ RUN  v4.1.11 <REPO>/apps/desktop
+
+stdout | <EVIDENCE>/code-mode-behavior.probe.tsx > initialization audit > F10: a fresh code session does not reset hidden/order preferences of the same project
+AUDIT {"name":"new-code-existing-tab-preferences","value":["browser","file","git"]}
+
+stdout | <EVIDENCE>/code-mode-behavior.probe.tsx > initialization audit > F01: consecutive new code sessions each need their own initialization
+AUDIT {"name":"consecutive-new-code","value":{"collapsed":false,"rightOpen":false,"width":540}}
+
+stdout | <EVIDENCE>/code-mode-behavior.probe.tsx > initialization audit > F02: first-message transition must not overwrite manual choices a second time
+AUDIT {"name":"first-message-transition","value":{"collapsed":true,"rightOpen":true,"width":628}}
+
+stdout | <EVIDENCE>/code-mode-behavior.probe.tsx > initialization audit > F02b: opening an existing code session is not new-session initialization
+AUDIT {"name":"existing-code-open","value":{"collapsed":true,"rightOpen":true,"width":628}}
+
+stdout | <EVIDENCE>/code-mode-behavior.probe.tsx > file/terminal isolation audit > F03: a newly mounted file panel must not follow another project's stale target
+AUDIT {"name":"cross-project-file","value":{"name":"private.ts","path":"/project-a/private.ts"}}
+
+stdout | <EVIDENCE>/code-mode-behavior.probe.tsx > file/terminal isolation audit > F04: another edit of the same file must restore AI target after manual file browsing
+AUDIT {"name":"repeat-file-after-manual","value":{"name":"manual.ts","path":"/project-a/manual.ts"}}
+
+stdout | <EVIDENCE>/code-mode-behavior.probe.tsx > file/terminal isolation audit > F05: terminal content is not isolated by the panel's project
+AUDIT {"name":"cross-project-terminal","value":"echo from-project-a"}
+
+stderr | <EVIDENCE>/code-mode-behavior.probe.tsx > file/terminal isolation audit > F05: terminal content is not isolated by the panel's project
+react-i18next:: useTranslation: You will need to pass in an i18next instance by using initReactI18next or by passing it via props or context. In monorepo setups, make sure there is only one instance of react-i18next. { code: 'NO_I18NEXT_INSTANCE' }
+
+stdout | <EVIDENCE>/code-mode-behavior.probe.tsx > file/terminal isolation audit > F06: a command completed after switching away must not remain running forever
+AUDIT {"name":"completion-after-switch","value":[{"command":"echo done","key":"c1","running":true,"at":1793297757052,"cwd":"/project-a"}]}
+
+stdout | <EVIDENCE>/code-mode-behavior.probe.tsx > file/terminal isolation audit > F07: live tool.update output should be visible before the command ends
+AUDIT {"name":"live-command-output","value":[{"command":"long command","key":"c1","running":true,"at":1793297757054,"cwd":"/project-a"}]}
+
+stdout | <EVIDENCE>/code-mode-behavior.probe.tsx > independent project catalogue audit > F08/F09: code-only projects load their history; live coding rows stay out of ordinary lists
+AUDIT {"name":"code-only-history-requests","value":[]}
+AUDIT {"name":"code-only-history-card","value":{"cwd":"/code-only","projectName":"Code only","registered":true,"sessions":[],"totalSessions":0}}
+AUDIT {"name":"code-only-create-options","value":["/ordinary"]}
+AUDIT {"name":"live-coding-in-ordinary-sidebar","value":[{"path":"/ordinary/live-code.jsonl","kind":"conversation"}]}
+
+ ❯ <EVIDENCE>/code-mode-behavior.probe.tsx (12 tests | 10 failed) 138ms
+     × F10: a fresh code session does not reset hidden/order preferences of the same project 9ms
+     × F01: consecutive new code sessions each need their own initialization 4ms
+     × F02: first-message transition must not overwrite manual choices a second time 3ms
+     × F02b: opening an existing code session is not new-session initialization 5ms
+     × F03: a newly mounted file panel must not follow another project's stale target 4ms
+     × F04: another edit of the same file must restore AI target after manual file browsing 4ms
+     × F05: terminal content is not isolated by the panel's project 13ms
+     × F06: a command completed after switching away must not remain running forever 4ms
+     × F07: live tool.update output should be visible before the command ends 2ms
+     × F08/F09: code-only projects load their history; live coding rows stay out of ordinary lists 71ms
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 10 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  <EVIDENCE>/code-mode-behavior.probe.tsx > initialization audit > F10: a fresh code session does not reset hidden/order preferences of the same project
+AssertionError: expected [ 'browser', 'file', 'git' ] to deeply equal [ Array(4) ]
+
+- Expected
++ Received
+
+  [
++   "browser",
+    "file",
+    "git",
+-   "terminal",
+-   "browser",
+  ]
+
+ ❯ <EVIDENCE>/code-mode-behavior.probe.tsx:67:43
+
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/12]⎯
+
+ FAIL  <EVIDENCE>/code-mode-behavior.probe.tsx > initialization audit > F01: consecutive new code sessions each need their own initialization
+AssertionError: expected { collapsed: false, …(2) } to deeply equal { collapsed: true, …(2) }
+
+- Expected
++ Received
+
+  {
+-   "collapsed": true,
+-   "rightOpen": true,
+-   "width": 628,
++   "collapsed": false,
++   "rightOpen": false,
++   "width": 540,
+  }
+
+ ❯ <EVIDENCE>/code-mode-behavior.probe.tsx:76:19
+     74|   act(() => { route.pathname = "/new-session"; route.search = { cwd: e…
+     75|   rerender(); trace("consecutive-new-code", state());
+     76|   expect(state()).toEqual({ collapsed: true, rightOpen: true, width: 6…
+       |                   ^
+     77|  });
+     78|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/12]⎯
+
+ FAIL  <EVIDENCE>/code-mode-behavior.probe.tsx > initialization audit > F02: first-message transition must not overwrite manual choices a second time
+AssertionError: expected { collapsed: true, …(2) } to deeply equal { collapsed: false, …(2) }
+
+- Expected
++ Received
+
+  {
+-   "collapsed": false,
+-   "rightOpen": false,
+-   "width": 540,
++   "collapsed": true,
++   "rightOpen": true,
++   "width": 628,
+  }
+
+ ❯ <EVIDENCE>/code-mode-behavior.probe.tsx:86:19
+     84|   act(() => store.set(activeSessionAtom, session("new"))); rerender();
+     85|   trace("first-message-transition", state());
+     86|   expect(state()).toEqual({ collapsed: false, rightOpen: false, width:…
+       |                   ^
+     87|  });
+     88|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/12]⎯
+
+ FAIL  <EVIDENCE>/code-mode-behavior.probe.tsx > initialization audit > F02b: opening an existing code session is not new-session initialization
+AssertionError: expected { collapsed: true, …(2) } to deeply equal { collapsed: false, …(2) }
+
+- Expected
++ Received
+
+  {
+-   "collapsed": false,
+-   "rightOpen": false,
+-   "width": 540,
++   "collapsed": true,
++   "rightOpen": true,
++   "width": 628,
+  }
+
+ ❯ <EVIDENCE>/code-mode-behavior.probe.tsx:94:19
+     92|   act(manualLayout); act(() => store.set(activeSessionAtom, session("e…
+     93|   trace("existing-code-open", state());
+     94|   expect(state()).toEqual({ collapsed: false, rightOpen: false, width:…
+       |                   ^
+     95|  });
+     96| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/12]⎯
+
+ FAIL  <EVIDENCE>/code-mode-behavior.probe.tsx > file/terminal isolation audit > F03: a newly mounted file panel must not follow another project's stale target
+AssertionError: expected { name: 'private.ts', …(1) } to be null
+
+- Expected:
+null
+
++ Received:
+{
+  "name": "private.ts",
+  "path": "/project-a/private.ts",
+}
+
+ ❯ <EVIDENCE>/code-mode-behavior.probe.tsx:104:44
+    102|   renderHook(() => useFollowAiFileEdits(), { wrapper });
+    103|   trace("cross-project-file", store.get(inlineFilePreviewAtom));
+    104|   expect(store.get(inlineFilePreviewAtom)).toBeNull();
+       |                                            ^
+    105|  });
+    106|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/12]⎯
+
+ FAIL  <EVIDENCE>/code-mode-behavior.probe.tsx > file/terminal isolation audit > F04: another edit of the same file must restore AI target after manual file browsing
+AssertionError: expected '/project-a/manual.ts' to be '/project-a/ai.ts' // Object.is equality
+
+Expected: "/project-a/ai.ts"
+Received: "/project-a/manual.ts"
+
+ ❯ <EVIDENCE>/code-mode-behavior.probe.tsx:113:50
+    111|   act(() => store.set(aiEditTargetAtom, { path: "/project-a/ai.ts", at…
+    112|   trace("repeat-file-after-manual", store.get(inlineFilePreviewAtom));
+    113|   expect(store.get(inlineFilePreviewAtom)?.path).toBe("/project-a/ai.t…
+       |                                                  ^
+    114|  });
+    115|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/12]⎯
+
+ FAIL  <EVIDENCE>/code-mode-behavior.probe.tsx > file/terminal isolation audit > F05: terminal content is not isolated by the panel's project
+AssertionError: expected <span …(1)></span> to be null
+
+- Expected:
+null
+
++ Received:
+<span
+  class="min-w-0 flex-1 break-all font-mono text-xs text-foreground"
+>
+  echo from-project-a
+</span>
+
+ ❯ <EVIDENCE>/code-mode-behavior.probe.tsx:120:53
+
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/12]⎯
+
+ FAIL  <EVIDENCE>/code-mode-behavior.probe.tsx > file/terminal isolation audit > F06: a command completed after switching away must not remain running forever
+AssertionError: expected true to be false // Object.is equality
+
+- Expected
++ Received
+
+- false
++ true
+
+ ❯ <EVIDENCE>/code-mode-behavior.probe.tsx:133:53
+    131|   act(() => handler(event({ type: "tool.end", toolCallId: "c1", toolNa…
+    132|   trace("completion-after-switch", store.get(aiTerminalFeedAtom));
+    133|   expect(store.get(aiTerminalFeedAtom)[0]?.running).toBe(false);
+       |                                                     ^
+    134|  });
+    135|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/12]⎯
+
+ FAIL  <EVIDENCE>/code-mode-behavior.probe.tsx > file/terminal isolation audit > F07: live tool.update output should be visible before the command ends
+AssertionError: expected '' to contain 'live line'
+
+- Expected
++ Received
+
+- live line
+
+ ❯ <EVIDENCE>/code-mode-behavior.probe.tsx:144:58
+    142|   act(() => handler(event({ type: "tool.update", toolCallId: "c1", too…
+    143|   trace("live-command-output", store.get(aiTerminalFeedAtom));
+    144|   expect(store.get(aiTerminalFeedAtom)[0]?.output ?? "").toContain("li…
+       |                                                          ^
+    145|  });
+    146|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/12]⎯
+
+ FAIL  <EVIDENCE>/code-mode-behavior.probe.tsx > independent project catalogue audit > F08/F09: code-only projects load their history; live coding rows stay out of ordinary lists
+AssertionError: expected "vi.fn()" to be called with arguments: [ '/code-only' ]
+
+Number of calls: 0
+
+ ❯ <EVIDENCE>/code-mode-behavior.probe.tsx:177:29
+    175|   trace("code-only-history-card", result.current.projectCards.find((ca…
+    176|   trace("code-only-create-options", result.current.projects.map((optio…
+    177|   expect.soft(listSessions).toHaveBeenCalledWith("/code-only");
+       |                             ^
+    178|   expect.soft(result.current.projects.some((option) => option.cwd === …
+    179|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/12]⎯
+
+ FAIL  <EVIDENCE>/code-mode-behavior.probe.tsx > independent project catalogue audit > F08/F09: code-only projects load their history; live coding rows stay out of ordinary lists
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ <EVIDENCE>/code-mode-behavior.probe.tsx:178:86
+    176|   trace("code-only-create-options", result.current.projects.map((optio…
+    177|   expect.soft(listSessions).toHaveBeenCalledWith("/code-only");
+    178|   expect.soft(result.current.projects.some((option) => option.cwd === …
+       |                                                                                      ^
+    179|
+    180|   vi.useFakeTimers(); // 观察事件增量投影，尚不推进随后全量刷新。
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[11/12]⎯
+
+ FAIL  <EVIDENCE>/code-mode-behavior.probe.tsx > independent project catalogue audit > F08/F09: code-only projects load their history; live coding rows stay out of ordinary lists
+AssertionError: expected [ { id: 'live-code', …(5) } ] to have a length of +0 but got 1
+
+- Expected
++ Received
+
+- 0
++ 1
+
+ ❯ <EVIDENCE>/code-mode-behavior.probe.tsx:184:32
+    182|   const ordinaryVisible = projectSidebarConversations(store.get(sessio…
+    183|   trace("live-coding-in-ordinary-sidebar", ordinaryVisible.map((item) …
+    184|   expect.soft(ordinaryVisible).toHaveLength(0);
+       |                                ^
+    185|  });
+    186| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[12/12]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  10 failed | 2 passed (12)
+   Start at  02:15:39
+   Duration  17.16s (transform 4.72s, setup 291ms, import 15.88s, tests 138ms, environment 635ms)

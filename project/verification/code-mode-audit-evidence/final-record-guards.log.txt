@@ -1,0 +1,36 @@
+$ bun run scripts/quality/check-guards.mjs
+[generate-themes] 2 built-in themes are current
+[generate-personas] 2 personas 与 personas-data.ts 一致
+[build-agent-modes] 2 modes 与 modes-data.ts 一致
+[runtime-subagents-boundary] ok (12 source files, workspace dependencies=0, tool protocol tokens=0)
+[runtime-failure-contract] ok (boundary files=55, violations=0)
+[agent-guide] root <= 8192, Claude <= 4096 bytes; pointers and file links passed
+[glossary] index <= 12288 bytes; unique terms, chapter routing and file links passed
+[runtime-independence] ok (7 manifests, 423 code/config files, Coding Agent dependencies=0)
+[waivers] all waivers valid and unexpired
+[skill-frontmatter] ok (59 file(s))
+[protocol-suites] every registered protocol has a conformance suite (0 exemptions)
+[workflow-skills] Claude entry is a Git symlink placeholder; validating .agents directly, Claude path is not ready. Enable core.symlinks and Windows Developer Mode, then safely re-checkout .claude/skills; do not overwrite local work
+[workflow-skills] canonical sources, shared entry and relative file links passed (not model routing evaluation)
+[task-worktrees] contract passed (399 task(s), 0 warning(s))
+[turbo-config] cache and entry-point contracts passed
+[vitest-runner] ok
+[project-indexes] Plan and Task status indexes match frontmatter
+[agent-ai-maintainability] ok (6 facades, 28 responsibility owners, inline type imports=0)
+[version-lines] 71 manifest(s)：无上游线残留，33 个统一线 manifest 与 Desktop 同版本
+Release notes found for v0.1.3: .github/release-notes/v0.1.3.md
+[standalone-cli-build] ok
+[conflict-markers] ok (7943 file(s))
+[private-key] ok (8885 file(s))
+baseline: upstream/dev@405fdcda13fd
+changed=2501 covered=2217 excluded=168 missing=116 unclassified=0
+ratchet: waived=116 new=0
+
+基线中已修复 535 条，可运行 --write-baseline 收缩快照。
+session event tombstones: no retired SessionEvent references
+[source-path-maps] ok
+[conversation-message-architecture] ok (2286 source files)
+[coding-agent-architecture] ok (source files=674, module edges=4423, manifest exports=25)
+[autonomy] contracts, entrypoints, DESIGN source checks passed (43 UI file(s)); runtime/visual acceptance is separate
+[context-boundary] all module declarations and internal_dependencies whitelists are consistent
+[package-boundaries] ok (7466 file(s) scanned)

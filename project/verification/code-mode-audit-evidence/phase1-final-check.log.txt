@@ -1,0 +1,56 @@
+$ concurrently --names "lint,types,guards,mobile-lint" --prefix-colors "cyan,yellow,magenta,green" "bun run check:lint" "bun run check:types" "bun run check:guards" "bun run --cwd apps/mobile lint"
+[lint] $ bun run scripts/quality/check-lint.mjs
+[types] $ concurrently --names "root,cli,desktop,docs,mobile" --prefix-colors "blue,yellow,green,magenta,cyan" "tsgo --noEmit" "bun run --cwd apps/cli-host typecheck" "bun run --cwd apps/desktop typecheck:incremental" "bun run --cwd apps/docs-site check" "bun run --cwd apps/mobile typecheck"
+[guards] $ bun run scripts/quality/check-guards.mjs
+[mobile-lint] $ expo lint
+[guards] [generate-themes] 2 built-in themes are current
+[guards] [generate-personas] 2 personas 与 personas-data.ts 一致
+[guards] [build-agent-modes] 2 modes 与 modes-data.ts 一致
+[guards] [runtime-subagents-boundary] ok (12 source files, workspace dependencies=0, tool protocol tokens=0)
+[guards] [agent-guide] root <= 8192, Claude <= 4096 bytes; pointers and file links passed
+[guards] [runtime-failure-contract] ok (boundary files=55, violations=0)
+[guards] [glossary] index <= 12288 bytes; unique terms, chapter routing and file links passed
+[guards] [skill-frontmatter] ok (59 file(s))
+[types] [cli] $ tsgo --noEmit -p tsconfig.json
+[guards] [vitest-runner] ok
+[guards] [waivers] all waivers valid and unexpired
+[types] [desktop] $ NODE_OPTIONS=--max-old-space-size=6144 tsc --noEmit -p tsconfig.json --incremental --tsBuildInfoFile ../../node_modules/.desktop-check.tsbuildinfo
+[types] [docs] $ next typegen && tsc --noEmit
+[types] [mobile] $ tsc --noEmit
+[guards] [protocol-suites] every registered protocol has a conformance suite (0 exemptions)
+[guards] [turbo-config] cache and entry-point contracts passed
+[guards] [version-lines] 71 manifest(s)：无上游线残留，33 个统一线 manifest 与 Desktop 同版本
+[guards] Release notes found for v0.1.3: .github/release-notes/v0.1.3.md
+[guards] [agent-ai-maintainability] ok (6 facades, 28 responsibility owners, inline type imports=0)
+[guards] [runtime-independence] ok (7 manifests, 423 code/config files, Coding Agent dependencies=0)
+[guards] [project-indexes] Plan and Task status indexes match frontmatter
+[guards] [task-worktrees] contract passed (399 task(s), 0 warning(s))
+[guards] [workflow-skills] Claude entry is a Git symlink placeholder; validating .agents directly, Claude path is not ready. Enable core.symlinks and Windows Developer Mode, then safely re-checkout .claude/skills; do not overwrite local work
+[guards] [workflow-skills] canonical sources, shared entry and relative file links passed (not model routing evaluation)
+[guards] [standalone-cli-build] ok
+[lint] Checked 5188 files in 7s. No fixes applied.
+[lint] bun run check:lint exited with code 0
+[guards] [source-path-maps] ok
+[types] [docs] Generating route types...
+[guards] session event tombstones: no retired SessionEvent references
+[types] [docs] ✓ Types generated successfully
+[guards] [conflict-markers] ok (7943 file(s))
+[guards] baseline: upstream/dev@405fdcda13fd
+[guards] changed=2500 covered=2217 excluded=167 missing=116 unclassified=0
+[guards] ratchet: waived=116 new=0
+[guards]
+[guards] 基线中已修复 535 条，可运行 --write-baseline 收缩快照。
+[guards] [conversation-message-architecture] ok (2286 source files)
+[guards] [private-key] ok (8885 file(s))
+[guards] [coding-agent-architecture] ok (source files=674, module edges=4423, manifest exports=25)
+[types] [mobile] bun run --cwd apps/mobile typecheck exited with code 0
+[types] [cli] bun run --cwd apps/cli-host typecheck exited with code 0
+[guards] [autonomy] contracts, entrypoints, DESIGN source checks passed (43 UI file(s)); runtime/visual acceptance is separate
+[types] [root] tsgo --noEmit exited with code 0
+[types] [docs] bun run --cwd apps/docs-site check exited with code 0
+[guards] [context-boundary] all module declarations and internal_dependencies whitelists are consistent
+[mobile-lint] bun run --cwd apps/mobile lint exited with code 0
+[guards] [package-boundaries] ok (7466 file(s) scanned)
+[guards] bun run check:guards exited with code 0
+[types] [desktop] bun run --cwd apps/desktop typecheck:incremental exited with code 0
+[types] bun run check:types exited with code 0

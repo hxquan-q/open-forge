@@ -9,6 +9,7 @@
 
 ## 验证记录
 
+| [VERIFY-0024](VERIFY-0024-code-mode-audit-2026-10-30.md) | Code 模式完整历史审计、可选复核探针与脱敏输出（2026-10-30 基线，2026-11-25 入仓） |
 | [VERIFY-0023](VERIFY-0023-qwen38-team-notification-real-model.md) | qwen3.8 真实模型团队会话：端点恢复、BUG-0151 通知链路行为验证（2026-10-24） |
 
 ## 默认验证顺序
