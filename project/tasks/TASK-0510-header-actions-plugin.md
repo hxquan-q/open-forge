@@ -1,0 +1,118 @@
+---
+id: TASK-0510
+type: task
+status: ready
+priority: P2
+owner: apps/desktop + packages/theme-ui + packages/plugin-sdk
+requirement: REQ-0008
+plan: PLAN-0032
+source: upstream 7e0a8b130 + b669f73ae + 234885a88 + 8efa385a8 + ffe0d5e90 + 25c43ece2（参照重写，PLAN-0032 P7）
+related_requirement: [REQ-0008]
+related_plan: [PLAN-0032]
+related_tasks: [TASK-0505]
+related_issues: []
+related_bugs: []
+execution: parallel
+branch: task/TASK-0510-header-actions-plugin
+worktree: unassigned（待创建）
+base_commit: 126727f3f
+read_paths:
+  - apps/desktop/src/renderer/domains/conversation/components/chat-view/ChatHeaderActionsView.tsx
+  - apps/desktop/src/main/plugins/plugin-api-version.ts
+  - apps/desktop/src/main/plugins/
+  - packages/plugin-sdk/
+  - packages/theme-ui/src/
+write_paths:
+  - apps/desktop/src/renderer/domains/header-actions/
+  - apps/desktop/src/renderer/domains/conversation/components/chat-view/ChatHeaderActionsView.tsx
+  - apps/desktop/src/main/plugins/plugin-api-version.ts
+  - apps/desktop/src/main/plugins/
+  - apps/desktop/src/shared/i18n/locales/en/
+  - apps/desktop/src/shared/i18n/locales/zh/
+  - packages/plugin-sdk/
+  - packages/theme-ui/src/
+  - docs/plugins/
+  - project/tasks/TASK-0510-header-actions-plugin.md
+exclusive_paths:
+  - apps/desktop/src/renderer/domains/header-actions/
+depends_on: [TASK-0505]
+conflicts_with: [TASK-0509]
+integration_status: pending
+created: 2026-11-25
+updated: 2026-11-25
+---
+<!-- Copyright The Open Forge contributors. -->
+
+# 顶栏按钮组（registerHeaderAction + 收纳/拖动排序/更多菜单）（PLAN-0032 P7）
+
+## 目标
+
+参照上游 `7e0a8b130` 重写本地顶栏：
+
+- 新增 `apps/desktop/src/renderer/domains/header-actions/` 与 theme-ui 顶栏视图组件；替换 `ChatHeaderActionsView.tsx` 的固定按钮。
+- 插件可声明 `ui.slot.header-action` 动作（最小集合权限声明，与宿主授权取交集）。
+- 扩展字段（`b669f73ae`）、收纳与调整模式（`234885a88` / `8efa385a8` / `ffe0d5e90`）、过窄收进更多菜单（`25c43ece2`）。
+- Plugin API 按 D3 拍板**升 2.14.0**，登记新增的 `registerHeaderAction` 与 `useMeta` 能力。
+- 排序持久化键名用本仓品牌前缀（Open Forge / `forge`），不用上游 `vetta`。
+
+## 范围
+
+### 并发评估
+
+- 结论：条件支持
+- 执行方式：parallel（独立 worktree `task/TASK-0510-header-actions-plugin`）
+- 可并行 Task：TASK-0506、TASK-0507、TASK-0508
+- 前置依赖：D3 已拍板
+- 冲突文件/独占路径：`header-actions/` 独占；`plugin-api-version.ts`、i18n 公共文件、theme-ui 与 TASK-0509 共享 → **conflicts_with TASK-0509**，集成顺序由 Coordinator 排
+- Branch：`task/TASK-0510-header-actions-plugin`
+- Worktree：由 Coordinator 派工时 `bun run worktree:create --task TASK-0510`
+
+### 做
+
+- `header-actions/` 域：注册中心、渲染器、拖拽排序、过窄收进更多菜单。
+- theme-ui 顶栏视图：纯渲染组件，使用 `ButtonGroup` + `VettaKbd`。
+- 替换 `ChatHeaderActionsView.tsx` 的现有固定按钮（保持现有功能等价：模型切换、分享、设置等）。
+- `plugin-api-version.ts` 升 2.14.0，写明对应上游能力集。
+- `plugin-sdk` 暴露 `registerHeaderAction` 类型与运行时；`ui.slot.header-action` 权限声明。
+- 排序持久化：键名 `forge.headerActions.order`（或本仓品牌前缀的等价形式），不沿用上游 `vetta.*`。
+- i18n：所有用户可见文案（含 aria/title）。
+
+### 不做
+
+- 不动 `ChatHeaderActionsView` 之外的会话头部其他区。
+- 不改会话协议、Agent 状态机。
+- 不重排其他 Plugin API 历史版本号。
+
+## Given / When / Then
+
+- Given：用户打开任意会话
+- When：查看会话顶栏 / 拖动动作排序 / 收窄窗口
+- Then：动作以统一按钮组呈现；可拖动排序、跨重启保持；过窄时溢出动作进「更多」菜单；插件能通过 SDK 注册新动作
+
+## 必须保持
+
+- 现有固定按钮（模型、分享、设置等）的功能等价。
+- 权限最小集合：只声明 `ui.slot.header-action`。
+- 排序持久化键品牌前缀正确（非 vetta）。
+
+## 测试与验证
+
+- 定向测试：`header-actions/`、`plugin-sdk/`、`ChatHeaderActionsView` 相关
+- 用户流程：拖动排序、重启、收窄窗口、第三方插件注册动作
+- 质量检查：`bun run test:impact`、`bun run check`、`plugin-protocol-contract.test.ts` 同步
+
+## 验收分层
+
+- 工程验证：待执行
+- 技术评审：独立评审
+- 集成：pending（与 TASK-0509 协调顺序）
+- 人工功能验收：待验收（用户实机拖动、收窄窗口验证）
+- 发布：未授权
+
+## 功能验收包
+
+- 入口：Desktop → 任意会话
+- 用例 1：默认动作按钮组排列整齐，键帽正确显示快捷键
+- 用例 2：拖动改变顺序，关闭并重开 Desktop 顺序保持
+- 用例 3：把窗口拖到很窄，溢出动作出现在「更多」菜单中
+- 用例 4：测试插件注册一个新的 header action，能在顶栏出现
