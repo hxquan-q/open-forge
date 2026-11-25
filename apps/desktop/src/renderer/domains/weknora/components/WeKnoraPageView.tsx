@@ -1,287 +1,184 @@
 // Copyright The Open Forge contributors.
 
-import type { WeKnoraAgent, WeKnoraSession } from "@preload/api";
 import { Input } from "@shared/components/ui/input";
 import { Button } from "@vetta-org/ui";
-import { motion } from "motion/react";
-import { useEffect, useRef, useState } from "react";
+import { ResizeHandle } from "@vetta-org/theme-ui/layout";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import type { WeKnoraAgentsStatus, WeKnoraChatMessage, WeKnoraErrorCode, WeKnoraHistoryStatus } from "../atoms";
-import type { WeKnoraBatchDeleteResult, WeKnoraBatchExportResult } from "../hooks/useWeKnoraBatchActions";
-import type { WeKnoraExportFormat } from "../services/weknoraExport";
-import {
-	persistWeKnoraSidebarCollapsed,
-	readPersistedWeKnoraSidebarCollapsed,
-} from "../weknora-sidebar-state";
+import type { WeKnoraErrorCode } from "../atoms";
+import type { WeKnoraPageActions, WeKnoraPageViewModel } from "../hooks/useWeKnoraViewModel";
 import { AgentSelector } from "./AgentSelector";
 import { ConversationList } from "./ConversationList";
 import { MessageList } from "./MessageList";
 import { WeKnoraComposer } from "./WeKnoraComposer";
 
 /**
- * 侧栏收起/展开动画（D 组 AC-10~12）。
+ * 侧栏收起/展开过渡（TASK-0506 / PLAN-0032 P4d）。
  *
- * - 展开宽度 = `ConversationList` 的 `nav` 宽度（`w-64` = 16rem）+ 原内容行 `flex gap-4` 的间隙（1rem）。
- *   间隙并入动画宽度一起归零：若把它留在内容行的 `gap-4` 上，收起终态会残留 16px 空隙
- *   （票面「flex 间隙」提醒的正是这个坑）。
- * - 时长约 200ms；缓动与 abilities 域入场先例一致。
- * - **终态必须卸载**（AC-11）：动画只是过渡，不得留下不可见占位节点，故用 `sidebarPresent` 控制挂载。
+ * 重写掉原先自写的 motion 宽度动画：占位盒子宽度一步到位切到终值（不参与过渡，
+ * 避免逐帧重排主内容区），面板脱离占位用 `transform` 滑进滑出、透明度同步——
+ * 与 theme-ui `SidebarDock` 同一抽屉模式，纯 CSS 过渡，reduced-motion 经
+ * `motion-reduce:transition-none` 瞬时切换。终态占位宽度为 0，不留空隙。
  */
-const SIDEBAR_SLOT_WIDTH = "17rem";
-const SIDEBAR_ANIMATION_MS = 200;
-const SIDEBAR_EASE = [0.22, 1, 0.36, 1] as const;
+const SIDEBAR_TRANSITION_MS = 240;
 
-/**
- * 渲染期读取系统「减少动态效果」偏好（AC-12）：为真时收起/展开瞬时切换。
- *
- * 直接读 `matchMedia`，不用 motion 的 `useReducedMotion`——后者在进程内首次调用时一次性
- * 缓存结果，既不随偏好变化更新，也无法在单个测试文件内分别验证两种分支
- * （仓库 live-animations / theme/apply 同样是直接读法）。
- */
-function prefersReducedMotion(): boolean {
-	return typeof window !== "undefined" && typeof window.matchMedia === "function"
-		? window.matchMedia("(prefers-reduced-motion: reduce)").matches
-		: false;
-}
+/** 窄屏断点：容器宽度低于此值时详情独占整页（与 SplitDetailLayout 一致）。 */
+const NARROW_BREAKPOINT = "@[780px]";
 
 export interface WeKnoraPageViewProps {
-	readonly configured: boolean;
-	readonly baseUrl: string;
-	readonly hasApiKey: boolean;
-	readonly agents: readonly WeKnoraAgent[];
-	readonly agentsStatus: WeKnoraAgentsStatus;
-	readonly selectedAgentId: string | null;
-	readonly messages: readonly WeKnoraChatMessage[];
-	readonly isStreaming: boolean;
-	readonly currentSessionId: string | null;
-	readonly sessions: readonly WeKnoraSession[];
-	readonly sessionsStatus: WeKnoraHistoryStatus;
-	readonly loadingSessionId: string | null;
-	/** 有活跃流（含后台思考）的会话 id 集合（AC-19 行级指示 / AC-10 禁删判定的状态源）。 */
-	readonly streamingSessionIds: ReadonlySet<string>;
-	/** 正在删除的会话 id（AC-12 防重复标记）；`null` = 无进行中的删除请求。 */
-	readonly deletingSessionId: string | null;
-	/** 批量删除进行中（T04：批量确认按钮防重复的驱动源）。 */
-	readonly batchDeleting: boolean;
-	/** 导出进行中（T05：单会话 / 批量任一在跑；入口防重复的驱动源）。 */
-	readonly exporting: boolean;
-	/** 删除失败的归一化错误码（AC-11）；非 `null` 时侧栏出内联错误块。 */
-	readonly deleteError: WeKnoraErrorCode | null;
-	readonly saving: boolean;
-	/** 最近一次保存配置失败的归一化错误码；`null` = 无错误（④）。 */
-	readonly saveError: WeKnoraErrorCode | null;
-	readonly onSelectAgent: (agentId: string) => void;
-	readonly onSend: (text: string) => void;
-	readonly onCancel: () => void;
-	readonly onNewConversation: () => void;
-	readonly onOpenSession: (sessionId: string) => void;
-	/** 删除历史会话（AC-8）；返回是否成功（失败时确认弹窗不关）。 */
-	readonly onDeleteSession: (sessionId: string) => Promise<boolean>;
-	/** 批量删除历史会话（AC-10）；返回聚合结果（成功 / 失败明细）。 */
-	readonly onDeleteSessions: (sessionIds: readonly string[]) => Promise<WeKnoraBatchDeleteResult>;
-	/** 单会话导出（AC-3）：拉全量 → 序列化 → 保存对话框（默认桌面）。 */
-	readonly onExportSession: (sessionId: string, format: WeKnoraExportFormat) => Promise<void>;
-	/** 批量导出（AC-9）：选目录 → 逐会话一文件；取消目录选择返回 `null`。 */
-	readonly onExportSessions: (
-		sessionIds: readonly string[],
-		format: WeKnoraExportFormat,
-	) => Promise<WeKnoraBatchExportResult | null>;
-	readonly onReloadSessions: () => void;
-	readonly onSaveSetup: (input: { baseUrl: string; apiKey?: string }) => void;
-	readonly onReloadAgents: () => void;
+	readonly viewModel: WeKnoraPageViewModel;
+	readonly actions: WeKnoraPageActions;
 }
 
-/** 「智能客服」纯展示视图：所有业务状态与动作都由连接层经 props 注入。 */
-export function WeKnoraPageView({
-	configured,
-	baseUrl,
-	hasApiKey,
-	agents,
-	agentsStatus,
-	selectedAgentId,
-	messages,
-	isStreaming,
-	currentSessionId,
-	sessions,
-	sessionsStatus,
-	loadingSessionId,
-	streamingSessionIds,
-	deletingSessionId,
-	batchDeleting,
-	exporting,
-	deleteError,
-	saving,
-	saveError,
-	onSelectAgent,
-	onSend,
-	onCancel,
-	onNewConversation,
-	onOpenSession,
-	onDeleteSession,
-	onDeleteSessions,
-	onExportSession,
-	onExportSessions,
-	onReloadSessions,
-	onSaveSetup,
-	onReloadAgents,
-}: WeKnoraPageViewProps): JSX.Element {
+/**
+ * 「智能客服」纯展示视图：平铺 props 收拢为 `viewModel` + `actions` 两个对象
+ * （对照 memory 三层样板）。会话栏进列表列、可拖宽可折叠；会话主区进右侧详情列，
+ * 窄屏（<780px 容器宽）下详情独占整页。
+ */
+export function WeKnoraPageView({ viewModel, actions }: WeKnoraPageViewProps): JSX.Element {
 	const { t } = useTranslation("weknora");
-	const reduceMotion = prefersReducedMotion();
-	const [settingsOpen, setSettingsOpen] = useState(false);
-	// 侧栏收起是单页面 UI 铬件状态（02-plan §2.5）：本地 state 而非 atom，
-	// 惰性初始化只读一次落盘（AC-3 重启保持），切换时写回。
-	const [sidebarCollapsed, setSidebarCollapsed] = useState(readPersistedWeKnoraSidebarCollapsed);
-	// 侧栏是否留在 DOM（AC-11）：展开时恒为 true；收起时先播退出动画、动画结束再卸载。
-	const [sidebarPresent, setSidebarPresent] = useState(!sidebarCollapsed);
-	// 仅首次挂载不播入场动画（`initial={false}`），之后每次展开都从 0 宽度滑入。
-	const sidebarMountedOnce = useRef(false);
-	const agentsReady = agentsStatus === "ready" && agents.length > 0;
-
-	useEffect(() => {
-		sidebarMountedOnce.current = true;
-	}, []);
-
-	// 收起：reduced-motion 立即卸载；否则等动画播完再卸载（AC-11 终态不渲染、不占宽）。
-	useEffect(() => {
-		if (!sidebarCollapsed) {
-			setSidebarPresent(true);
-			return;
-		}
-		if (reduceMotion) {
-			setSidebarPresent(false);
-			return;
-		}
-		const timer = window.setTimeout(() => setSidebarPresent(false), SIDEBAR_ANIMATION_MS);
-		return () => window.clearTimeout(timer);
-	}, [sidebarCollapsed, reduceMotion]);
-
-	const toggleSidebar = (): void => {
-		const next = !sidebarCollapsed;
-		setSidebarCollapsed(next);
-		persistWeKnoraSidebarCollapsed(next);
-	};
+	const agentsReady = viewModel.agentsStatus === "ready" && viewModel.agents.length > 0;
 
 	let statusNotice: JSX.Element | null = null;
-	if (configured && agentsStatus === "loading") {
+	if (viewModel.configured && viewModel.agentsStatus === "loading") {
 		statusNotice = <Notice message={t("page.loadingAgents")} />;
-	} else if (configured && agentsStatus === "empty") {
-		statusNotice = <Notice message={t("page.agentsEmpty")} onRetry={onReloadAgents} retryLabel={t("page.retry")} />;
-	} else if (configured && agentsStatus === "error") {
-		statusNotice = <Notice message={t("page.agentsError")} onRetry={onReloadAgents} retryLabel={t("page.retry")} />;
+	} else if (viewModel.configured && viewModel.agentsStatus === "empty") {
+		statusNotice = (
+			<Notice message={t("page.agentsEmpty")} onRetry={actions.reloadAgents} retryLabel={t("page.retry")} />
+		);
+	} else if (viewModel.configured && viewModel.agentsStatus === "error") {
+		statusNotice = (
+			<Notice message={t("page.agentsError")} onRetry={actions.reloadAgents} retryLabel={t("page.retry")} />
+		);
 	}
 
-	return (
-		<div className="relative flex h-full w-full flex-1 flex-col overflow-hidden">
-			{/* AC-1/AC-1c：左右内边距 32→12px（px-8→px-3）、页头下边距 16→8px（pb-4→pb-2），
-			    收掉顶部那一大块留白。原先这里有一条 `drag-region h-12`（48px 纯空白带），本 feature 删除它：
-			    窗口拖拽由外壳页头承担——`PageHeaderFrame` 自身即 `drag-region`，且 `/weknora` 走 content 路由
-			    ⇒ `MainContentFrame` 必然渲染它（证据见 00-requirement.md），故本页不再需要自己的拖拽带。 */}
-			<header className="shrink-0 px-3 pb-2">
-				<div className="flex items-end justify-between gap-4">
-					<div className="flex items-center gap-2">
-						{/* AC-1/AC-4：侧栏显隐开关只对已配置用户出现；状态由 aria-expanded 暴露，
-						    图标指向收拢方向（展开时朝左收、收起后朝右放）。 */}
-						{configured ? (
-							<Button
-								aria-expanded={!sidebarCollapsed}
-								aria-label={sidebarCollapsed ? t("sidebar.expand") : t("sidebar.collapse")}
-								onClick={toggleSidebar}
-								size="icon-xs"
-								title={sidebarCollapsed ? t("sidebar.expand") : t("sidebar.collapse")}
-								type="button"
-								variant="ghost"
-							>
-								<span
-									aria-hidden="true"
-									className={`h-3.5 w-3.5 ${
-										sidebarCollapsed
-											? "icon-[solar--alt-arrow-right-linear]"
-											: "icon-[solar--alt-arrow-left-linear]"
-									}`}
-								/>
-							</Button>
-						) : null}
-						<div>
-							<h1 className="text-[15px] font-semibold text-foreground">{t("page.title")}</h1>
-							<p className="mt-1 text-[12px] text-muted-foreground/60">{t("page.subtitle")}</p>
-						</div>
-					</div>
-					<div className="flex items-center gap-2">
-						{configured && agentsReady ? (
-							<AgentSelector
-								agents={agents}
-								selectedAgentId={selectedAgentId}
-								onSelect={onSelectAgent}
-							/>
-						) : null}
-						<Button onClick={() => setSettingsOpen((open) => !open)} size="sm" type="button" variant="outline">
-							{settingsOpen ? t("page.closeSettings") : t("page.openSettings")}
-						</Button>
-					</div>
-				</div>
-			</header>
+	const sidebarVisible = viewModel.configured && !viewModel.sidebarCollapsed;
 
+	return (
+		<div className="@container relative flex h-full w-full flex-1 flex-col overflow-hidden">
 			{/* AC-2/AC-1b：内容行左右与页头对齐（px-3），下边距 32→12px（pb-8→pb-3），
-			    使历史会话栏（含「新建对话」）整体上移贴近页头。
-			    注意：这里刻意不再用 `gap-4`——间隙并入侧栏动画宽度（见 SIDEBAR_SLOT_WIDTH），
-			    否则收起终态会残留 16px 空隙。 */}
+			    使历史会话栏（含「新建对话」）整体上移贴近页头（DESIGN.md:283 登记特例保留）。
+			    列表列与详情列同处一行：≥780px 并排分屏；窄屏下列表隐藏，详情独占整页。 */}
 			<div className="flex flex-1 overflow-hidden px-3 pb-3">
-				{/* AC-10/AC-11：收起/展开为宽度滑动 + 内容淡出/淡入（约 200ms）；动画结束后整栏卸载，
-				    不占宽（终态与 AC-2 一致）。动画期间 `aria-hidden` 让辅助技术按「已收起」看待它。 */}
-				{configured && sidebarPresent ? (
-					<motion.div
-						animate={{ opacity: sidebarCollapsed ? 0 : 1, width: sidebarCollapsed ? "0rem" : SIDEBAR_SLOT_WIDTH }}
-						aria-hidden={sidebarCollapsed || undefined}
-						className="shrink-0 overflow-hidden"
-						initial={sidebarMountedOnce.current ? { opacity: 0, width: "0rem" } : false}
-						transition={reduceMotion ? { duration: 0 } : { duration: SIDEBAR_ANIMATION_MS / 1000, ease: SIDEBAR_EASE }}
+				{viewModel.configured ? (
+					// 侧栏占位盒子：宽度一步到位（收起终值 0），不参与过渡；把手贴在右缘。
+					<div
+						data-testid="weknora-sidebar-slot"
+						className="relative z-10 shrink-0 overflow-visible"
+						style={{ width: viewModel.sidebarCollapsed ? 0 : viewModel.sidebarWidth }}
+						{...(viewModel.sidebarCollapsed ? { inert: true, "aria-hidden": true } : {})}
 					>
-						<ConversationList
-							agents={agents}
-							batchDeleting={batchDeleting}
-							currentSessionId={currentSessionId}
-							deleteError={deleteError}
-							deletingSessionId={deletingSessionId}
-							exporting={exporting}
-							loadingSessionId={loadingSessionId}
-							onDeleteSession={onDeleteSession}
-							onDeleteSessions={onDeleteSessions}
-							onExportSession={onExportSession}
-							onExportSessions={onExportSessions}
-							onNewConversation={onNewConversation}
-							onOpenSession={onOpenSession}
-							onReload={onReloadSessions}
-							sessions={sessions}
-							status={sessionsStatus}
-							streamingSessionIds={streamingSessionIds}
-						/>
-					</motion.div>
+						<div
+							className={`absolute inset-y-0 left-0 h-full transition-[transform,opacity] ease-[cubic-bezier(0.22,0.61,0.36,1)] motion-reduce:transition-none ${
+								sidebarVisible ? "opacity-100" : "pointer-events-none opacity-0"
+							}`}
+							style={{
+								width: viewModel.sidebarWidth,
+								transform: sidebarVisible ? "translateX(0)" : "translateX(-100%)",
+								transitionDuration: `${SIDEBAR_TRANSITION_MS}ms`,
+							}}
+						>
+							<ConversationList
+								agents={viewModel.agents}
+								batchDeleting={viewModel.batchDeleting}
+								currentSessionId={viewModel.currentSessionId}
+								deleteError={viewModel.deleteError}
+								deletingSessionId={viewModel.deletingSessionId}
+								exporting={viewModel.exporting}
+								loadingSessionId={viewModel.loadingSessionId}
+								onDeleteSession={actions.deleteSession}
+								onDeleteSessions={actions.deleteSessions}
+								onExportSession={actions.exportSession}
+								onExportSessions={actions.exportSessions}
+								onNewConversation={actions.newConversation}
+								onOpenSession={actions.openSession}
+								onReload={actions.reloadSessions}
+								sessions={viewModel.sessions}
+								status={viewModel.sessionsStatus}
+								streamingSessionIds={viewModel.streamingSessionIds}
+							/>
+						</div>
+						{/* 拖宽把手（ResizeHandle，side="right"：向右拖变大）：只在 ≥780px 且展开时可拖；
+						    窄屏详情独占整页、列表隐藏，拖拽无意义。 */}
+						{sidebarVisible ? (
+							<span className={`hidden ${NARROW_BREAKPOINT}:block`}>
+								<ResizeHandle side="right" onResize={actions.resizeSidebar} />
+							</span>
+						) : null}
+					</div>
 				) : null}
 
-				<div className="flex flex-1 flex-col gap-4 overflow-hidden">
-					{configured ? null : (
+				{/* 详情列（会话主区）：窄屏独占整页（容器断点隐藏列表后 flex-1 吃满）。 */}
+				<div className="flex min-w-0 flex-1 flex-col gap-4 overflow-hidden pl-4">
+					{/* AC-1/AC-1c：页头贴边（下边距 8px）；窗口拖拽由外壳页头承担，本页不再自带拖拽带。 */}
+					<header className="shrink-0 pb-2">
+						<div className="flex items-end justify-between gap-4">
+							<div className="flex items-center gap-2">
+								{/* AC-1/AC-4：侧栏显隐开关只对已配置用户出现；状态由 aria-expanded 暴露，
+								    图标指向收拢方向（展开时朝左收、收起后朝右放）。 */}
+								{viewModel.configured ? (
+									<Button
+										aria-expanded={!viewModel.sidebarCollapsed}
+										aria-label={viewModel.sidebarCollapsed ? t("sidebar.expand") : t("sidebar.collapse")}
+										onClick={actions.toggleSidebar}
+										size="icon-xs"
+										title={viewModel.sidebarCollapsed ? t("sidebar.expand") : t("sidebar.collapse")}
+										type="button"
+										variant="ghost"
+									>
+										<span
+											aria-hidden="true"
+											className={`h-3.5 w-3.5 ${
+												viewModel.sidebarCollapsed
+													? "icon-[solar--alt-arrow-right-linear]"
+													: "icon-[solar--alt-arrow-left-linear]"
+											}`}
+										/>
+									</Button>
+								) : null}
+								<div>
+									<h1 className="text-[15px] font-semibold text-foreground">{t("page.title")}</h1>
+									<p className="mt-1 text-[12px] text-muted-foreground/60">{t("page.subtitle")}</p>
+								</div>
+							</div>
+							<div className="flex items-center gap-2">
+								{viewModel.configured && agentsReady ? (
+									<AgentSelector
+										agents={viewModel.agents}
+										selectedAgentId={viewModel.selectedAgentId}
+										onSelect={actions.selectAgent}
+									/>
+								) : null}
+								<Button onClick={actions.toggleSettings} size="sm" type="button" variant="outline">
+									{viewModel.settingsOpen ? t("page.closeSettings") : t("page.openSettings")}
+								</Button>
+							</div>
+						</div>
+					</header>
+
+					{viewModel.configured ? null : (
 						<Notice detail={t("page.notConfiguredBody")} message={t("page.notConfiguredTitle")} />
 					)}
 
-					{configured && !settingsOpen ? null : (
+					{viewModel.configured && !viewModel.settingsOpen ? null : (
 						<SetupPanel
-							baseUrl={baseUrl}
-							hasApiKey={hasApiKey}
-							saveError={saveError}
-							saving={saving}
-							onSave={onSaveSetup}
+							baseUrl={viewModel.baseUrl}
+							hasApiKey={viewModel.hasApiKey}
+							saveError={viewModel.saveError}
+							saving={viewModel.saving}
+							onSave={actions.saveSetup}
 						/>
 					)}
 
-					{configured ? (
+					{viewModel.configured ? (
 						<>
 							{statusNotice}
-							<MessageList messages={messages} />
+							<MessageList messages={viewModel.messages} />
 							<WeKnoraComposer
 								disabled={!agentsReady}
-								isStreaming={isStreaming}
-								onCancel={onCancel}
-								onSend={onSend}
+								isStreaming={viewModel.isStreaming}
+								onCancel={actions.cancel}
+								onSend={actions.send}
 							/>
 						</>
 					) : null}

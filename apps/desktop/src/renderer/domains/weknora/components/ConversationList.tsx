@@ -10,7 +10,7 @@ import {
 	DialogTitle,
 } from "@shared/components/ui/dialog";
 import { useShortcutScope } from "@shared/shortcuts";
-import { Button } from "@vetta-org/ui";
+import { Button, ButtonGroup, ButtonGroupItem } from "@vetta-org/ui";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { agentNameOfSession, formatSessionTime, type WeKnoraErrorCode, type WeKnoraHistoryStatus } from "../atoms";
@@ -210,7 +210,7 @@ export function ConversationList({
 	return (
 		<nav
 			aria-label={t("conversation.historyTitle")}
-			className="flex w-64 shrink-0 flex-col gap-3 overflow-hidden border-border/40 border-r pr-4"
+			className="flex h-full w-full flex-col gap-3 overflow-hidden border-border/40 border-r pr-4"
 		>
 			{/* AC-8：多选模式操作条（进入后取代「新建对话」，聚焦批量动作）。 */}
 			{selection.active ? (
@@ -233,24 +233,24 @@ export function ConversationList({
 						>
 							{t("selection.selectAll")}
 						</Button>
-						<Button
-							disabled={selection.count === 0 || exporting}
-							onClick={() => setExportRequest({ kind: "batch" })}
-							size="sm"
-							type="button"
-							variant="outline"
-						>
-							{exporting ? t("batchExport.exporting") : t("selection.export")}
-						</Button>
-						<Button
-							disabled={selection.count === 0}
-							onClick={() => setBatchConfirmOpen(true)}
-							size="sm"
-							type="button"
-							variant="destructive"
-						>
-							{t("selection.delete")}
-						</Button>
+						<ButtonGroup>
+							<ButtonGroupItem
+								aria-label={exporting ? t("batchExport.exporting") : t("selection.export")}
+								disabled={selection.count === 0 || exporting}
+								icon={<span aria-hidden="true" className="icon-[solar--download-minimalistic-linear] h-4 w-4" />}
+								label={exporting ? t("batchExport.exporting") : t("selection.export")}
+								onClick={() => setExportRequest({ kind: "batch" })}
+								title={exporting ? t("batchExport.exporting") : t("selection.export")}
+							/>
+							<ButtonGroupItem
+								aria-label={t("selection.delete")}
+								disabled={selection.count === 0}
+								icon={<span aria-hidden="true" className="icon-[solar--trash-bin-trash-linear] h-4 w-4" />}
+								label={t("selection.delete")}
+								onClick={() => setBatchConfirmOpen(true)}
+								title={t("selection.delete")}
+							/>
+						</ButtonGroup>
 					</div>
 				</div>
 			) : (

@@ -4,7 +4,7 @@
 import { i18n, initI18n } from "@shared/i18n";
 import { render, screen, within } from "@testing-library/react";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import type { WeKnoraPageViewProps } from "./components/WeKnoraPageView";
+import type { WeKnoraPageActions, WeKnoraPageViewModel } from "./hooks/useWeKnoraViewModel";
 import { WeKnoraPageView } from "./components/WeKnoraPageView";
 
 /**
@@ -35,7 +35,7 @@ vi.mock("@shared/components/ui/select", () => ({
 
 const noop = (): void => undefined;
 
-function props(overrides: Partial<WeKnoraPageViewProps> = {}): WeKnoraPageViewProps {
+function viewModel(overrides: Partial<WeKnoraPageViewModel> = {}): WeKnoraPageViewModel {
 	return {
 		agents: [
 			{ id: "A", name: "Agent A" },
@@ -44,6 +44,7 @@ function props(overrides: Partial<WeKnoraPageViewProps> = {}): WeKnoraPageViewPr
 		agentsStatus: "ready",
 		baseUrl: "http://host:8083",
 		batchDeleting: false,
+		canAsk: false,
 		configured: true,
 		currentSessionId: null,
 		deleteError: null,
@@ -58,33 +59,42 @@ function props(overrides: Partial<WeKnoraPageViewProps> = {}): WeKnoraPageViewPr
 		selectedAgentId: null,
 		sessions: [],
 		sessionsStatus: "ready",
+		settingsOpen: false,
+		sidebarCollapsed: false,
+		sidebarWidth: 272,
 		streamingSessionIds: new Set<string>(),
-		onCancel: noop,
-		onDeleteSession: async () => true,
-		onDeleteSessions: async () => ({ succeeded: [], failed: [] }),
-		onExportSession: async () => undefined,
-		onExportSessions: async () => ({ succeeded: [], failed: [] }),
-		onNewConversation: noop,
-		onOpenSession: noop,
-		onReloadAgents: noop,
-		onReloadSessions: noop,
-		onSaveSetup: noop,
-		onSelectAgent: noop,
-		onSend: noop,
 		...overrides,
 	};
 }
 
-function renderRoot(): HTMLElement {
-	return render(<WeKnoraPageView {...props()} />).container.firstElementChild as HTMLElement;
+function actions(): WeKnoraPageActions {
+	return {
+		cancel: noop,
+		deleteSession: async () => true,
+		deleteSessions: async () => ({ succeeded: [], failed: [] }),
+		exportSession: async () => undefined,
+		exportSessions: async () => ({ succeeded: [], failed: [] }),
+		newConversation: noop,
+		openSession: async () => undefined,
+		reloadAgents: noop,
+		reloadSessions: noop,
+		resizeSidebar: noop,
+		saveSetup: async () => undefined,
+		selectAgent: noop,
+		send: noop,
+		toggleSettings: noop,
+		toggleSidebar: noop,
+	};
 }
 
-/** 内容行 = 页头与拖拽区之外的直接子元素。 */
+function renderRoot(): HTMLElement {
+	return render(<WeKnoraPageView viewModel={viewModel()} actions={actions()} />).container
+		.firstElementChild as HTMLElement;
+}
+
+/** 内容行 = 根节点唯一的直接子元素（TASK-0506 起页头移进详情列内部）。 */
 function contentRow(root: HTMLElement): HTMLElement {
-	const header = root.querySelector("header");
-	return Array.from(root.children).find(
-		(child) => child !== header && !child.classList.contains("drag-region"),
-	) as HTMLElement;
+	return root.firstElementChild as HTMLElement;
 }
 
 beforeAll(async () => {
