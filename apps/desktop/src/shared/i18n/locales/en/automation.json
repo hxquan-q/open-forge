@@ -30,12 +30,27 @@
 		}
 	},
 
-	"dialog": {
+	"detail": {
 		"namePlaceholderEdit": "Task name",
 		"namePlaceholderNew": "New task",
+		"close": "Close",
+		"runNow": "Run now",
+		"pause": "Pause",
+		"enable": "Enable",
+		"more": "More",
+		"delete": "Delete",
+		"discard": "Discard",
 		"cancel": "Cancel",
 		"save": "Save",
-		"create": "Create"
+		"saving": "Saving…",
+		"create": "Create",
+		"status": {
+			"active": "Active",
+			"running": "Running",
+			"paused": "Paused",
+			"done": "Done",
+			"draft": "Draft"
+		}
 	},
 	"form": {
 		"namePlaceholder": "Task name",
@@ -102,6 +117,15 @@
 		"weekdayNames": ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
 	},
 	"list": {
+		"filter": {
+			"all": "All",
+			"enabled": "Enabled",
+			"paused": "Paused",
+			"done": "Done"
+		},
+		"searchPlaceholder": "Search tasks",
+		"emptySearch": "No tasks match this search",
+		"emptyFilter": "No tasks in this filter",
 		"running": "Running",
 		"pending": "Pending",
 		"disabled": "Disabled",
@@ -128,14 +152,10 @@
 		"deleteTitle": "Delete task \"{{name}}\"?",
 		"deleteMsg": "This cannot be undone. Please confirm to continue.",
 		"delete": "Delete",
-		"cancel": "Cancel"
-	},
-	"drawer": {
-		"close": "Close",
-		"runNow": "Run now",
-		"pause": "Pause",
-		"enable": "Enable",
-		"edit": "Edit"
+		"cancel": "Cancel",
+		"discardTitle": "Discard unsaved changes?",
+		"discardMsg": "Your edits will be lost. Please confirm to continue.",
+		"discard": "Discard"
 	},
 	"history": {
 		"title": "Execution history",

@@ -1,5 +1,4 @@
 // Modified by The Open Forge contributors.
-import { TaskFormDialogView } from "@vetta-org/theme-ui/scheduler";
 import { SkillPromptArea } from "@domains/conversation/components/SkillPromptArea";
 import { ModelSelect } from "@shared/components/ModelSelect";
 import type { ScheduledTaskTrigger } from "@shared/store/atoms";
@@ -426,4 +425,3 @@ function IntervalEditor({
 	);
 }
 
-export type ThemeUiLink_TaskFormDialogView = typeof TaskFormDialogView;

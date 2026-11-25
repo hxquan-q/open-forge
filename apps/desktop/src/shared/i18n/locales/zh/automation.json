@@ -30,12 +30,27 @@
 		}
 	},
 
-	"dialog": {
+	"detail": {
 		"namePlaceholderEdit": "任务名称",
 		"namePlaceholderNew": "新建任务",
+		"close": "关闭",
+		"runNow": "立即执行",
+		"pause": "暂停",
+		"enable": "启用",
+		"more": "更多",
+		"delete": "删除",
+		"discard": "放弃",
 		"cancel": "取消",
 		"save": "保存",
-		"create": "创建"
+		"saving": "保存中…",
+		"create": "创建",
+		"status": {
+			"active": "已开启",
+			"running": "运行中",
+			"paused": "已暂停",
+			"done": "已完成",
+			"draft": "草稿"
+		}
 	},
 	"form": {
 		"namePlaceholder": "任务名称",
@@ -102,6 +117,15 @@
 		"weekdayNames": ["周日", "周一", "周二", "周三", "周四", "周五", "周六"]
 	},
 	"list": {
+		"filter": {
+			"all": "全部",
+			"enabled": "已启用",
+			"paused": "已暂停",
+			"done": "已完成"
+		},
+		"searchPlaceholder": "搜索任务",
+		"emptySearch": "没有匹配的任务",
+		"emptyFilter": "此筛选下暂无任务",
 		"running": "运行中",
 		"pending": "待运行",
 		"disabled": "已停用",
@@ -128,14 +152,10 @@
 		"deleteTitle": "确认删除任务「{{name}}」",
 		"deleteMsg": "删除后无法撤回，请确认是否继续。",
 		"delete": "删除",
-		"cancel": "取消"
-	},
-	"drawer": {
-		"close": "关闭",
-		"runNow": "立即执行",
-		"pause": "暂停",
-		"enable": "启用",
-		"edit": "编辑"
+		"cancel": "取消",
+		"discardTitle": "放弃未保存的修改？",
+		"discardMsg": "修改内容将丢失，请确认是否继续。",
+		"discard": "放弃修改"
 	},
 	"history": {
 		"title": "执行历史",

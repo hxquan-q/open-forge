@@ -65,7 +65,17 @@ export const scheduledTasksAtom = atom<ScheduledTask[]>([]);
 export const runningTaskIdsAtom = atom<Set<string>>(new Set<string>());
 export const selectedTaskIdAtom = atom<string | null>(null);
 export const selectedRecordIdAtom = atom<string | null>(null);
-export const formOpenAtom = atom<ScheduledTask | null | undefined>(undefined);
+
+/**
+ * 从别处（如会话右键菜单「基于此会话创建自动化」）带着预填内容打开新建分屏。
+ * 自动化页消费后置回 null。字段含义同表单编辑态（SchedulerTaskDraft），这里只放可序列化的部分。
+ */
+export interface AutomationCreateRequest {
+	readonly name: string;
+	readonly prompt: string;
+	readonly cwd: string;
+}
+export const automationCreateRequestAtom = atom<AutomationCreateRequest | null>(null);
 
 /**
  * 所有定时任务执行产生的 session 路径集合。侧栏据此给对应 session item

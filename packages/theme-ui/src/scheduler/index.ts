@@ -1,4 +1,11 @@
+// Modified by The Open Forge contributors.
 export type {
+	AutomationDetailPaneViewProps,
+	AutomationDetailStatusTone,
+} from "./AutomationDetailPaneView";
+export { AutomationDetailPaneView } from "./AutomationDetailPaneView";
+export type {
+	AutomationFilterTab,
 	AutomationPageViewLabels,
 	AutomationPageViewProps,
 	AutomationRecommendationItem,
@@ -12,19 +19,8 @@ export type {
 } from "./ExecutionHistoryView";
 export { ExecutionHistoryView } from "./ExecutionHistoryView";
 export type {
-	HistoryDrawerTaskView,
-	HistoryDrawerViewLabels,
-	HistoryDrawerViewProps,
-} from "./HistoryDrawerView";
-export { HistoryDrawerView } from "./HistoryDrawerView";
-export type {
-	TaskFormDialogViewLabels,
-	TaskFormDialogViewProps,
-} from "./TaskFormDialogView";
-export { TaskFormDialogView } from "./TaskFormDialogView";
-export type {
+	TaskListItemTone,
 	TaskListItemView,
-	TaskListViewLabels,
 	TaskListViewProps,
 } from "./TaskListView";
 export { TaskListView } from "./TaskListView";

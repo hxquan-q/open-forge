@@ -31,6 +31,12 @@
 		"packages/theme-ui/src/overlays/SplashParts.tsx": {
 			"D03": 1,
 			"D07": 1
+		},
+		"packages/theme-ui/src/scheduler/TaskListView.tsx": {
+			"D03": 1
+		},
+		"packages/theme-ui/src/scheduler/AutomationPageView.tsx": {
+			"D03": 1
 		}
 	}
 }

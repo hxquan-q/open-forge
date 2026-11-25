@@ -1,88 +1,65 @@
 // Modified by The Open Forge contributors.
-import type { ScheduledTask } from "@shared/store/scheduler-atoms";
-import {
-	AutomationPageView as ThemeAutomationPageView,
-	type AutomationRecommendationItem,
-} from "@vetta-org/theme-ui/scheduler";
+import { AutomationPageView as ThemeAutomationPageView } from "@vetta-org/theme-ui/scheduler";
 import { useTranslation } from "react-i18next";
 import { SettingsAiAssist } from "../../settings/ai-assist";
-import type { SchedulerTaskDraft } from "./SchedulerTaskFields";
 import { AutomationPackageActions } from "./AutomationPackageActions";
-import { HistoryDrawer } from "./HistoryDrawer";
-import { TaskFormDialog } from "./TaskForm";
+import { AutomationDetailPane } from "./AutomationDetailPane";
 import { TaskList } from "./TaskList";
+import type { AutomationPageModel } from "../hooks/useAutomationPageModel";
 
-export interface AutomationPageViewProps {
-	readonly dialogOpen: boolean;
-	readonly editingTask: ScheduledTask | undefined;
-	readonly createDraft: SchedulerTaskDraft | undefined;
-	readonly hasTasks: boolean;
-	readonly recommendations: readonly AutomationRecommendationItem[];
-	readonly selectedTask: ScheduledTask | null;
-	readonly selectedTaskId: string | null;
-	readonly onCloseDialog: () => void;
-	readonly onCloseHistory: () => void;
-	readonly onEditTask: (task: ScheduledTask) => void;
-	readonly onNewTask: () => void;
-	readonly onSelectRecommendation: (id: string) => void;
-	readonly onSelectTask: (id: string) => void;
-}
-
-export function AutomationPageView({
-	dialogOpen,
-	editingTask,
-	createDraft,
-	hasTasks,
-	recommendations,
-	selectedTask,
-	selectedTaskId,
-	onCloseDialog,
-	onCloseHistory,
-	onEditTask,
-	onNewTask,
-	onSelectRecommendation,
-	onSelectTask,
-}: AutomationPageViewProps): JSX.Element {
+export function AutomationPageView(model: AutomationPageModel): JSX.Element {
 	const { t } = useTranslation("automation");
+	const paneOpen = model.pane.kind !== "none";
 
 	return (
 		<ThemeAutomationPageView
-			hasTasks={hasTasks}
+			labels={{
+				title: t("page.title"),
+				subtitle: t("page.subtitle"),
+				create: t("page.newTask"),
+				searchPlaceholder: t("list.searchPlaceholder"),
+				recommendTitle: t("recommend.title"),
+				recommendUse: t("recommend.use"),
+			}}
+			filters={model.filters}
+			activeFilter={model.activeFilter}
+			onFilterChange={model.onFilterChange}
+			searchValue={model.search}
+			onSearchChange={model.onSearchChange}
+			onCreate={model.onCreate}
 			headerTrailing={
 				<>
 					<AutomationPackageActions />
 					<SettingsAiAssist tabId="automation" />
 				</>
 			}
-			onNewTask={onNewTask}
-			recommendations={hasTasks ? undefined : recommendations}
-			onSelectRecommendation={onSelectRecommendation}
-			labels={{
-				title: t("page.title"),
-				subtitle: t("page.subtitle"),
-				newTask: t("page.newTask"),
-				newTaskTitle: t("page.newTaskTitle"),
-				recommendTitle: t("recommend.title"),
-				recommendUse: t("recommend.use"),
-			}}
-			taskList={
+			list={
 				<TaskList
-					selectedTaskId={selectedTaskId}
-					onSelectTask={onSelectTask}
-					onEditTask={onEditTask}
+					selectedTaskId={model.selectedTaskId}
+					filter={model.activeFilter}
+					search={model.search}
+					onSelectTask={model.onSelectTask}
 				/>
 			}
-			historyDrawer={
-				<HistoryDrawer task={selectedTask} onClose={onCloseHistory} onEdit={onEditTask} />
+			recommendations={model.hasTasks ? undefined : model.recommendations}
+			onSelectRecommendation={model.onSelectRecommendation}
+			detail={
+				paneOpen ? (
+					<AutomationDetailPane
+						key={model.pane.kind === "create" ? `create-${model.pane.key}` : model.pane.task?.id}
+						task={model.pane.kind === "task" ? model.pane.task : null}
+						createInitial={model.pane.kind === "create" ? model.pane.draft : undefined}
+						onClose={model.onClosePane}
+						onCreated={model.onCreated}
+					/>
+				) : undefined
 			}
-			taskFormDialog={
-				<TaskFormDialog
-					open={dialogOpen}
-					task={editingTask}
-					initialDraft={createDraft}
-					onClose={onCloseDialog}
-				/>
-			}
+			detailWidth={model.detailWidth}
+			minDetailWidth={model.minDetailWidth}
+			maxDetailWidth={model.maxDetailWidth}
+			onDetailWidthChange={model.onDetailWidthChange}
+			onDetailResizeStart={model.onDetailResizeStart}
+			onDetailResizeEnd={model.onDetailResizeEnd}
 		/>
 	);
 }

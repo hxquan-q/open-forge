@@ -1,27 +1,18 @@
-import type { ScheduledTask } from "@shared/store/atoms";
+// Modified by The Open Forge contributors.
+import type { AutomationListFilter } from "../automation-status";
 import { useTaskListModel } from "../hooks/useTaskListModel";
 import { TaskListView } from "./TaskListView";
 
 interface TaskListProps {
-	selectedTaskId: string | null;
-	onSelectTask: (id: string) => void;
-	onEditTask: (task: ScheduledTask) => void;
+	readonly selectedTaskId: string | null;
+	readonly filter: AutomationListFilter;
+	readonly search: string;
+	readonly onSelectTask: (id: string) => void;
 }
 
-export function TaskList({ selectedTaskId, onSelectTask, onEditTask }: TaskListProps): JSX.Element {
-	const model = useTaskListModel({ selectedTaskId });
+export function TaskList({ selectedTaskId, filter, search, onSelectTask }: TaskListProps): JSX.Element {
+	const model = useTaskListModel({ selectedTaskId, filter, search });
 	return (
-		<TaskListView
-			items={model.items}
-			labels={model.labels}
-			onDeleteTask={model.onDeleteTask}
-			onEditTask={(taskId) => {
-				const item = model.items.find((candidate) => candidate.id === taskId);
-				if (item) onEditTask(item.task);
-			}}
-			onRunTask={model.onRunTask}
-			onSelectTask={onSelectTask}
-			onToggleTask={model.onToggleTask}
-		/>
+		<TaskListView items={model.items} emptyLabel={model.emptyLabel} onSelectTask={onSelectTask} />
 	);
 }
