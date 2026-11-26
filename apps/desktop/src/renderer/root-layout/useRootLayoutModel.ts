@@ -10,13 +10,18 @@ import type { CodingAgentPlanReviewRequest } from "@vetta/coding-agent/function-
 import { getDefaultStore, useAtom, useAtomValue, useSetAtom } from "jotai";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { BROWSER_ELEMENT_PICKER_TOGGLE_EVENT } from "@/shared/browser-tab-ipc";
-import { FILE_EDITOR_SAVE_EVENT } from "@/shared/shortcuts";
+import { FILE_EDITOR_SAVE_EVENT, SPACE_SHORTCUT_ACTIONS } from "@/shared/shortcuts";
 import { loadNewSessionPage } from "../domains/conversation/components/loadNewSessionPage";
 import { useAppInit } from "../domains/conversation/hooks/useAppInit";
 import { useSessionManager } from "../domains/conversation/hooks/useSessionManager";
 import { useDesktopNotificationSound } from "../domains/message/hooks/useDesktopNotificationSound";
 import { useNotificationInit } from "../domains/message/hooks/useNotificationInit";
 import { useProjectActions } from "../domains/project/hooks/useProjects";
+import {
+	decodeRouteValue,
+	rememberSpaceLocation,
+	useSpaceNavigation,
+} from "../domains/project/hooks/useSpaceNavigation";
 import { useAttentionSessionsSync } from "../shared/hooks/useAttentionSessionsSync";
 import { useModelCatalogSync } from "../shared/hooks/useModelCatalogSync";
 import { useNarrowScreen } from "../shared/hooks/useNarrowScreen";
@@ -47,6 +52,7 @@ import {
 	sidebarWidthAtom,
 } from "../shared/store/atoms";
 import { recordRecentSessionVisitAtom } from "../shared/store/recent-sessions-atoms";
+import { MAIN_SPACE, spacesAtom } from "../shared/store/spaces";
 import { showToast } from "../shared/store/toast-atoms";
 import { shouldShowChatRoutePending } from "./chat-route-pending";
 import { syncPendingInteractions } from "./pending-interaction-sync";
@@ -131,6 +137,20 @@ export function useRootLayoutModel(): RootLayoutModel {
 	// 会话打开/发送的唯一挂载点。ChatPage 与新会话页走模块级 ref，避免再挂一份。
 	const { openSession } = useSessionManager();
 	const sessionRestoreState = useLastSessionRestore(currentPath);
+	const switchSpace = useSpaceNavigation();
+	const activePath = activeSession?.sessionPath;
+	const activeCwd = activeSession?.cwd;
+	// 记住每个空间最后停留的位置：切走再切回时回到原会话/项目页。
+	// 团队会话归属 Allstar 版块，不参与空间位置记忆（ADR-0156）。
+	useEffect(() => {
+		if (!defaultConversationCwd) return;
+		const store = getDefaultStore();
+		if (currentPath === "/" && activePath && activeCwd) {
+			rememberSpaceLocation(store, { kind: "conversation", path: activePath, cwd: activeCwd });
+		} else if (currentPath.startsWith("/project/")) {
+			rememberSpaceLocation(store, { kind: "project", cwd: decodeRouteValue(currentPath.slice(9)) });
+		}
+	}, [activeCwd, activePath, currentPath, defaultConversationCwd]);
 
 	useEffect(() => {
 		if (!hasUnsavedFileChanges) return;
@@ -443,6 +463,13 @@ export function useRootLayoutModel(): RootLayoutModel {
 	useGlobalShortcuts(
 		useCallback(
 			(actionId: string) => {
+				const spaceIndex = SPACE_SHORTCUT_ACTIONS.findIndex(({ id }) => id === actionId);
+				if (spaceIndex >= 0) {
+					const { spaces } = getDefaultStore().get(spacesAtom);
+					const id = spaceIndex === 0 ? MAIN_SPACE : spaces[spaceIndex - 1]?.id;
+					if (id) void switchSpace(id);
+					return;
+				}
 				switch (actionId) {
 					case "new-session": {
 						// 默认走「对话」项目的 NewSession 页面；若主进程尚未返回 cwd，退回第一个项目。
@@ -478,7 +505,7 @@ export function useRootLayoutModel(): RootLayoutModel {
 					}
 				}
 			},
-			[openProject, navigate, setCommandMenuOpen],
+			[openProject, navigate, setCommandMenuOpen, switchSpace],
 		),
 	);
 

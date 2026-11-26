@@ -29,6 +29,7 @@ import {
 	sessionExecutionModeAtom,
 	switchSessionInputDraftScope,
 } from "@shared/store/atoms";
+import { selectedSpaceAtom } from "@shared/store/spaces";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import type { NewSessionHeroIdentity } from "@vetta-org/theme-ui";
 import { useAtomValue, useSetAtom } from "jotai";
@@ -109,6 +110,8 @@ export function useNewSessionPageModel(): NewSessionPageModel {
 	const navigate = useNavigate();
 	const defaultConversationCwd = useAtomValue(defaultConversationCwdAtom);
 	const decodedCwd = search.cwd ? decodeURIComponent(search.cwd) : defaultConversationCwd;
+	const spaceId = useAtomValue(selectedSpaceAtom);
+	const draftKey = newSessionInputDraftKey(decodedCwd, spaceId);
 	const initialTargetKey = search.target ? parseNewSessionTarget(search.target) : null;
 	const [targetKey, setTargetKey] = useState<NewSessionTargetKey | null>(
 		initialTargetKey === "conversation" ? null : initialTargetKey,
@@ -194,6 +197,9 @@ export function useNewSessionPageModel(): NewSessionPageModel {
 
 	const newSessionSend = useNewSessionSend({
 		cwd: contextCwd,
+		defaultConversationCwd,
+		spaceId,
+		draftKey,
 		executionMode,
 		prepareCwd,
 		openSession,
@@ -260,7 +266,7 @@ export function useNewSessionPageModel(): NewSessionPageModel {
 	useEffect(() => {
 		// 会话对象只是发送路由，不改变当前新会话的草稿身份。这样切换普通
 		// 对话、单 Agent 与 Team 时，用户正在编辑的正文和附件保持可见。
-		switchSessionInputDraftScope(newSessionInputDraftKey(decodedCwd));
+		switchSessionInputDraftScope(draftKey);
 		// 旧 attachedImages 链路兜底清空（正文 token 已由草稿文本恢复）。
 		setAttachedImages([]);
 		// 释放一次性的插件 prompt attachment，避免带进新会话。
@@ -284,7 +290,7 @@ export function useNewSessionPageModel(): NewSessionPageModel {
 		// 用户主动进入新会话页后，不应在后续刷新/回到根路由时恢复旧会话。
 		setLastActiveSession(null);
 	}, [
-		decodedCwd,
+		draftKey,
 		targetKey,
 		setAttachedImages,
 		setPromptAttachment,

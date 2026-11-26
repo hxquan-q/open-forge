@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
 	getEffectiveShortcut,
@@ -9,6 +10,27 @@ import {
 import { type ShortcutBinding, useShortcutScope } from "../shortcuts";
 
 export type ShortcutHandler = (actionId: string) => void;
+
+/** 一次取回全部自定义绑定，供列表里同时展示多个快捷键（避免每个动作各订阅一次）。 */
+export function useShortcutBindings(): ShortcutBindings {
+	const [bindings, setBindings] = useState<ShortcutBindings>({});
+
+	useEffect(() => {
+		let alive = true;
+		void loadShortcutBindings().then((loaded) => {
+			if (alive) setBindings(loaded);
+		});
+		const unsubscribe = window.vetta.config.onShortcutsChanged((event) => {
+			setBindings(event.bindings ?? {});
+		});
+		return () => {
+			alive = false;
+			unsubscribe();
+		};
+	}, []);
+
+	return bindings;
+}
 
 /**
  * Global (app-scope) keyboard shortcuts.

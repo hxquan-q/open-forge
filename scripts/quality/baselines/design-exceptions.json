@@ -60,6 +60,9 @@
 		},
 		"packages/theme-ui/src/markdown/CodeBlock.tsx": {
 			"D05": 1
+		},
+		"packages/theme-ui/src/sidebar/WaitingPulseBadge.tsx": {
+			"D07": 1
 		}
 	}
 }

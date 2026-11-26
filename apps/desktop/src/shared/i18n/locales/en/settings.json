@@ -2586,5 +2586,15 @@
 		"shortcutTitle": "Open the launcher",
 		"shortcutDescription": "Works anywhere in the app. Press it again or hit Esc to close",
 		"sidebarHint": "The search button at the top of the sidebar opens the launcher too"
-	}
+	},
+	"shortcutSpace1Label": "Workspace 1",
+	"shortcutSpace2Label": "Workspace 2",
+	"shortcutSpace3Label": "Workspace 3",
+	"shortcutSpace4Label": "Workspace 4",
+	"shortcutSpace5Label": "Workspace 5",
+	"shortcutSpace6Label": "Workspace 6",
+	"shortcutSpace7Label": "Workspace 7",
+	"shortcutSpace8Label": "Workspace 8",
+	"shortcutSpace9Label": "Workspace 9",
+	"shortcutSpaceDesc": "Switch to the workspace at this position"
 }

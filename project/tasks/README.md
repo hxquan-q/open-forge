@@ -30,6 +30,7 @@ rg -n '^status: (draft|ready|in_progress|blocked|verifying)$' project/tasks -g '
 
 | Task ID | 状态 | Plan | 任务（详情见原记录） |
 |---|---|---|---|
+| `TASK-0523` | `verifying` | PLAN-0032 | [工作空间分组切片①：空间状态核心+归因+底栏切换器+快捷键](TASK-0523-spaces-core-and-switcher.md)：PLAN-0032 P9；ADR-0156 落地；上游 d6f9906c4 参照适配，删 team 归属。 |
 | `TASK-0520` | `verifying` | PLAN-0032 | [自动化详情面板 UI 对齐上游](TASK-0520-automation-detail-ui-alignment.md)：TASK-0519 渲染层遗留——调度七档编辑、skipped/missed 原因、打开聊天。 |
 | `TASK-0522` | `verifying` | PLAN-0032 | [设置页快捷键录入器改用键帽展示](TASK-0522-shortcut-recorder-keycaps.md)：PLAN-0032 P2 收尾；上游 11a71308b 移植遗漏补齐。 |
 | `TASK-0521` | `verifying` | PLAN-0032 | [自动化侧栏会话组 + 右键创建入口 + 绑定会话删除提示](TASK-0521-automation-sidebar-groups.md)：PLAN-0032 P9a 后续；上游 865d97823/f940900be/b67141f40 参照适配。 |

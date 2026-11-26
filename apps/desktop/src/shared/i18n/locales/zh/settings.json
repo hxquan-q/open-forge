@@ -2580,5 +2580,15 @@
 		"shortcutTitle": "唤起启动器",
 		"shortcutDescription": "在应用内任何地方按下即可打开，再按一次或按 Esc 关闭",
 		"sidebarHint": "侧栏顶部的搜索按钮也能打开启动器"
-	}
+	},
+	"shortcutSpace1Label": "工作空间 1",
+	"shortcutSpace2Label": "工作空间 2",
+	"shortcutSpace3Label": "工作空间 3",
+	"shortcutSpace4Label": "工作空间 4",
+	"shortcutSpace5Label": "工作空间 5",
+	"shortcutSpace6Label": "工作空间 6",
+	"shortcutSpace7Label": "工作空间 7",
+	"shortcutSpace8Label": "工作空间 8",
+	"shortcutSpace9Label": "工作空间 9",
+	"shortcutSpaceDesc": "切换到对应位置的工作空间"
 }

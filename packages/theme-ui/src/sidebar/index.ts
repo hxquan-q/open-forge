@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { ComponentType } from "react";
 import type { SidebarNavItemButton } from "./SidebarNavItemButton";
 import type { SidebarNavigationProps } from "./SidebarNavigation";
@@ -116,3 +117,4 @@ export type {
 	SidebarNavRegion,
 } from "./useSidebarNavDrag";
 export { SIDEBAR_NAV_DRAG_MIME, useSidebarNavDrag } from "./useSidebarNavDrag";
+export { WaitingPulseBadge } from "./WaitingPulseBadge";

@@ -15,8 +15,20 @@ export interface ShortcutActionDef {
 
 export const FILE_EDITOR_SAVE_EVENT = "vetta:file-editor-save";
 
+export const SPACE_SHORTCUT_ACTIONS = ([1, 2, 3, 4, 5, 6, 7, 8, 9] as const).map(
+	(position) =>
+		({
+			id: `switch-space-${position}` as const,
+			labelKey: `shortcutSpace${position}Label` as const,
+			descriptionKey: "shortcutSpaceDesc",
+			defaultShortcut: `ctrl+${position}`,
+			scope: "app",
+		}) as const satisfies ShortcutActionDef,
+);
+
 /** 可配置的全局快捷键动作（白名单）。as const 保留字面量类型。 */
 export const SHORTCUT_ACTIONS = [
+	...SPACE_SHORTCUT_ACTIONS,
 	{
 		id: "computer-use-stop",
 		labelKey: "shortcutComputerUseStopLabel",

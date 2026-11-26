@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 /** 输入草稿 / 历史的纯逻辑（无 jotai、无 DOM），便于单测。 */
 
 export const INPUT_HISTORY_MAX = 50;
@@ -7,8 +8,8 @@ export interface SessionInputDraftLike {
 	appshot: unknown;
 }
 
-export function newSessionInputDraftKey(cwd: string): string {
-	return `new:${cwd}`;
+export function newSessionInputDraftKey(cwd: string, spaceId?: string): string {
+	return spaceId && spaceId !== "main" ? `new-space:${spaceId}:${cwd}` : `new:${cwd}`;
 }
 
 export function isSessionInputDraftEmpty(draft: SessionInputDraftLike): boolean {

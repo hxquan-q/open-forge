@@ -23,6 +23,15 @@ describe("createOfficialShortcutsApi", () => {
 		const api = createOfficialShortcutsApi(assertOfficial, "capability-session");
 
 		expect(api.listAvailableActions()).toEqual([
+			{ id: "switch-space-1", defaultShortcut: "ctrl+1" },
+			{ id: "switch-space-2", defaultShortcut: "ctrl+2" },
+			{ id: "switch-space-3", defaultShortcut: "ctrl+3" },
+			{ id: "switch-space-4", defaultShortcut: "ctrl+4" },
+			{ id: "switch-space-5", defaultShortcut: "ctrl+5" },
+			{ id: "switch-space-6", defaultShortcut: "ctrl+6" },
+			{ id: "switch-space-7", defaultShortcut: "ctrl+7" },
+			{ id: "switch-space-8", defaultShortcut: "ctrl+8" },
+			{ id: "switch-space-9", defaultShortcut: "ctrl+9" },
 			{ id: "computer-use-stop", defaultShortcut: "mod+alt+q" },
 			{ id: "computer-use-recall", defaultShortcut: "mod+alt+v" },
 			{ id: "new-session", defaultShortcut: "mod+n" },

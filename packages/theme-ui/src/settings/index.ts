@@ -224,6 +224,12 @@ export type { ShortcutRecorderViewProps } from "./ShortcutRecorderView";
 export { ShortcutRecorderView } from "./ShortcutRecorderView";
 export type { ShortcutActionRowView, ShortcutsSettingsViewProps } from "./ShortcutsSettingsView";
 export { ShortcutsSettingsView } from "./ShortcutsSettingsView";
+export type {
+	SpaceEditorDialogViewLabels,
+	SpaceEditorDialogViewProps,
+	SpaceEditorIconOption,
+} from "./SpaceEditorDialogView";
+export { SpaceEditorDialogView } from "./SpaceEditorDialogView";
 export type { SshHostFormFieldsLabels, SshHostFormValues } from "./SshHostFormFieldsView";
 export { SshHostFormFieldsView } from "./SshHostFormFieldsView";
 export { SubscriptionActionsView } from "./SubscriptionActionsView";

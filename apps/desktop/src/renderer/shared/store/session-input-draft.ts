@@ -30,6 +30,7 @@ import {
 	isSessionInputDraftEmpty,
 	newSessionInputDraftKey as newSessionInputDraftKeyImpl,
 } from "./session-input-draft-logic";
+import { selectedSpaceAtom } from "./spaces";
 
 export {
 	appendInputHistoryEntry,
@@ -239,7 +240,7 @@ export function claimNewSessionInputDraft(sessionPath: string, newSessionKey: st
  */
 export function prefillNewSessionInputDraft(cwd: string, text: string): void {
 	const store = getDefaultStore();
-	const key = newSessionInputDraftKeyImpl(cwd);
+	const key = newSessionInputDraftKeyImpl(cwd, store.get(selectedSpaceAtom));
 	const draft: SessionInputDraft = {
 		...loadSessionInputDraft(key),
 		text,

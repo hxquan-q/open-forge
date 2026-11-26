@@ -487,6 +487,10 @@ export const actionButtonHandlersAtom = atom<Map<string, () => void>>(new Map())
 
 /** Options for {@link openSessionFnRef} / useSessionManager.openSession. */
 export interface OpenSessionOptions {
+	/** 新建会话输入草稿归属的分键（含空间前缀）；缺省回退到 newSessionInputDraftKey(cwd)。 */
+	newSessionDraftKey?: string;
+	/** 新建会话归属的目标空间；仅当目标 cwd 是默认会话 cwd 时由调用方传入。 */
+	newConversationSpace?: string;
 	/**
 	 * When false, create/subscribe the session and set it active, but stay on the
 	 * current route (e.g. Settings AI assist fly-to-sidebar). Default true.
