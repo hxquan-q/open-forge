@@ -24,6 +24,7 @@ export const SETTINGS_TAB_LOADERS = {
 	sshHosts: async () => ({ default: (await import("./SshHostsSettings")).SshHostsSettings }),
 	shortcuts: async () => ({ default: (await import("./ShortcutsSettings")).ShortcutsSettings }),
 	team: async () => ({ default: (await import("./TeamSettings")).TeamSettings }),
+	usage: async () => ({ default: (await import("./usage/UsageSettings")).UsageSettings }),
 	webhook: async () => ({ default: (await import("./WebhookSettings")).WebhookSettings }),
 } satisfies Record<Exclude<SettingsTab, "mcp">, SettingsTabLoader>;
 

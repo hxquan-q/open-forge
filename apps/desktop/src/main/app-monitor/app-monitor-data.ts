@@ -1,3 +1,11 @@
+// Modified by The Open Forge contributors.
+import {
+	type AppMonitorModelUsageStats,
+	createEmptyHourlyTokens,
+	normalizeHourlyTokens,
+	normalizeModelUsageRecord,
+} from "./app-monitor-usage.js";
+
 export const APP_MONITOR_SCHEMA_VERSION = 1;
 
 export interface AppMonitorToolStats {
@@ -116,6 +124,11 @@ export interface AppMonitorData {
 		cacheReadTokens: number;
 		cacheWriteTokens: number;
 		costTotal: number;
+		/** Completed model calls; files written before per-model tracking only have the token sums above. */
+		requests: number;
+		byModel: Record<string, AppMonitorModelUsageStats>;
+		/** Tokens per local hour (0–23) in the reporting time zone. */
+		hourlyTokens: number[];
 	};
 	compactions: {
 		started: number;
@@ -590,6 +603,9 @@ export function createDefaultAppMonitorData(now = Date.now()): AppMonitorData {
 			cacheReadTokens: 0,
 			cacheWriteTokens: 0,
 			costTotal: 0,
+			requests: 0,
+			byModel: {},
+			hourlyTokens: createEmptyHourlyTokens(),
 		},
 		compactions: {
 			started: 0,
@@ -790,6 +806,9 @@ export function normalizeAppMonitorData(value: unknown): AppMonitorData {
 			cacheReadTokens: normalizeCount(usage.cacheReadTokens),
 			cacheWriteTokens: normalizeCount(usage.cacheWriteTokens),
 			costTotal: normalizeAmount(usage.costTotal),
+			requests: normalizeCount(usage.requests),
+			byModel: normalizeModelUsageRecord(usage.byModel),
+			hourlyTokens: normalizeHourlyTokens(usage.hourlyTokens),
 		},
 		compactions: {
 			started: normalizeCount(compactions.started),

@@ -70,7 +70,8 @@ export type SettingsTab =
 	| "knowledge"
 	| "pet"
 	| "remote"
-	| "sshHosts";
+	| "sshHosts"
+	| "usage";
 
 export const fontPreferencesAtom = atom(getStoredFontPreferences());
 

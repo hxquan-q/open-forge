@@ -1,9 +1,21 @@
 // Modified by The Open Forge contributors.
 import type { RuntimeHost, SessionEvent } from "@vetta/runtime-core";
-import type { AppMonitorEvent, AppMonitorInputImageAttachment } from "../../preload/api-types/app-monitor.js";
+import type {
+	AppMonitorEvent,
+	AppMonitorInputImageAttachment,
+	UsageReport,
+	UsageReportDay,
+	UsageReportSeries,
+} from "../../preload/api-types/app-monitor.js";
 import { type AbilityLifecycleLogContext, logAbilityLifecycleEvent } from "../abilities/ability-lifecycle-log.js";
 import { getAppLogger } from "../logger.js";
-import { formatDayKey, getDayBounds, getPreviousDayKey, getPreviousMonthKey } from "./app-monitor-calendar.js";
+import {
+	formatDayKey,
+	getDayBounds,
+	getHourOfDay,
+	getPreviousDayKey,
+	getPreviousMonthKey,
+} from "./app-monitor-calendar.js";
 import { type AppMonitorData, createDefaultAppMonitorData } from "./app-monitor-data.js";
 import {
 	type AppMonitorDayBucket,
@@ -13,7 +25,14 @@ import {
 	getOrCreateAppMonitorDayBucket,
 } from "./app-monitor-month-data.js";
 import { type AppMonitorProfile, createDefaultAppMonitorProfile } from "./app-monitor-profile.js";
-import { appMonitorProfileStore, appMonitorStore, createAppMonitorMonthStore } from "./app-monitor-store.js";
+import {
+	appMonitorProfileStore,
+	appMonitorStore,
+	createAppMonitorMonthStore,
+	listPersistedAppMonitorMonths,
+} from "./app-monitor-store.js";
+import { type AppMonitorUsageSample, recordUsageSample } from "./app-monitor-usage.js";
+import { assembleUsageReport, buildUsageReportMonthDays } from "./app-monitor-usage-report.js";
 import { runAppMonitorFileMigrations } from "./migrations/index.js";
 import { observePerfSession, unobservePerfSession } from "./perf-monitor-service.js";
 
@@ -37,6 +56,11 @@ export interface KnowledgeBaseProcessingUsage {
 	costTotal: number;
 }
 
+interface ArchivedUsageMonth {
+	days: UsageReportDay[];
+	series: UsageReportSeries[];
+}
+
 interface SessionEngagementStats {
 	turns: number;
 	messages: number;
@@ -58,6 +82,8 @@ class AppMonitorService {
 	private readonly runtimeSubscriptions = new Map<string, () => void>();
 	private readonly sessionStats = new Map<string, SessionEngagementStats>();
 	private readonly dailySessionStats = new Map<string, SessionEngagementStats>();
+	/** Months not held in memory are never written again by this process, so their rows are cached once read. */
+	private readonly archivedUsageMonths = new Map<string, ArchivedUsageMonth>();
 
 	async initialize(): Promise<void> {
 		if (this.initialized) return;
@@ -252,6 +278,47 @@ class AppMonitorService {
 		return structuredClone(this.data);
 	}
 
+	/**
+	 * Daily token usage across every persisted month plus the live in-memory ones.
+	 * Reads happen only when the usage page asks; months already in memory are never re-read from disk.
+	 */
+	async getUsageReport(): Promise<UsageReport> {
+		const now = Date.now();
+		const seriesByKey = new Map<string, UsageReportSeries>();
+		const days: UsageReportDay[] = [];
+		const persistedMonths = await listPersistedAppMonitorMonths();
+		for (const monthKey of persistedMonths) {
+			if (this.months.has(monthKey)) continue;
+			const archived = await this.readArchivedUsageMonth(monthKey);
+			days.push(...archived.days);
+			for (const entry of archived.series) if (!seriesByKey.has(entry.key)) seriesByKey.set(entry.key, entry);
+		}
+		for (const month of this.months.values()) {
+			days.push(...buildUsageReportMonthDays(month, seriesByKey));
+		}
+		return assembleUsageReport({
+			timeZone: this.profile.reportingTimeZone,
+			today: formatDayKey(now, this.profile.reportingTimeZone),
+			days,
+			seriesByKey,
+		});
+	}
+
+	private async readArchivedUsageMonth(monthKey: string): Promise<ArchivedUsageMonth> {
+		const cached = this.archivedUsageMonths.get(monthKey);
+		if (cached) return cached;
+		try {
+			const month = await createAppMonitorMonthStore(monthKey, this.profile).read();
+			const seriesByKey = new Map<string, UsageReportSeries>();
+			const archived = { days: buildUsageReportMonthDays(month, seriesByKey), series: [...seriesByKey.values()] };
+			this.archivedUsageMonths.set(monthKey, archived);
+			return archived;
+		} catch (error) {
+			log.warn("usage report month read failed", { month: monthKey }, error);
+			return { days: [], series: [] };
+		}
+	}
+
 	monitorSession(runtime: RuntimeHost, sessionId: string, kind: MonitoredSessionKind): void {
 		this.mutate((data) => {
 			data.sessions[kind] += 1;
@@ -411,15 +478,21 @@ class AppMonitorService {
 					recordToolEnd(data, event.toolName, event.isError, event.durationMs);
 				}, event.timestamp);
 				break;
-			case "usage.update":
+			case "usage.update": {
+				const hour = getHourOfDay(event.timestamp, this.profile.reportingTimeZone);
+				const sample: AppMonitorUsageSample = {
+					input: event.input,
+					output: event.output,
+					cacheRead: event.cacheRead,
+					cacheWrite: event.cacheWrite,
+					costTotal: event.costTotal,
+					...(event.model ? { model: { provider: event.model.provider, id: event.model.id } } : {}),
+				};
 				this.mutate((data) => {
-					data.usage.inputTokens += Math.max(0, event.input);
-					data.usage.outputTokens += Math.max(0, event.output);
-					data.usage.cacheReadTokens += Math.max(0, event.cacheRead);
-					data.usage.cacheWriteTokens += Math.max(0, event.cacheWrite);
-					data.usage.costTotal += Math.max(0, event.costTotal);
+					recordUsageSample(data.usage, sample, hour);
 				}, event.timestamp);
 				break;
+			}
 			// compaction.* 不在会话订阅路径累计：计数挂在宿主级 sessionCompactionObserver，
 			// 覆盖所有已挂载会话（含 Agent Team 成员/协调会话等不经 monitorSession 的路径），
 			// 与 session-compaction-logger 的日志口径一致；在这里再计会双算。
@@ -1164,6 +1237,10 @@ export function recordKnowledgeBaseSnapshot(snapshot: KnowledgeBaseMonitorSnapsh
 
 export function getAppMonitorSnapshot(): AppMonitorData {
 	return appMonitor.getSnapshot();
+}
+
+export function getAppMonitorUsageReport(): Promise<UsageReport> {
+	return appMonitor.getUsageReport();
 }
 
 /**

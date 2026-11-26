@@ -415,6 +415,8 @@ Size：`default`(h-8) / `xs`(h-6) / `sm`(h-7) / `lg`(h-9) / `icon`(size-8) / `ic
 > 自动化页分屏布局的移植原语同口径登记：`TaskListView` 的列表行与 `AutomationPageView` 的推荐模板卡片在原语层用 `<button>`（D03，整行/整卡即一个语义化点击目标，替换为 `Button` 会引入按钮样式并破坏上游的整行 hover/选中态几何）——均登记在同一基线文件，改写回归本地设计时删除对应条目。
 >
 > 顶栏按钮组的移植原语同口径登记：`HeaderActionBarView` 与 `HeaderActionOverflowMenu`（`@vetta-org/theme-ui/chat`）沿用上游视觉语言——字面色 `bg-red-500`/`bg-sky-500` 及配对 `text-red-500`/`text-sky-500` 做角标与状态点（D01）、拖拽占位 probe 用 `rgba(128,128,128,0.35)` 中性灰（D01）、原语层直接用 `<button>`（D03，按钮封装自身）、收纳托盘面板用上游 `rounded-[18px]` 曲率（D05）——均登记在同一基线文件，改写回归本地设计时删除对应条目，超出计数的新增 token 仍判负。
+>
+> 用量页的移植原语同口径登记：`UsageSettingsView` 的自定义区间触发器在原语层用 `<button>`（D03，与分段控制器并列的胶囊形触发件，跟随上游几何而非 Button variant）；`UsageTicket` 的 `TICKET_PALETTE` 一组 `rgb(...)` 字面色（D01，小票是用户保存分享的位图，必须在任意主题/外观下渲染一致，有意不读主题 token，数据层色非视觉 token）；`UsageTicketDialog` 的空舞台点击关闭用 `<button>`（D03，铺满舞台的隐形关闭捕获层，非可见按钮）——均登记在同一基线文件，改写回归本地设计时删除对应条目。
 
 ### TabBar
 

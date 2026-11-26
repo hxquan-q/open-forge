@@ -1,7 +1,7 @@
 ---
 id: TASK-0509
 type: task
-status: ready
+status: verifying
 priority: P2
 owner: apps/desktop
 requirement: REQ-0008
@@ -15,7 +15,7 @@ related_bugs: []
 execution: parallel
 branch: task/TASK-0509-usage-page-app-monitor
 worktree: unassigned（待创建）
-base_commit: 126727f3f
+base_commit: be5f5f58e
 read_paths:
   - apps/desktop/src/main/app-monitor/
   - apps/desktop/src/renderer/domains/settings/components/useUsageSeries.ts
@@ -23,21 +23,25 @@ read_paths:
   - apps/desktop/src/preload/
 write_paths:
   - apps/desktop/src/main/app-monitor/
-  - apps/desktop/src/main/usage/
   - apps/desktop/src/preload/
   - apps/desktop/src/renderer/domains/settings/components/usage/
   - apps/desktop/src/shared/i18n/locales/en/
   - apps/desktop/src/shared/i18n/locales/zh/
   - apps/desktop/package.json
+  - apps/desktop/src/renderer/domains/settings/registry.ts
+  - apps/desktop/src/renderer/domains/settings/components/SettingsPage.tsx
+  - apps/desktop/src/renderer/domains/settings/components/settings-tab-loaders.ts
+  - apps/desktop/src/renderer/shared/store/ui-atoms.ts
+  - scripts/quality/baselines/design-exceptions.json
+  - apps/desktop/DESIGN.md
   - project/tasks/TASK-0509-usage-page-app-monitor.md
 exclusive_paths:
-  - apps/desktop/src/main/usage/
   - apps/desktop/src/renderer/domains/settings/components/usage/
 depends_on: [TASK-0505]
-conflicts_with: [TASK-0510]
-integration_status: pending
+conflicts_with: []
+integration_status: integrated
 created: 2026-11-25
-updated: 2026-11-25
+updated: 2026-11-26
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -66,7 +70,7 @@ updated: 2026-11-25
 
 ### 做
 
-- `main/usage/`：聚合 app-monitor 事件，按 (model, hour) 统计 input/output/cached token；月文件读写；首次使用无文件时返回空数组，不报错。
+- ~~`main/usage/`~~（实施落位调整：聚合代码直接放 `app-monitor/`，与上游同构，不另建 `main/usage/`）：聚合 app-monitor 事件，按 (model, hour) 统计 input/output/cached token；月文件读写；首次使用无文件时返回空数组，不报错。
 - IPC `getUsageReport`（renderer → main），preload 暴露类型化 API。
 - `settings/components/usage/`：页面接 `chart.js` 渲染按模型堆叠的面积图 / 按小时柱状图 / 连续使用天数 / 高峰时段。
 - 小票视图：当前会话/当日的 token 用量小卡片。
@@ -101,11 +105,19 @@ updated: 2026-11-25
 
 ## 验收分层
 
-- 工程验证：待执行
+- 工程验证：已执行（2026-11-26）——`bun run check:types` 通过；定向 vitest 4 文件 31 用例全绿（`app-monitor-service.usage.test.ts`、`app-monitor-usage-report.test.ts`、`UsageSettings.test.tsx`、`usage-aggregation.test.ts`）；邻近回归 5 文件 31 用例全绿（`app-monitor-service.test.ts`、`app-monitor-data.test.ts`、`app-monitor-parser.test.ts`、`diagnostics-bundle.test.ts`、`desktop-conversation-service.test.ts`）；`check-guards` 全绿（设计例外已按移植原语口径登记，`DESIGN.md` 有对应说明）；`test:impact` 有 4 个预存在失败（`media-protocol`/`file-protocol`/`skill-presentation-read`，均为 SSH 远程项目相关，改动面之外，未随本任务恶化——改动文件与这些域无交集）。
 - 技术评审：独立评审
-- 集成：pending
+- 集成：integrated（直接落 main，串行在 TASK-0510 之后，conflicts_with 已消解）
 - 人工功能验收：待验收（用户实机查看用量页图表与小票）
 - 发布：未授权
+
+## 实施差异记录
+
+- 数据层落位 `app-monitor/app-monitor-usage.ts` 与 `app-monitor/app-monitor-usage-report.ts`（上游 verbatim 移植 + notice 头），未新建 `main/usage/`；月归档经 `listPersistedAppMonitorMonths` 读取既有 `months/<YYYY-MM>.json`，跨月聚合在 service `getUsageReport()` 内完成。
+- 团队会话用量归属：核查结论——与上游一致，团队会话不进入 `monitorRuntimeSession` 管道（上游同样未覆盖），仅普通会话、批量任务与调度任务计入；维持上游行为，未扩展。
+- `SettingsTab` union 新增 `"usage"`；`settings.changed` 埋点的 `AppMonitorSettingsTab` 未加 usage（与上游一致）。
+- i18n 品牌词写 "Vetta" 原文，由 `desktopBrand` postProcessor 归一；`usage` 键树 verbatim 移植 en/zh。
+- `chart.js ^4.5.0` 已加入 desktop 依赖并完成 `bun install`（lockfile 已更新）。
 
 ## 功能验收包
 

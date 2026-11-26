@@ -21,7 +21,8 @@ export type SettingsTabLabelKey =
 	| "tabPet"
 	| "tabPermissions"
 	| "tabRemote"
-	| "tabSshHosts";
+	| "tabSshHosts"
+	| "tabUsage";
 
 export interface SettingsTabRegistration {
 	key: SettingsTab;
@@ -62,6 +63,7 @@ export const SETTINGS_TABS: readonly SettingsTabRegistration[] = [
 		labelKey: "tabSshHosts",
 		icon: "icon-[solar--server-linear]",
 	},
+	{ key: "usage", label: "用量", labelKey: "tabUsage", icon: "icon-[solar--chart-2-linear]" },
 	// MCP 管理已迁至侧栏「扩展 → 连接器」
 	{ key: "im", label: "Claw", labelKey: "tabIm", icon: "icon-[mdi--message-text-outline]" },
 	{ key: "webhook", label: "消息推送", labelKey: "tabWebhook", icon: "icon-[mdi--webhook]" },
@@ -159,6 +161,10 @@ export const SETTINGS_SECTIONS = [
 	{ tab: "pet", id: "pet-decoration", title: "桌宠装饰", titleKey: "section_pet-decoration" },
 	{ tab: "pet", id: "pet-bubble", title: "气泡样式", titleKey: "section_pet-bubble" },
 	{ tab: "pet", id: "pet-developer", title: "开发调试", titleKey: "section_pet-developer" },
+	{ tab: "usage", id: "usage-overview", title: "概览", titleKey: "section_usage-overview" },
+	{ tab: "usage", id: "usage-trend", title: "用量趋势", titleKey: "section_usage-trend" },
+	{ tab: "usage", id: "usage-models", title: "模型明细", titleKey: "section_usage-models" },
+	{ tab: "usage", id: "usage-heatmap", title: "每日活跃", titleKey: "section_usage-heatmap" },
 ] as const satisfies readonly SettingsSectionRegistration[];
 
 export type SettingsSectionId = (typeof SETTINGS_SECTIONS)[number]["id"];

@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 const DAY_SEARCH_WINDOW_MS = 36 * 60 * 60 * 1000;
 
 const dayFormatters = new Map<string, Intl.DateTimeFormat>();
@@ -15,6 +16,19 @@ function getDayFormatter(timeZone: string): Intl.DateTimeFormat {
 		dayFormatters.set(timeZone, formatter);
 	}
 	return formatter;
+}
+
+const hourFormatters = new Map<string, Intl.DateTimeFormat>();
+
+/** Local hour (0–23) of the timestamp in the given time zone. */
+export function getHourOfDay(timestamp: number, timeZone: string): number {
+	let formatter = hourFormatters.get(timeZone);
+	if (!formatter) {
+		formatter = new Intl.DateTimeFormat("en-US", { hour: "numeric", hourCycle: "h23", timeZone });
+		hourFormatters.set(timeZone, formatter);
+	}
+	const hour = Number(formatter.formatToParts(timestamp).find((part) => part.type === "hour")?.value);
+	return Number.isInteger(hour) && hour >= 0 && hour < 24 ? hour : 0;
 }
 
 export function isValidTimeZone(value: unknown): value is string {
