@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 // @vitest-environment jsdom
 
 import { act, cleanup, render, screen } from "@testing-library/react";
@@ -7,13 +8,17 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 let animationEnd: ((open: boolean) => void) | undefined;
 let latestOverlayClassName: string | undefined;
 
-vi.mock("@vetta-org/ui", () => {
+vi.mock("@vetta-org/ui", async (importOriginal) => {
+	// 只替换抽屉壳本体，其余导出保留真实现——theme-ui 侧依赖的 cn 等工具
+	// 随 ui 包演进增加，全量手写 mock 会在新增内部依赖时静默断链。
+	const actual = await importOriginal<typeof import("@vetta-org/ui")>();
 	type DrawerProps = {
 		children: ReactNode;
 		open: boolean;
 		onAnimationEnd?: (open: boolean) => void;
 	};
 	return {
+		...actual,
 		Drawer: ({ children, open, onAnimationEnd }: DrawerProps) => {
 			animationEnd = onAnimationEnd;
 			return (
