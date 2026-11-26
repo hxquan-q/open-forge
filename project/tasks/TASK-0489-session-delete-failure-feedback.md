@@ -85,6 +85,7 @@ updated: 2026-11-26
   - 绿灯证据：定向 vitest 3 文件 27 用例全绿（新增组合测试 `deleteSession.orchestration.test.tsx`：真实菜单+panel+useProjects+useBatchTasks，仅 `window.vetta` IPC fake，deferred Promise 控制 pending，覆盖主拒绝/延迟成功/等待期切换/scheduler 清理失败/失败重试/批量分支拒绝与成功/取消确认）；邻近回归 6 文件 30 用例全绿（`newSession`/`selectSession`/`projectWrites`/`sessionsChanged`/`useProjectDetailPageModel`/`DefaultConversationSection`）；`bun run check`（types+lint+guards 含断言深度门禁）全绿。
   - 断言深度豁免：三个测试文件的调用类断言基线显式上调（21/14/14），理由写入各文件头——编排层合同即「哪步调用哪个边界、失败时哪步不调用」，无更深可观察状态；负向断言（不得调用）无法从最终状态区分。
   - 合同边界遵守：Team 分支合同未变；批量底层引擎未改；未触碰主进程删除能力；未自动跑 impact/全量/UI verify（按任务约定）；未访问真实会话/配置，未启动 dev。
-  - 验收分层：工程验证已执行（上述）；技术评审：独立复查进行中；集成：pending（提交后落 main 推 xquan）；人工功能验收：待用户实机验证删除失败提示与标记保留。
+  - 验收分层：工程验证已执行（上述）；集成：已提交 `e324583a1` 落 main 并推 origin/xquan；人工功能验收：待用户实机验证删除失败提示与标记保留。
+  - 2026-11-26 复查收口：verifier 延迟复核指出团队分支仍用发起时闭包判定、不符合完成时语义（本任务「Team 分支合同未变」的保留条款把它原样留了下来，属合同自身疏漏）；已由 TASK-0513 补齐团队分支完成时判定，`useConfirmDialogModel` 同步 catch 的注释改写准确（行为不变）。
   - 既有修复边界：`a263429c1`（BUG-0114）只给 `agent-team` 分支补 `catch` + 失败 Toast（该文件仅 +7 行），其测试 `useProjectsPanelModel.deleteSession.test.tsx` 只构造 `kind: "agent-team"`；`4fb65a823`（BUG-0087/TASK-0226）只改主进程团队删除服务。普通/批量分支零改动。
   - 复用条件：i18n 文案 `sidebar.dialogs.deleteSessionFailedToast` 已在 zh/en `project.json:77` 存在，无需新增 key；合同其余条款与 `write_paths` 不变。

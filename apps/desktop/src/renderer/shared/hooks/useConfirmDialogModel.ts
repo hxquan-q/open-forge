@@ -22,9 +22,9 @@ export function useConfirmDialogModel(): ConfirmDialogViewProps {
 	}, [setState, state]);
 
 	const onConfirm = useCallback(() => {
-		// onConfirm 自身可以是 async（如删除会话编排）；rejection 必须由回调内部
-		// 承接，对话框不替调用方兜底，但调用本身用 void 明确表示不承接——回调
-		// 同步抛出的异常也在这里接住，避免升级成 unhandled rejection。
+		// onConfirm 自身可以是 async（如删除会话编排）：返回的 Promise 用 void 明确
+		// 不承接，rejection 归回调内部自理。try/catch 只接住调用本身的同步抛出，
+		// 此时按「确认即关闭」的合同照常关框并把异常记入日志。
 		try {
 			void state?.onConfirm(state.checkbox?.checked ?? false, inputValue);
 		} catch (error) {

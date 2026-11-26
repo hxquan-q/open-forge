@@ -125,6 +125,21 @@ const BATCH_MENU_SESSION = {
 	firstMessage: "batch task",
 	modifiedAt: 1,
 } as never;
+const TEAM_SESSION_ID = "team-session-1";
+const TEAM_COORD_PATH = "/repo/a/.vetta/team-sessions/team-session-1.jsonl";
+const TEAM_MENU_SESSION = {
+	kind: "agent-team",
+	id: TEAM_SESSION_ID,
+	path: TEAM_COORD_PATH,
+	cwd: "/repo/a",
+	firstMessage: "team hello",
+	modifiedAt: 1,
+	teamId: "team-1",
+	teamSessionId: TEAM_SESSION_ID,
+	memberAvatarUrls: [],
+	sessionTitle: "团队会话甲",
+} as never;
+const TEAM_ROUTE = { pathname: `/agent-teams/team-1/${TEAM_SESSION_ID}`, params: { sessionId: TEAM_SESSION_ID } };
 
 function deferred<T = void>() {
 	let resolve: (value: T | PromiseLike<T>) => void = () => undefined;
@@ -144,16 +159,16 @@ function renderChain() {
 }
 
 async function confirmDeletion(pathSession: unknown) {
-	const { result } = renderChain();
+	const rendered = renderChain();
 	act(() => {
-		result.current.actions.deleteSession(pathSession as never);
+		rendered.result.current.actions.deleteSession(pathSession as never);
 	});
 	const confirmation = getDefaultStore().get(confirmDialogAtom);
 	expect(confirmation).not.toBeNull();
 	act(() => {
 		confirmation?.onConfirm(false);
 	});
-	return result;
+	return rendered;
 }
 
 function sessionRowExists(path: string): boolean {
@@ -341,5 +356,64 @@ describe("会话删除编排组合链（BUG-0191）", () => {
 		expect(batchDeleteTask).not.toHaveBeenCalled();
 		expect(forgetConversations).not.toHaveBeenCalled();
 		expect(sessionRowExists(SESSION_PATH)).toBe(true);
+	});
+
+	it("团队分支删除拒绝：失败 toast、不导航、不清标记", async () => {
+		routeMatches = [TEAM_ROUTE];
+		const pending = deferred();
+		teamDeleteSession.mockReturnValueOnce(pending.promise);
+		const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+		await confirmDeletion(TEAM_MENU_SESSION);
+		expect(teamDeleteSession).toHaveBeenCalledWith({ id: TEAM_SESSION_ID, coordinationSessionPath: TEAM_COORD_PATH });
+		await act(async () => {
+			pending.reject(new Error("team ipc down"));
+			await pending.promise.catch(() => undefined);
+		});
+
+		await waitFor(() =>
+			expect(toastMessages("error").some((message) => message.includes("deleteSessionFailedToast"))).toBe(true),
+		);
+		expect(forgetConversations).not.toHaveBeenCalled();
+		expect(forgetArchivedSessions).not.toHaveBeenCalled();
+		expect(navigateSpy).not.toHaveBeenCalled();
+		errorSpy.mockRestore();
+	});
+
+	it("团队分支延迟成功且等待期离开会话路由：不清标记之外的副作用照常，但不拉回首页", async () => {
+		routeMatches = [TEAM_ROUTE];
+		const pending = deferred();
+		teamDeleteSession.mockReturnValueOnce(pending.promise);
+
+		const rendered = await confirmDeletion(TEAM_MENU_SESSION);
+		// 删除 pending 期间用户离开该团队会话路由（切到别的会话/页面）。
+		routeMatches = [{ pathname: "/", params: {} }];
+		act(() => {
+			rendered.rerender();
+		});
+		await act(async () => {
+			pending.resolve();
+			await pending.promise;
+		});
+
+		await waitFor(() => expect(forgetConversations).toHaveBeenCalledWith([TEAM_COORD_PATH]));
+		expect(navigateSpy).not.toHaveBeenCalled();
+		expect(toastMessages("error")).toEqual([]);
+	});
+
+	it("团队分支删除时仍在该会话路由：完成后导航回首页", async () => {
+		routeMatches = [TEAM_ROUTE];
+		const pending = deferred();
+		teamDeleteSession.mockReturnValueOnce(pending.promise);
+
+		await confirmDeletion(TEAM_MENU_SESSION);
+		await act(async () => {
+			pending.resolve();
+			await pending.promise;
+		});
+
+		await waitFor(() => expect(navigateSpy).toHaveBeenCalledWith({ to: "/" }));
+		await waitFor(() => expect(forgetArchivedSessions).toHaveBeenCalledWith([TEAM_COORD_PATH]));
+		expect(toastMessages("error")).toEqual([]);
 	});
 });

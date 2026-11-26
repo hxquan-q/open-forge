@@ -106,6 +106,12 @@ export function useProjectsPanelModel({
 	const selectedSession = sidebarSelectionIntent ?? fallbackSelection;
 	const activeSessionPath = selectedSession?.kind === "conversation" ? selectedSession.path : "";
 	const activeTeamSessionId = selectedSession?.kind === "agent-team" ? selectedSession.sessionId : "";
+	// 与 currentPathRef 同理：团队会话的「活动」由路由推导，删除完成时判定要读
+	// 那时的最新值，不能用发起删除时闭包里的旧值（BUG-0191 团队分支）。
+	const activeTeamSessionIdRef = useRef(activeTeamSessionId);
+	useEffect(() => {
+		activeTeamSessionIdRef.current = activeTeamSessionId;
+	}, [activeTeamSessionId]);
 	const batchProjects = useAtomValue(batchProjectsAtom);
 	const [expandedBatchProjects, setExpandedBatchProjects] = useAtom(expandedBatchProjectsAtom);
 	const { deleteTask: deleteBatchTask, deleteProject: deleteBatchProject } = useBatchTasks();
@@ -314,19 +320,25 @@ export function useProjectsPanelModel({
 				}
 			};
 			if (session.kind === "agent-team") {
-				const wasActive = activeTeamSessionId === session.teamSessionId;
-				void window.vetta.agentTeams
-					.deleteSession({ id: session.teamSessionId, coordinationSessionPath: session.path })
-					.then(async () => {
-						const metadataFailed = await cleanupMetadata(session.path);
-						if (metadataFailed) reportPartialCleanup();
-						notifyTeamSessionsChanged(session.teamId);
-						if (wasActive) void navigate({ to: "/" });
-					})
-					.catch((error: unknown) => {
+				void (async () => {
+					try {
+						await window.vetta.agentTeams.deleteSession({
+							id: session.teamSessionId,
+							coordinationSessionPath: session.path,
+						});
+					} catch (error) {
 						// IPC rejection 无出口会升级成 unhandled rejection，用户侧零反馈（BUG-0114）。
 						failToast("[projects-panel] delete team session failed", error);
-					});
+						return;
+					}
+					notifyTeamSessionsChanged(session.teamId);
+					// 完成时判定（与普通/批量同口径）：用户等待期切走后不得拉回首页。
+					if (activeTeamSessionIdRef.current === session.teamSessionId) {
+						void navigate({ to: "/" });
+					}
+					const metadataFailed = await cleanupMetadata(session.path);
+					if (metadataFailed) reportPartialCleanup();
+				})();
 				return;
 			}
 			const batchMatch = batchProjects.find((project) =>
@@ -342,8 +354,9 @@ export function useProjectsPanelModel({
 							failToast("[projects-panel] delete batch task session failed", error);
 							return;
 						}
-						if (await cleanupMetadata(session.path)) reportPartialCleanup();
+						// 导航/清活动不等待元数据清理：清理 IPC 挂起不应把用户滞留在已删会话上。
 						settleActiveSession(session.path, batchMatch.id);
+						if (await cleanupMetadata(session.path)) reportPartialCleanup();
 					})();
 					return;
 				}
@@ -356,12 +369,12 @@ export function useProjectsPanelModel({
 					failToast("[projects-panel] delete session failed", error);
 					return;
 				}
+				settleActiveSession(session.path, session.cwd);
 				const metadataFailed = await cleanupMetadata(session.path);
 				if (result.cleanupFailed || metadataFailed) reportPartialCleanup();
-				settleActiveSession(session.path, session.cwd);
 			})();
 		},
-		[activeTeamSessionId, batchProjects, deleteBatchTask, deleteSession, setActiveSession, store, navigate, t],
+		[batchProjects, deleteBatchTask, deleteSession, setActiveSession, store, navigate, t],
 	);
 
 	const renamePanelSession = useCallback(

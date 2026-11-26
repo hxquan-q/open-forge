@@ -52,6 +52,8 @@ P1反馈与状态一致性缺陷：删除失败零反馈且标记丢失、被导
 
 验证证据：定向 vitest 3 文件 27 用例全绿（新增组合测试 deleteSession.orchestration.test.tsx 以真实菜单+panel+useProjects+useBatchTasks 装配、仅 IPC 边界 fake，覆盖主拒绝/延迟成功/等待期切换/scheduler 清理失败/失败重试/批量分支/取消确认）；邻近回归 6 文件 30 用例全绿；`bun run check`（types+lint+guards 含断言深度门禁）全绿。断言深度基线对三个测试文件显式豁免（调用类断言即编排合同本身，理由已写入文件头）。未做：实机 UI 验收（未授权），Task 保持 verifying 待用户确认。
 
+2026-11-26 复查收口（TASK-0513）：verifier 延迟复核（verifier_0489）指出团队分支实际仍用发起时闭包 `wasActive` 判定并在完成时无条件导航 `/`，上面的「三分支完成时判定」记录言过其实。已修复：团队分支改 IIFE 结构 + `activeTeamSessionIdRef` 完成时判定（路由镜像，与 `currentPathRef` 同模式），用户等待期切走后不再被拉回；普通/批量分支导航移到元数据清理之前，不再被清理 IPC 拖住。编排测试补团队三用例（拒绝不导航/切走不拉回/仍在则回首页），3 文件 30/30、邻近回归 88/88、`bun run check` 全绿；verifier_0513 复查 pass。
+
 ## 修复与验证范围（登记时）
 
 TASK-0489先红后绿：组件/组合Hook层真实菜单+panel+useProjects装配，仅IPC外部边界fake。覆盖主删除拒绝、延迟成功、非活动目标、等待期切换会话、失败后重试、清理失败部分完成、批量分支、Team保护、取消确认。动态红灯待执行，不冒充已测；实际结果由TASK-0489补记。
