@@ -142,5 +142,8 @@
 	"projectImport": {
 		"dialogTitle": "Import project",
 		"filterName": "{{brand}} project package and session archive (.zip / .ofar)"
+	},
+	"runtime": {
+		"noAvailableModel": "No model is available, so this conversation can't continue yet. Add a model provider in Settings, then try again."
 	}
 }

@@ -142,5 +142,8 @@
 	"projectImport": {
 		"dialogTitle": "导入项目",
 		"filterName": "{{brand}} 项目包与会话归档（.zip / .ofar）"
+	},
+	"runtime": {
+		"noAvailableModel": "当前没有可用模型，这个对话暂时无法继续。请在设置里添加模型服务商后再试。"
 	}
 }

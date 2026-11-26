@@ -71,6 +71,7 @@ import {
 import { DEFAULT_SERVER_URL } from "../constants.js";
 import { resolveDesktopRuntimeSessionRoots } from "../conversations/session-catalog-roots.js";
 import { resolveSessionListCwd } from "../conversations/session-paths.js";
+import { mainT } from "../i18n/index.js";
 import { getKnowledgeRoot } from "../knowledge/knowledge-layout.js";
 import { getAppLogger } from "../logger.js";
 import { getDesktopMcpAppRegistry } from "../mcp/mcp-app-runtime.js";
@@ -199,6 +200,7 @@ export function createDesktopRuntimeComposition(): DesktopRuntimeComposition {
 		});
 		const runtimeBackendPool = new DesktopRuntimeBackendPool({
 			observationPublisher,
+			readUnavailableModelMessage: () => mainT("runtime.noAvailableModel"),
 			compositionDefaults: {
 				tracer: observability.tracer,
 				tracing: { captureContent: false, detail: "standard" },

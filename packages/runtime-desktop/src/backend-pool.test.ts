@@ -28,6 +28,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest
 import { DesktopRuntimeBackendPool } from "./backend-pool.js";
 import { resolveCodeProjectAiWorkspace } from "./code-project-ai-workspace.js";
 import { DesktopRuntimeSessionCatalog } from "./session-catalog.js";
+import { isUnavailableModel } from "./unavailable-model.js";
 
 /** `getAgentDir()` 的环境变量开关；缺省会话落点由它决定，测试不得写进真实 `~/.vetta/agent`。 */
 const AGENT_DIR_ENV = "VETTA_CODING_AGENT_DIR";
@@ -853,6 +854,85 @@ describe("DesktopRuntimeBackendPool", () => {
 		expect(dispose).toHaveBeenCalledTimes(1);
 	});
 
+	describe("没有可用模型时(openvetta/open-vetta#91)", () => {
+		async function createSavedSession(cwd: string): Promise<string> {
+			const pool = createPool();
+			const runtime = new RuntimeHost({ sessionBackend: pool, getDefaultExecutionMode: () => "full-access" });
+			const created = await runtime.createSession({ cwd, model: MODEL, scenario: "batch" });
+			const sessionPath = runtime.getSessionPath(created.sessionId);
+			if (!sessionPath) throw new Error("Runtime pool did not expose a session path");
+			await runtime.disposeAllSessions();
+			await pool.dispose();
+			return sessionPath;
+		}
+
+		function createPoolWithoutModels(registry = mutableModelRegistry([])) {
+			const modelRequests: string[] = [];
+			const pool = new DesktopRuntimeBackendPool({
+				compositionDefaults: {
+					modelRegistry: registry,
+					streamFn: (model) => {
+						modelRequests.push(`${model.provider}/${model.id}`);
+						throw new Error("test stream must not be reached");
+					},
+					initialThinkingLevel: "off",
+					resolveSystemPromptOptions: resolveTestSystemPromptOptions,
+				},
+				readUnavailableModelMessage: () => "请先配置模型",
+			});
+			const runtime = new RuntimeHost({ sessionBackend: pool, getDefaultExecutionMode: () => "full-access" });
+			pools.push(pool);
+			runtimes.push(runtime);
+			return { pool, runtime, registry, modelRequests };
+		}
+
+		it("仍能打开已有会话查看历史,模型是占位的", async () => {
+			const cwd = await temporaryDirectory("desktop-runtime-no-model-resume-");
+			const sessionPath = await createSavedSession(cwd);
+			const { runtime } = createPoolWithoutModels();
+
+			const resumed = await runtime.createSession({ cwd, sessionPath, scenario: "batch" });
+
+			expect(runtime.getSessionPath(resumed.sessionId)).toBe(sessionPath);
+			expect(isUnavailableModel(runtime.getState(resumed.sessionId).model)).toBe(true);
+		});
+
+		it("在已有会话里发消息时明确报没有模型,不会发出任何模型请求", async () => {
+			const cwd = await temporaryDirectory("desktop-runtime-no-model-prompt-");
+			const sessionPath = await createSavedSession(cwd);
+			const { runtime, modelRequests } = createPoolWithoutModels();
+			const resumed = await runtime.createSession({ cwd, sessionPath, scenario: "batch" });
+
+			const outcome = await runtime.prompt(resumed.sessionId, { text: "继续" });
+
+			expect(outcome.status).toBe("failed");
+			expect(JSON.stringify(outcome.error)).toContain("请先配置模型");
+			expect(modelRequests).toEqual([]);
+		});
+
+		it("新建会话照旧拒绝", async () => {
+			const cwd = await temporaryDirectory("desktop-runtime-no-model-new-");
+			const { runtime } = createPoolWithoutModels();
+
+			await expect(runtime.createSession({ cwd, scenario: "batch" })).rejects.toThrow(
+				"Desktop Runtime requires at least one available model",
+			);
+		});
+
+		it("随后配好了模型,同一工作区里新开的会话用上它,不沿用占位", async () => {
+			const cwd = await temporaryDirectory("desktop-runtime-no-model-later-");
+			const sessionPath = await createSavedSession(cwd);
+			const { pool, runtime, registry } = createPoolWithoutModels();
+			await runtime.createSession({ cwd, sessionPath, scenario: "batch" });
+
+			registry.models.push(MODEL);
+			const fresh = await runtime.createSession({ cwd, scenario: "batch" });
+
+			expect(pool.readScopeCount()).toBe(1);
+			expect(runtime.getState(fresh.sessionId).model?.id).toBe(MODEL.id);
+		});
+	});
+
 	function createPool(): DesktopRuntimeBackendPool {
 		return new DesktopRuntimeBackendPool({
 			compositionDefaults: {
@@ -876,6 +956,18 @@ function modelRegistry(): CodingAgentRuntimeModelSource {
 		refresh() {},
 		getAvailable: () => [MODEL],
 		find: (provider, modelId) => (provider === MODEL.provider && modelId === MODEL.id ? MODEL : undefined),
+		getApiKey: async () => "test-key",
+		setServerToken() {},
+		loadRemoteModels: async () => undefined,
+	};
+}
+
+function mutableModelRegistry(models: Model<Api>[]): CodingAgentRuntimeModelSource & { models: Model<Api>[] } {
+	return {
+		models,
+		refresh() {},
+		getAvailable: () => [...models],
+		find: (provider, modelId) => models.find((model) => model.provider === provider && model.id === modelId),
 		getApiKey: async () => "test-key",
 		setServerToken() {},
 		loadRemoteModels: async () => undefined,

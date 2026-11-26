@@ -30,6 +30,7 @@ rg -n '^status: (draft|ready|in_progress|blocked|verifying)$' project/tasks -g '
 
 | Task ID | 状态 | Plan | 任务（详情见原记录） |
 |---|---|---|---|
+| `TASK-0529` | `verifying` | PLAN-0032 | [会话打开失败反馈闭环（上游 issue #91）](TASK-0529-session-open-failure-feedback-loop.md)：基线外增量；手工合并上游 223a8c6a3+972c6cdcb+a1cb2d2fb，无模型时旧会话可看历史、失败跨页 toast。 |
 | `TASK-0528` | `verifying` | PLAN-0032 | [Git 面板改用 useMeta 固定上栏](TASK-0528-git-tab-usemeta-consumer.md)：PLAN-0032 P9 闭环；手工合并上游 d753d869f，useMeta 首个真实消费者，依赖 TASK-0527。 |
 | `TASK-0527` | `verifying` | PLAN-0032 | [活动面板插件 useMeta 按工作空间声明可用性与固定上栏](TASK-0527-activity-tab-usemeta-by-workspace.md)：PLAN-0032 P9 收尾；上游 62b2749f8 与本地 6c9e717ea 合并设计，Plugin API 升 2.15.0。 |
 | `TASK-0526` | `verifying` | PLAN-0032 | [工作空间分组切片③：破坏性移除档+全局搜索空间标注](TASK-0526-space-destructive-removal-search-annotation.md)：ADR-0156 决策 3/4；上游 RemoveSpaceDialog/space-removal/commandSpaceItem 参照适配，删除编排走 BUG-0191 收口。 |
