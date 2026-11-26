@@ -30,6 +30,7 @@ rg -n '^status: (draft|ready|in_progress|blocked|verifying)$' project/tasks -g '
 
 | Task ID | 状态 | Plan | 任务（详情见原记录） |
 |---|---|---|---|
+| `TASK-0512` | `verifying` | PLAN-0032 | [Git 活动面板按钮组](TASK-0512-git-panel-button-group.md)：PLAN-0032 P8③；手工合并上游 54fb4d5a9+d25fa3cc8+aeae24785，保留本地 diffStat 与内联 preflight；verifier 复查 pass、check 全绿，待用户实机目视。 |
 | `TASK-0511` | `verifying` | PLAN-0032 | [代码块与表格统一外框](TASK-0511-markdown-unified-frame.md)：PLAN-0032 P8①；手工合并上游 29ba5969b+4866771a5，保留本地流式渲染预算与隔离合同；verifier 复查 pass、check 全绿，待用户实机目视。 |
 | `TASK-0510` | `verifying` | PLAN-0032 | [顶栏按钮组（registerHeaderAction + 拖动排序 + 更多菜单）](TASK-0510-header-actions-plugin.md)：PLAN-0032 P7；升 Plugin API 2.14.0；conflicts_with TASK-0509，需协调集成顺序。 |
 | `TASK-0509` | `verifying` | PLAN-0032 | [本机用量页（app-monitor + chart.js）](TASK-0509-usage-page-app-monitor.md)：PLAN-0032 P6；聚合落位 `app-monitor/`（非 `main/usage/`）+ `settings/components/usage/` 独占；已集成 main，待人工验收。 |

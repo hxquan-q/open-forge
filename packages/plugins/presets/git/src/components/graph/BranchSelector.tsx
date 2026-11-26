@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { useTranslation } from "@vetta-org/plugin-sdk";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@vetta-org/ui";
 import type { BranchRef, GraphScope, GraphSelection } from "../../git/types";
@@ -37,7 +38,7 @@ export function BranchSelector({
 				))}
 			</div>
 
-			<div className="flex min-w-0 flex-1 items-center gap-1.5">
+			<div className="ml-auto flex min-w-0 items-center gap-1.5">
 				<BranchIcon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
 				<Select
 					value={selectValue}
@@ -48,11 +49,7 @@ export function BranchSelector({
 						})
 					}
 				>
-					<SelectTrigger
-						size="sm"
-						title={t("branch.placeholder")}
-						className="h-7 min-w-0 w-full max-w-full flex-1 border-border/60 bg-transparent font-normal shadow-none"
-					>
+					<SelectTrigger title={t("branch.placeholder")} className="min-w-0 max-w-full">
 						<SelectValue placeholder={t("branch.placeholder")} />
 					</SelectTrigger>
 					<SelectContent className="max-h-64">
