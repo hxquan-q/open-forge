@@ -10214,7 +10214,6 @@
           "required": [
             "id",
             "taskId",
-            "sessionId",
             "startedAt",
             "completedAt",
             "status",
@@ -10236,6 +10235,18 @@
             },
             "cwd": {
               "type": "string"
+            },
+            "mode": {
+              "anyOf": [
+                {
+                  "const": "new-session",
+                  "type": "string"
+                },
+                {
+                  "const": "same-session",
+                  "type": "string"
+                }
+              ]
             },
             "startedAt": {
               "type": "number"
@@ -10267,6 +10278,14 @@
                 {
                   "const": "aborted",
                   "type": "string"
+                },
+                {
+                  "const": "skipped",
+                  "type": "string"
+                },
+                {
+                  "const": "missed",
+                  "type": "string"
                 }
               ]
             },
@@ -10280,6 +10299,28 @@
               "type": "string"
             },
             "durationMs": {
+              "type": "number"
+            },
+            "reason": {
+              "anyOf": [
+                {
+                  "const": "previous-running",
+                  "type": "string"
+                },
+                {
+                  "const": "app-not-running",
+                  "type": "string"
+                },
+                {
+                  "const": "system-sleep",
+                  "type": "string"
+                }
+              ]
+            },
+            "missedCount": {
+              "type": "number"
+            },
+            "missedUntil": {
               "type": "number"
             },
             "executionMode": {
@@ -10565,8 +10606,15 @@
                 "type": "string"
               },
               "modelKey": {
-                "pattern": "\\S",
-                "type": "string"
+                "anyOf": [
+                  {
+                    "pattern": "\\S",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
               },
               "executionMode": {
                 "anyOf": [
@@ -10585,34 +10633,41 @@
                 ]
               },
               "skill": {
-                "additionalProperties": false,
-                "type": "object",
-                "required": [
-                  "name",
-                  "type"
-                ],
-                "properties": {
-                  "name": {
-                    "pattern": "\\S",
-                    "type": "string"
-                  },
-                  "alias": {
-                    "pattern": "\\S",
-                    "type": "string"
-                  },
-                  "type": {
-                    "anyOf": [
-                      {
-                        "const": "skill",
+                "anyOf": [
+                  {
+                    "additionalProperties": false,
+                    "type": "object",
+                    "required": [
+                      "name",
+                      "type"
+                    ],
+                    "properties": {
+                      "name": {
+                        "pattern": "\\S",
                         "type": "string"
                       },
-                      {
-                        "const": "scene",
+                      "alias": {
+                        "pattern": "\\S",
                         "type": "string"
+                      },
+                      "type": {
+                        "anyOf": [
+                          {
+                            "const": "skill",
+                            "type": "string"
+                          },
+                          {
+                            "const": "scene",
+                            "type": "string"
+                          }
+                        ]
                       }
-                    ]
+                    }
+                  },
+                  {
+                    "type": "null"
                   }
-                }
+                ]
               }
             }
           }

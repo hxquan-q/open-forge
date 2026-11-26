@@ -9,7 +9,7 @@ import type { RuntimeHost } from "@vetta/runtime-core";
 import { getAppLogger } from "../logger.js";
 import { type AutomationHostEventContext, selectEventTriggeredTasks } from "./automation-event-select.js";
 import { executeTask, isTaskRunning } from "./task-executor.js";
-import { loadTasks, type ScheduledTask, updateTaskEnabled } from "./task-storage.js";
+import { loadTasks, type ScheduledTask } from "./task-storage.js";
 
 export type { AutomationHostEventContext } from "./automation-event-select.js";
 export { selectEventTriggeredTasks } from "./automation-event-select.js";
@@ -45,11 +45,7 @@ export async function dispatchAutomationHostEvent(
 			continue;
 		}
 		started.push(task.id);
-		void executeTask(task, dependencies.getRuntime(), {
-			onOneTimeCompleted: async () => {
-				await updateTaskEnabled(task.id, false);
-			},
-		}).catch((error) => {
+		void executeTask(task, dependencies.getRuntime(), { trigger: "schedule" }).catch((error) => {
 			log.error(`Event task failed ${task.id} (${event}):`, error);
 		});
 	}

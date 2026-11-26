@@ -219,7 +219,7 @@ export function useProjectDetailPageModel(
 	);
 	const runningSessionCount = sessions.reduce((count, session) => count + Number(runningPaths.has(session.path)), 0);
 	const runningTaskCount = scheduledTasks.reduce(
-		(count, task) => count + Number(task.cwd === decodedCwd && runningTaskIds.has(task.id)),
+		(count, task) => count + Number(task.runTarget.projectCwd === decodedCwd && runningTaskIds.has(task.id)),
 		0,
 	);
 

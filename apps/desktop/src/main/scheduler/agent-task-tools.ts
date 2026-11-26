@@ -7,45 +7,29 @@ import {
 	type ScheduledTaskStore,
 } from "@vetta/coding-agent/runtime";
 import { type SchedulerService, SchedulerServiceError, tryGetDesktopSchedulerService } from "./scheduler-service.js";
+import { taskToV1Shape, v1CreateToV2, v1PatchToV2 } from "./v1-shape-adapter.js";
 
 /** 定时任务 Agent 工具需要的 SchedulerService 窄端口；便于测试注入假实现。 */
-export type DesktopSchedulerTaskPort = Pick<SchedulerService, "listTasks" | "createTask" | "updateTask" | "deleteTask">;
+export type DesktopSchedulerTaskPort = Pick<
+	SchedulerService,
+	"listTasks" | "getTask" | "createTask" | "updateTask" | "deleteTask"
+>;
 
 /**
  * 把现有 SchedulerService 适配成 Coding Agent 的 ScheduledTaskStore。
- * 只做端口翻译与 NOT_FOUND 收敛——调度、校验、执行都仍归 service 所有，
- * 不产生第二条存储或调度路径。
+ * 只做端口翻译与 NOT_FOUND 收敛（v1↔v2 形状见 v1-shape-adapter，ADR-0155 §7）——
+ * 调度、校验、执行都仍归 service 所有，不产生第二条存储或调度路径。
  */
 export function createSchedulerServiceTaskStore(service: DesktopSchedulerTaskPort): ScheduledTaskStore {
 	return {
-		listTasks: async () => await service.listTasks(),
+		listTasks: async () => (await service.listTasks()).map(taskToV1Shape),
 		createTask: async (input: AgentScheduledTaskCreate) =>
-			await service.createTask({
-				name: input.name,
-				prompt: input.prompt,
-				cron: input.cron,
-				cwd: input.cwd,
-				isOnce: input.isOnce ?? false,
-				enabled: input.enabled ?? true,
-				...(input.modelKey !== undefined ? { modelKey: input.modelKey } : {}),
-				...(input.executionMode !== undefined ? { executionMode: input.executionMode } : {}),
-				...(input.skill !== undefined ? { skill: input.skill } : {}),
-				...(input.permissionTiers !== undefined ? { permissionTiers: input.permissionTiers } : {}),
-			}),
+			taskToV1Shape(await service.createTask(v1CreateToV2(input))),
 		updateTask: async (taskId: string, patch: AgentScheduledTaskPatch) => {
 			try {
-				return await service.updateTask(taskId, {
-					...(patch.name !== undefined ? { name: patch.name } : {}),
-					...(patch.prompt !== undefined ? { prompt: patch.prompt } : {}),
-					...(patch.cron !== undefined ? { cron: patch.cron } : {}),
-					...(patch.isOnce !== undefined ? { isOnce: patch.isOnce } : {}),
-					...(patch.enabled !== undefined ? { enabled: patch.enabled } : {}),
-					...(patch.cwd !== undefined ? { cwd: patch.cwd } : {}),
-					...(patch.modelKey !== undefined ? { modelKey: patch.modelKey } : {}),
-					...(patch.executionMode !== undefined ? { executionMode: patch.executionMode } : {}),
-					...(patch.skill !== undefined ? { skill: patch.skill } : {}),
-					...(patch.permissionTiers !== undefined ? { permissionTiers: patch.permissionTiers } : {}),
-				});
+				const current = await service.getTask(taskId);
+				const updated = await service.updateTask(taskId, v1PatchToV2(patch, current));
+				return taskToV1Shape(updated);
 			} catch (error) {
 				if (isSchedulerTaskNotFound(error)) return undefined;
 				throw error;

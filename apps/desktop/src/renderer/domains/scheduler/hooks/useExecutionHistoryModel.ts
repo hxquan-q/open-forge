@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { TaskExecutionRecord } from "@shared/store/atoms";
 import { openSessionFnRef, scheduledRecordsVersionAtom } from "@shared/store/atoms";
 import { useAtomValue } from "jotai";
@@ -70,7 +71,9 @@ export function useExecutionHistoryModel(taskId: string): ExecutionHistoryModel 
 			})),
 			onOpenRecord: (record: TaskExecutionRecord): void => {
 				if (record.sessionPath && record.cwd && openSessionFnRef.current) {
-					void openSessionFnRef.current(record.cwd, record.sessionPath, record.executionMode);
+					// 记录里 inherit 视为跟随会话默认：打开时不带显式覆盖。
+					const mode = record.executionMode === "inherit" ? undefined : record.executionMode;
+					void openSessionFnRef.current(record.cwd, record.sessionPath, mode);
 				}
 			},
 			onRefresh: (): void => {

@@ -31,6 +31,7 @@ import { getKnowledgeService } from "../knowledge/knowledge-service.js";
 import { getPluginBlobFile } from "../plugins/plugin-storage-service.js";
 import { getDesktopProjectService } from "../projects/project-service-instance.js";
 import { getDesktopSchedulerService } from "../scheduler/scheduler-service.js";
+import { taskToV1Shape, v1CreateToV2, v1PatchToV2 } from "../scheduler/v1-shape-adapter.js";
 import { getDesktopShortcutService } from "../shortcuts/shortcut-service.js";
 import { getDesktopSkillService } from "../skills/skill-service.js";
 import { getAppVersion, updaterService } from "../updater.js";
@@ -561,13 +562,13 @@ export function registerDesktopDomainProviders(
 		bindCapability(DOMAIN_SCHEDULER_CAPABILITIES.LIST_TASKS, {
 			execute: async (_input, context) => {
 				assertNotAborted(context.signal);
-				return scheduler.listTasks();
+				return (await scheduler.listTasks()).map(taskToV1Shape);
 			},
 		}),
 		bindCapability(DOMAIN_SCHEDULER_CAPABILITIES.GET_TASK, {
 			execute: async ({ taskId }, context) => {
 				assertNotAborted(context.signal);
-				return scheduler.getTask(taskId);
+				return taskToV1Shape(await scheduler.getTask(taskId));
 			},
 		}),
 		bindCapability(DOMAIN_SCHEDULER_CAPABILITIES.LIST_HISTORY, {
@@ -579,13 +580,15 @@ export function registerDesktopDomainProviders(
 		bindCapability(DOMAIN_SCHEDULER_CAPABILITIES.CREATE_TASK, {
 			execute: async ({ data }, context) => {
 				assertNotAborted(context.signal);
-				return scheduler.createTask({ ...data });
+				return taskToV1Shape(await scheduler.createTask(v1CreateToV2({ ...data })));
 			},
 		}),
 		bindCapability(DOMAIN_SCHEDULER_CAPABILITIES.UPDATE_TASK, {
 			execute: async ({ taskId, data }, context) => {
 				assertNotAborted(context.signal);
-				return scheduler.updateTask(taskId, { ...data });
+				// v1 补丁的 cron / isOnce / cwd 换算依赖任务当前形态。
+				const current = await scheduler.getTask(taskId);
+				return taskToV1Shape(await scheduler.updateTask(taskId, v1PatchToV2({ ...data }, current)));
 			},
 		}),
 		bindCapability(DOMAIN_SCHEDULER_CAPABILITIES.DELETE_TASK, {
@@ -597,7 +600,7 @@ export function registerDesktopDomainProviders(
 		bindCapability(DOMAIN_SCHEDULER_CAPABILITIES.SET_ENABLED, {
 			execute: async ({ taskId, enabled }, context) => {
 				assertNotAborted(context.signal);
-				return scheduler.setEnabled(taskId, enabled);
+				return taskToV1Shape(await scheduler.setEnabled(taskId, enabled));
 			},
 		}),
 		bindCapability(DOMAIN_SCHEDULER_CAPABILITIES.RUN_TASK, {

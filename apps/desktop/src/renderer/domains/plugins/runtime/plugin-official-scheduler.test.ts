@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createOfficialSchedulerApi } from "./plugin-official-scheduler.js";
 
@@ -37,9 +38,10 @@ describe("createOfficialSchedulerApi", () => {
 
 		expect(assertOfficial).toHaveBeenCalledTimes(2);
 		expect(scheduler.listTasks).toHaveBeenCalledWith("capability-session");
+		// null 是清除语义，原样透传；不存在于输入的键不下发（保留服务侧原值）。
 		expect(scheduler.updateTask).toHaveBeenCalledWith("capability-session", "task", {
-			modelKey: undefined,
-			skill: undefined,
+			modelKey: null,
+			skill: null,
 		});
 	});
 });

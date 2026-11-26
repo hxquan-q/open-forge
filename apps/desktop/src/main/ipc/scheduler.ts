@@ -1,6 +1,11 @@
 // Modified by The Open Forge contributors.
 import { isAutomationHostEventName } from "@vetta/coding-agent/runtime";
 import { ipcMain, type WebContents } from "electron";
+import type {
+	AutomationTaskCreateRequest,
+	AutomationTaskEvent,
+	AutomationTaskUpdateRequest,
+} from "../../shared/automation.js";
 import { emitAutomationHostEvent } from "../scheduler/automation-event-dispatcher.js";
 import type { DiscoveredAutomationPackage } from "../scheduler/automation-package-discovery.js";
 import {
@@ -12,7 +17,6 @@ import {
 import { getRuntime } from "../scheduler/scheduler.js";
 import type { SchedulerService } from "../scheduler/scheduler-service.js";
 import { getRunningTaskIds } from "../scheduler/task-executor";
-import type { ScheduledTask } from "../scheduler/task-storage";
 import { deleteRecordsBySessionPath, loadAllScheduledSessionPaths, loadRecords } from "../scheduler/task-storage";
 
 const CHANNELS = {
@@ -52,24 +56,8 @@ interface TaskStreamEvent {
 	phase?: string;
 }
 
-export type TaskEvent =
-	| {
-			type: "task.started";
-			taskId: string;
-			recordId: string;
-			sessionId: string;
-			sessionPath: string;
-			cwd: string;
-			sessionName: string;
-			firstMessage: string;
-	  }
-	| { type: "task.completed"; taskId: string; recordId: string; status: "success" | "failed" }
-	| { type: "task.failed"; taskId: string; error: string }
-	| { type: "record.updated"; taskId: string; sessionId: string; status: "success" | "failed" | "aborted" }
-	| { type: "tasks.changed" };
-
 const streamHandlers = new Set<TaskStreamHandler>();
-const eventHandlers = new Set<(event: TaskEvent) => void>();
+const eventHandlers = new Set<(event: AutomationTaskEvent) => void>();
 
 export function emitTaskStreamEvent(event: TaskStreamEvent): void {
 	for (const handler of streamHandlers) {
@@ -77,7 +65,7 @@ export function emitTaskStreamEvent(event: TaskStreamEvent): void {
 	}
 }
 
-export function emitTaskEvent(event: TaskEvent): void {
+export function emitTaskEvent(event: AutomationTaskEvent): void {
 	for (const handler of eventHandlers) {
 		handler(event);
 	}
@@ -90,7 +78,7 @@ export function registerSchedulerIpc(webContents: WebContents, service: Schedule
 	};
 	streamHandlers.add(streamHandler);
 
-	const eventHandler = (event: TaskEvent) => {
+	const eventHandler = (event: AutomationTaskEvent) => {
 		webContents.send(CHANNELS.EVENT, event);
 	};
 	eventHandlers.add(eventHandler);
@@ -102,14 +90,11 @@ export function registerSchedulerIpc(webContents: WebContents, service: Schedule
 		return await service.listTasks();
 	});
 
-	ipcMain.handle(
-		CHANNELS.CREATE_TASK,
-		async (_, task: Omit<ScheduledTask, "id" | "createdAt" | "updatedAt" | "lastRunAt" | "lastRunStatus">) => {
-			return await service.createTask(task);
-		},
-	);
+	ipcMain.handle(CHANNELS.CREATE_TASK, async (_, task: AutomationTaskCreateRequest) => {
+		return await service.createTask(task);
+	});
 
-	ipcMain.handle(CHANNELS.UPDATE_TASK, async (_, id: string, patch: Partial<ScheduledTask>) => {
+	ipcMain.handle(CHANNELS.UPDATE_TASK, async (_, id: string, patch: AutomationTaskUpdateRequest) => {
 		await service.updateTask(id, patch);
 	});
 

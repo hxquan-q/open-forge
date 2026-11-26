@@ -3,6 +3,7 @@ import { stat } from "node:fs/promises";
 import { parseProjectLocation } from "@vetta/ssh-transport";
 import { readDesktopConfig, updateDesktopConfig } from "../config/desktop-config-store.js";
 import { allowProjectRoot, createFilesystemDirectory } from "../filesystem/filesystem-service.js";
+import { tryGetDesktopSchedulerService } from "../scheduler/scheduler-service.js";
 import { getSshConnection } from "../ssh/ssh-runtime.js";
 import { broadcastProjectsChanged } from "./project-events.js";
 import { ProjectService } from "./project-service.js";
@@ -26,6 +27,11 @@ export function getDesktopProjectService(): ProjectService {
 		readConfig: readDesktopConfig,
 		updateConfig: updateDesktopConfig,
 		broadcastChanged: broadcastProjectsChanged,
+		onRemoved: (path) => {
+			void tryGetDesktopSchedulerService()
+				?.handleProjectRemoved(path)
+				.catch((error) => console.error("[projects] failed to update automations after project removal", error));
+		},
 		isKnownSshHost: async (hostId) => {
 			const config = await readDesktopConfig();
 			return (config.sshHosts ?? []).some((host) => host.id === hostId);

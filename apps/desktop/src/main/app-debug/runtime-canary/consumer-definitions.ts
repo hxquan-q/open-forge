@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { z } from "zod";
 import type { BatchTaskService } from "../../batch-tasks/batch-task-service.js";
 import type { SchedulerService } from "../../scheduler/scheduler-service.js";
@@ -20,7 +21,7 @@ const inputSchema = z
 export interface RuntimeCanarySchedulerState {
 	readonly activeTasks: Array<{
 		readonly taskId: string;
-		readonly sessionId: string;
+		readonly sessionId: string | undefined;
 		readonly sessionPath: string | undefined;
 	}>;
 }
@@ -85,11 +86,10 @@ export function createRuntimeCanaryConsumerDefinitions(
 				const schedulerTask = await dependencies.scheduler.createTask({
 					name: "Runtime Canary Scheduler",
 					prompt: RUNTIME_CANARY_SCHEDULER_PROMPT,
-					cron: "0 0 1 1 *",
-					isOnce: false,
+					schedule: { kind: "custom", cron: "0 0 1 1 *" },
+					runTarget: { mode: "new-session", projectCwd: parsed.workspace },
 					enabled: false,
-					cwd: parsed.workspace,
-					modelKey: parsed.modelKey,
+					model: { key: parsed.modelKey },
 					executionMode: "full-access",
 				});
 				void dependencies.scheduler.runNow(schedulerTask.id).catch((error: unknown) => {

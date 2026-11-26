@@ -33,7 +33,8 @@ import {
 	resolveSessionListCwd,
 } from "./session-paths.js";
 
-export type DesktopConversationSource = "interactive" | "debug";
+/** automation：定时自动化在无人值守时发起的会话/轮次（ADR-0155）。 */
+export type DesktopConversationSource = "interactive" | "debug" | "automation";
 export type DesktopSessionKind = "conversation" | "other";
 
 /** Desktop 的 Coding Agent 产品输入；产品字段不会进入 Runtime Core 的 SessionConfig。 */

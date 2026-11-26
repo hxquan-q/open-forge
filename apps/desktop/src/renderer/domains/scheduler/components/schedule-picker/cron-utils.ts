@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 /**
  * Cron expression generation and parsing utilities for the schedule picker.
  *
@@ -10,6 +11,7 @@
  *   day-of-week (0-6, 0=Sunday)
  */
 
+import type { AutomationSchedule, ScheduledTask } from "@shared/store/atoms";
 import type { TFunction } from "i18next";
 
 export type ScheduleMode = "once" | "daily" | "weekly" | "interval";
@@ -87,100 +89,6 @@ export function describeSchedule(schedule: Schedule, t: TFunction<"automation">)
 	}
 }
 
-/** Generate cron expression string from schedule */
-export function toCronExpression(schedule: Schedule): string {
-	switch (schedule.mode) {
-		case "once":
-			// node-cron does not support year field.
-			// We use a 6-field cron: minute hour day month day-of-week
-			// The task will fire once and then be disabled via isOnce flag.
-			return `${schedule.minute} ${schedule.hour} ${schedule.day} ${schedule.month} *`;
-		case "daily":
-			return `${schedule.minute} ${schedule.hour} * * *`;
-		case "weekly": {
-			const sortedDays = [...schedule.weekdays].sort((a, b) => a - b).join(",");
-			return `${schedule.minute} ${schedule.hour} * * ${sortedDays}`;
-		}
-		case "interval":
-			// Every N hours at minute 0
-			return `0 */${schedule.intervalHours} * * *`;
-	}
-}
-
-/**
- * Parse a cron expression string into a Schedule.
- * Returns null if the expression cannot be parsed.
- */
-export function parseCronExpression(cron: string, isOnce: boolean): Schedule | null {
-	if (!cron || typeof cron !== "string") return null;
-
-	const parts = cron.trim().split(/\s+/);
-	if (parts.length !== 5) return null;
-
-	const [minute, hour, dayOfMonth, month, dayOfWeek] = parts;
-
-	// Determine mode
-	if (isOnce || (dayOfMonth !== "*" && month !== "*")) {
-		// one-time: specific day and month
-		const m = parseNumberInRange(month, 1, 12);
-		const d = parseNumberInRange(dayOfMonth, 1, 31);
-		const parsedHour = parseNumberInRange(hour, 0, 23);
-		const parsedMinute = parseNumberInRange(minute, 0, 59);
-		if (m === null || d === null || parsedHour === null || parsedMinute === null) return null;
-		return {
-			mode: "once",
-			year: new Date().getFullYear(),
-			month: m,
-			day: d,
-			hour: parsedHour,
-			minute: parsedMinute,
-		};
-	}
-
-	if (hour.startsWith("*/")) {
-		// interval: */N hour
-		const intervalHours = parseNumberInRange(hour.slice(2), 1, Number.MAX_SAFE_INTEGER);
-		if (intervalHours === null || minute !== "0" || dayOfMonth !== "*" || month !== "*" || dayOfWeek !== "*") {
-			return null;
-		}
-		return { mode: "interval", intervalHours };
-	}
-
-	const parsedHour = parseNumberInRange(hour, 0, 23);
-	const parsedMinute = parseNumberInRange(minute, 0, 59);
-	if (parsedHour === null || parsedMinute === null || dayOfMonth !== "*" || month !== "*") return null;
-
-	if (dayOfWeek !== "*" && dayOfWeek !== "?") {
-		// weekly: specific weekday(s)
-		const weekdays = new Set<number>();
-		for (const part of dayOfWeek.split(",")) {
-			const n = parseNumberInRange(part.trim(), 0, 6);
-			if (n === null) return null;
-			weekdays.add(n);
-		}
-		if (weekdays.size === 0) return null;
-		return {
-			mode: "weekly",
-			weekdays,
-			hour: parsedHour,
-			minute: parsedMinute,
-		};
-	}
-
-	// daily: every day at specific time
-	return {
-		mode: "daily",
-		hour: parsedHour,
-		minute: parsedMinute,
-	};
-}
-
-function parseNumberInRange(value: string, min: number, max: number): number | null {
-	if (!/^\d+$/.test(value)) return null;
-	const parsed = Number(value);
-	return parsed >= min && parsed <= max ? parsed : null;
-}
-
 /** Get default schedule values for each mode */
 export function getDefaultOnceSchedule(): OnceSchedule {
 	const now = new Date();
@@ -215,4 +123,129 @@ export function getDefaultIntervalSchedule(): IntervalSchedule {
 	// Default to 2 hours so "custom" mode is active on first click,
 	// allowing users to enter any interval value.
 	return { mode: "interval", intervalHours: 2 };
+}
+
+/**
+ * 选择器状态 → v2 调度判别联合（ADR-0155：编辑器直编联合，不再经 cron 编译）。
+ * 间隔按「编辑重新锚定」语义把 startAt 记为当前时刻。
+ */
+export function scheduleToAutomation(schedule: Schedule): AutomationSchedule {
+	switch (schedule.mode) {
+		case "once":
+			return {
+				kind: "once",
+				at: new Date(schedule.year, schedule.month - 1, schedule.day, schedule.hour, schedule.minute).getTime(),
+			};
+		case "daily":
+			return { kind: "daily", hour: schedule.hour, minute: schedule.minute };
+		case "weekly":
+			return {
+				kind: "weekly",
+				weekdays: [...schedule.weekdays].sort((a, b) => a - b),
+				hour: schedule.hour,
+				minute: schedule.minute,
+			};
+		case "interval":
+			return { kind: "interval", everyMinutes: schedule.intervalHours * 60, startAt: Date.now() };
+	}
+}
+
+/**
+ * v2 判别联合 → 选择器状态。选择器只有单次/每天（含每周）/整小时间隔三档；
+ * hourly、monthly、custom 与非整小时间隔返回 null——调用方用原文展示且不跟随重置。
+ */
+export function automationToSchedule(schedule: AutomationSchedule | undefined): Schedule | null {
+	if (!schedule) return null;
+	switch (schedule.kind) {
+		case "once": {
+			const at = new Date(schedule.at);
+			return {
+				mode: "once",
+				year: at.getFullYear(),
+				month: at.getMonth() + 1,
+				day: at.getDate(),
+				hour: at.getHours(),
+				minute: at.getMinutes(),
+			};
+		}
+		case "daily":
+			return { mode: "daily", hour: schedule.hour, minute: schedule.minute };
+		case "weekly":
+			return {
+				mode: "weekly",
+				weekdays: new Set(schedule.weekdays),
+				hour: schedule.hour,
+				minute: schedule.minute,
+			};
+		case "interval":
+			if (schedule.everyMinutes % 60 !== 0) return null;
+			return { mode: "interval", intervalHours: schedule.everyMinutes / 60 };
+		default:
+			return null;
+	}
+}
+
+/**
+ * v2 判别联合 → v1（cron / isOnce）外部形状。无法完整表达的形态返回 null：
+ * once 的 cron 近似不带年份会逐年重复，interval 超出 cron 表达力，按输入契约不近似。
+ */
+export function automationToV1Fields(schedule: AutomationSchedule): { cron: string; isOnce: boolean } | null {
+	switch (schedule.kind) {
+		case "once": {
+			const at = new Date(schedule.at);
+			return {
+				cron: `${at.getMinutes()} ${at.getHours()} ${at.getDate()} ${at.getMonth() + 1} *`,
+				isOnce: true,
+			};
+		}
+		case "daily":
+			return { cron: `${schedule.minute} ${schedule.hour} * * *`, isOnce: false };
+		case "weekly":
+			return {
+				cron: `${schedule.minute} ${schedule.hour} * * ${[...schedule.weekdays].sort((a, b) => a - b).join(",")}`,
+				isOnce: false,
+			};
+		case "hourly":
+			return { cron: `${schedule.minute} * * * *`, isOnce: false };
+		case "monthly": {
+			if (schedule.days.some((day) => day === "last")) return null;
+			return {
+				cron: `${schedule.minute} ${schedule.hour} ${schedule.days.join(",")} * *`,
+				isOnce: false,
+			};
+		}
+		case "custom":
+			return { cron: schedule.cron.trim(), isOnce: false };
+		case "interval":
+			return null;
+	}
+}
+
+/** 单个计划的人类可读描述；选择器表达不了的档位展示原文，不近似成别的计划。 */
+export function describeAutomationSchedule(schedule: AutomationSchedule, t: TFunction<"automation">): string {
+	const picker = automationToSchedule(schedule);
+	if (picker) {
+		// 非整小时间隔已由 automationToSchedule 排除；这里只需要选择器三档的描述。
+		if (picker.mode !== "interval" || schedule.kind === "interval") return describeSchedule(picker, t);
+	}
+	switch (schedule.kind) {
+		case "interval":
+			return t("schedule.intervalMinutes", { minutes: schedule.everyMinutes });
+		default: {
+			const cron = automationToV1Fields(schedule);
+			return cron ? cron.cron : t("schedule.customFallback");
+		}
+	}
+}
+
+/**
+ * 任务详情/列表共用的计划描述。event / manual 触发没有计划时沿用触发说明；
+ * cron 触发（含缺省）理论上必有 schedule，缺失时展示触发名而不是空白。
+ */
+export function describeTaskSchedule(task: ScheduledTask, t: TFunction<"automation">): string {
+	if (task.schedule) return describeAutomationSchedule(task.schedule, t);
+	const trigger = task.trigger;
+	if (trigger?.type === "event" && trigger.event) return t(`trigger.events.${trigger.event}`);
+	if (trigger?.type === "manual") return t("trigger.manual");
+	return t("trigger.cron");
 }

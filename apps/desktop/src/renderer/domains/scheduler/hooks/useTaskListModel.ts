@@ -5,14 +5,19 @@ import type { TFunction } from "i18next";
 import { useAtomValue } from "jotai";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { type AutomationListFilter, automationTaskTone, matchesAutomationFilter } from "../automation-status";
-import { describeSchedule, parseCronExpression } from "../components/schedule-picker/cron-utils";
+import {
+	type AutomationListFilter,
+	type AutomationTaskTone,
+	automationTaskTone,
+	matchesAutomationFilter,
+} from "../automation-status";
+import { describeTaskSchedule } from "../components/schedule-picker/cron-utils";
 
 export interface TaskListItemModel {
 	readonly id: string;
 	readonly name: string;
 	readonly subtitle: string;
-	readonly tone: "active" | "running" | "paused" | "done";
+	readonly tone: AutomationTaskTone;
 	readonly isSelected: boolean;
 }
 
@@ -69,9 +74,7 @@ export function useTaskListModel({ selectedTaskId, filter, search }: UseTaskList
 }
 
 function scheduleLabel(task: ScheduledTask, t: TFunction<"automation">): string {
-	const parsed = parseCronExpression(task.cron, task.isOnce);
-	if (parsed) return describeSchedule(parsed, t);
-	return task.cron;
+	return describeTaskSchedule(task, t);
 }
 
 function formatLastRun(timestamp: number, t: TFunction<"automation">): string {

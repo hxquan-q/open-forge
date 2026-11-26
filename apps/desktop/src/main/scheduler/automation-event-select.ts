@@ -21,7 +21,7 @@ export function selectEventTriggeredTasks(
 		if (!task.enabled) return false;
 		const trigger = resolveAutomationTaskTrigger(task.trigger);
 		if (trigger.type !== "event" || trigger.event !== event) return false;
-		if (context.cwd && task.cwd && task.cwd !== context.cwd) return false;
+		if (context.cwd && task.runTarget.projectCwd !== context.cwd) return false;
 		return true;
 	});
 }

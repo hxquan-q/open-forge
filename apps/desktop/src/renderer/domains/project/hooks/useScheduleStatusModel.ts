@@ -1,4 +1,5 @@
-import { describeSchedule, parseCronExpression } from "@domains/scheduler/components/schedule-picker/cron-utils";
+// Modified by The Open Forge contributors.
+import { describeTaskSchedule } from "@domains/scheduler/components/schedule-picker/cron-utils";
 import { useScheduledTasks } from "@domains/scheduler/hooks/useScheduledTasks";
 import type { ScheduledTask } from "@shared/store/atoms";
 import type { ScheduleStatusViewProps, ScheduleTaskItemView } from "@vetta-org/theme-ui/project";
@@ -16,9 +17,7 @@ function formatLastRun(timestamp: number | null, t: TFunction<"automation">): st
 }
 
 function scheduleLabel(task: ScheduledTask, t: TFunction<"automation">): string {
-	const parsed = parseCronExpression(task.cron, task.isOnce);
-	if (parsed) return describeSchedule(parsed, t);
-	return task.cron;
+	return describeTaskSchedule(task, t);
 }
 
 export function useScheduleStatusModel(cwd: string): ScheduleStatusViewProps | null {
@@ -36,7 +35,7 @@ export function useScheduleStatusModel(cwd: string): ScheduleStatusViewProps | n
 		return unsubscribe;
 	}, [refreshTasks]);
 
-	const projectTasks = useMemo(() => tasks.filter((task) => task.cwd === cwd), [cwd, tasks]);
+	const projectTasks = useMemo(() => tasks.filter((task) => task.runTarget.projectCwd === cwd), [cwd, tasks]);
 
 	const viewTasks: ScheduleTaskItemView[] = useMemo(
 		() =>

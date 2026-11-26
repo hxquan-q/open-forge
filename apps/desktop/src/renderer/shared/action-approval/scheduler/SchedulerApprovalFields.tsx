@@ -1,9 +1,11 @@
+// Modified by The Open Forge contributors.
 import {
 	SchedulerTaskFields,
 	type SchedulerTaskDraft,
 } from "@domains/scheduler/components/SchedulerTaskFields";
 import type { DesktopActionJsonValue } from "@preload/api";
 import { useTranslation } from "react-i18next";
+import { scheduleToV1Output } from "./v1-draft-conversion";
 
 export type SchedulerEditableData = SchedulerTaskDraft;
 export type SchedulerApprovalJsonData = { [key: string]: DesktopActionJsonValue };
@@ -35,8 +37,10 @@ export function toSchedulerApprovalJsonData(value: SchedulerEditableData): Sched
 	const data: SchedulerApprovalJsonData = {};
 	if (value.name !== undefined) data.name = value.name;
 	if (value.prompt !== undefined) data.prompt = value.prompt;
-	if (value.cron !== undefined) data.cron = value.cron;
-	if (value.isOnce !== undefined) data.isOnce = value.isOnce;
+	// schedule 只在能无损回到 v1 cron 形状时下发；表达不了的形态按「保持原计划」省略（ADR-0155 §7）。
+	const v1Schedule = scheduleToV1Output(value.schedule);
+	if (v1Schedule.cron !== undefined) data.cron = v1Schedule.cron;
+	if (v1Schedule.isOnce !== undefined) data.isOnce = v1Schedule.isOnce;
 	if (value.enabled !== undefined) data.enabled = value.enabled;
 	if (value.cwd !== undefined) data.cwd = value.cwd;
 	if (value.modelKey !== undefined) data.modelKey = value.modelKey;

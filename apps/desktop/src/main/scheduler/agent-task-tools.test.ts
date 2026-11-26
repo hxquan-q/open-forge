@@ -32,10 +32,9 @@ function scheduledTask(overrides: Partial<ScheduledTask>): ScheduledTask {
 		id: "task-1",
 		name: "daily checks",
 		prompt: "run static checks",
-		cron: "0 14 * * *",
-		isOnce: false,
+		schedule: { kind: "daily", hour: 14, minute: 0 },
+		runTarget: { mode: "new-session", projectCwd: PROJECT },
 		enabled: true,
-		cwd: PROJECT,
 		createdAt: 1,
 		updatedAt: 1,
 		lastRunAt: null,
@@ -54,10 +53,27 @@ function createFakeScheduler(initial: readonly ScheduledTask[]): {
 		tasks,
 		service: {
 			listTasks: async () => tasks.map((task) => ({ ...task })),
+			getTask: async (taskId) => {
+				const task = tasks.find((candidate) => candidate.id === taskId);
+				if (!task) {
+					throw new SchedulerServiceError("SCHEDULER_TASK_NOT_FOUND", "定时任务不存在。", { taskId });
+				}
+				return { ...task };
+			},
 			createTask: async (data) => {
+				if (!data.runTarget.projectCwd) throw new Error("fake service requires projectCwd");
 				const created: ScheduledTask = {
-					...data,
 					id: `task-${tasks.length + 1}`,
+					name: data.name,
+					prompt: data.prompt,
+					schedule: data.schedule,
+					runTarget: data.runTarget as ScheduledTask["runTarget"],
+					model: data.model,
+					executionMode: data.executionMode,
+					skill: data.skill,
+					permissionTiers: data.permissionTiers,
+					trigger: data.trigger,
+					enabled: data.enabled,
 					createdAt: 2,
 					updatedAt: 2,
 					lastRunAt: null,
@@ -71,7 +87,13 @@ function createFakeScheduler(initial: readonly ScheduledTask[]): {
 				if (index < 0) {
 					throw new SchedulerServiceError("SCHEDULER_TASK_NOT_FOUND", "定时任务不存在。", { taskId });
 				}
-				tasks[index] = { ...tasks[index], ...patch, id: tasks[index].id, updatedAt: tasks[index].updatedAt + 1 };
+				// null 清除语义（ADR-0155）：null 的键删除字段，不写入 null。
+				const merged = { ...tasks[index], updatedAt: tasks[index].updatedAt + 1 };
+				for (const [key, value] of Object.entries(patch)) {
+					if (value === null) delete (merged as Record<string, unknown>)[key];
+					else (merged as Record<string, unknown>)[key] = value;
+				}
+				tasks[index] = merged;
 				return tasks[index];
 			},
 			deleteTask: async (taskId) => {
@@ -159,7 +181,11 @@ describe("createDesktopScheduledTaskSessionTools", () => {
 
 	it("carries a create→list→update→delete flow through the real service port", async () => {
 		const { service, tasks } = createFakeScheduler([
-			scheduledTask({ id: "other-1", name: "other project task", cwd: "C:/repo/beta" }),
+			scheduledTask({
+				id: "other-1",
+				name: "other project task",
+				runTarget: { mode: "new-session", projectCwd: "C:/repo/beta" },
+			}),
 		]);
 		const registrations = createDesktopScheduledTaskSessionTools(PROJECT, service);
 		const list = toolNamed(registrations, "scheduled_task_list");
@@ -174,7 +200,7 @@ describe("createDesktopScheduledTaskSessionTools", () => {
 		expect(created.isError).toBeUndefined();
 		const createdId = tasks.find((task) => task.name === "静态检查")?.id;
 		expect(createdId).toBeTruthy();
-		expect(tasks.find((task) => task.id === createdId)?.cwd).toBe(PROJECT);
+		expect(tasks.find((task) => task.id === createdId)?.runTarget.projectCwd).toBe(PROJECT);
 
 		const listed = await list.execute(request({}));
 		const listText = listed.content[0].type === "text" ? listed.content[0].text : "";
@@ -183,12 +209,13 @@ describe("createDesktopScheduledTaskSessionTools", () => {
 
 		const rescheduled = await update.execute(request({ task_id: createdId ?? "", cron: "0 15 * * *" }));
 		expect(rescheduled.isError).toBeUndefined();
-		expect(tasks.find((task) => task.id === createdId)?.cron).toBe("0 15 * * *");
+		// v1 补丁 "0 15 * * *" 经 v1PatchToV2 换算为 daily 15:00 存进 v2 模型。
+		expect(tasks.find((task) => task.id === createdId)?.schedule).toEqual({ kind: "daily", hour: 15, minute: 0 });
 
 		// 别的项目的任务在更新/删除时同样 NOT_FOUND。
 		const foreign = await update.execute(request({ task_id: "other-1", cron: "0 1 * * *" }));
 		expect(foreign.isError).toBe(true);
-		expect(tasks.find((task) => task.id === "other-1")?.cron).toBe("0 14 * * *");
+		expect(tasks.find((task) => task.id === "other-1")?.schedule).toEqual({ kind: "daily", hour: 14, minute: 0 });
 
 		const deleted = await del.execute(request({ task_id: createdId ?? "" }));
 		expect(deleted.isError).toBeUndefined();

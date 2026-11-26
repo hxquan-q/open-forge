@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { describe, expect, it, vi } from "vitest";
 import { createRuntimeCanaryConsumerDefinitions } from "./consumer-definitions.js";
 import { RUNTIME_CANARY_BATCH_PROMPT, RUNTIME_CANARY_SCHEDULER_PROMPT } from "./contracts.js";
@@ -8,10 +9,9 @@ describe("Runtime Canary consumer definitions", () => {
 			id: "scheduler-task",
 			name: "Runtime Canary Scheduler",
 			prompt: RUNTIME_CANARY_SCHEDULER_PROMPT,
-			cron: "0 0 1 1 *",
-			isOnce: false,
+			schedule: { kind: "custom" as const, cron: "0 0 1 1 *" },
+			runTarget: { mode: "new-session" as const, projectCwd: "C:/runtime-canary" },
 			enabled: false,
-			cwd: "C:/runtime-canary",
 			createdAt: 1,
 			updatedAt: 1,
 			lastRunAt: null,

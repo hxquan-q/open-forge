@@ -2,8 +2,8 @@
 import { cn } from "@vetta-org/ui";
 import type { JSX } from "react";
 
-/** active 已开启、running 运行中、paused 已暂停、done 一次性任务已完成。 */
-export type TaskListItemTone = "active" | "running" | "paused" | "done";
+/** active 已开启、running 运行中、paused 已暂停、suspended 目标失效暂停、done 一次性任务已完成。 */
+export type TaskListItemTone = "active" | "running" | "paused" | "suspended" | "done";
 
 export interface TaskListItemView {
 	readonly id: string;
@@ -25,6 +25,7 @@ const TONE_ICON: Record<TaskListItemTone, string> = {
 	active: "icon-[mdi--circle-outline] text-primary",
 	running: "icon-[mdi--progress-clock] text-primary",
 	paused: "icon-[mdi--pause-circle-outline] text-muted-foreground/60",
+	suspended: "icon-[mdi--alert-circle-outline] text-amber-500",
 	done: "icon-[mdi--check-circle-outline] text-muted-foreground/60",
 };
 
@@ -55,7 +56,7 @@ export function TaskListView({ items, emptyLabel, onSelectTask }: TaskListViewPr
 							<span
 								className={cn(
 									"block truncate text-[14px]",
-									item.tone === "paused" || item.tone === "done"
+							item.tone === "paused" || item.tone === "suspended" || item.tone === "done"
 										? "text-muted-foreground"
 										: "text-foreground",
 								)}

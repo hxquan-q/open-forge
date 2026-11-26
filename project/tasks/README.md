@@ -30,6 +30,7 @@ rg -n '^status: (draft|ready|in_progress|blocked|verifying)$' project/tasks -g '
 
 | Task ID | 状态 | Plan | 任务（详情见原记录） |
 |---|---|---|---|
+| `TASK-0519` | `verifying` | PLAN-0032 | [自动化数据模型 v2 后端](TASK-0519-automation-model-v2-backend.md)：PLAN-0032 P9a；ADR-0155 落地——判别联合调度、runTarget、迁移、执行器重写，保留权限分层。 |
 | `TASK-0517` | `verifying` | PLAN-0032 | [定时任务失败轮次不再记成成功](TASK-0517-scheduled-task-failure-status.md)：BUG-0198；上游 c83d5c220 等价行为合入（D4 核对结论）。 |
 | `TASK-0518` | `verifying` | PLAN-0032 | [Git 插件补登宿主 theme-ui 共享声明](TASK-0518-git-plugin-host-theme-ui-shared.md)：TASK-0516 终审遗漏修正；vite.config.ts 补 `hostThemeUi: true`，mf-manifest 已登记 singleton 共享。 |
 | `TASK-0516` | `verifying` | PLAN-0032 | [Git 变更面板平铺与宿主控件打磨](TASK-0516-git-panel-flat-polish.md)：PLAN-0032 P8 基线外增量；手工合并上游 73305d477+994d3d88d+3239d8e23+060b589a1+4b169ab54+055c3a5fa 终端状态，保留本地分叉。 |

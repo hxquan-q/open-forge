@@ -70,6 +70,7 @@ import {
 	tryNormalizeDynamicSystemPromptOperations,
 } from "../plugins/system-prompt-operations.js";
 import { getSharedRuntime } from "../runtime.js";
+import { notifyAutomationSessionsDeleted } from "../scheduler/session-deletion.js";
 import {
 	DEFAULT_CONVERSATION_CWD,
 	DEFAULT_CONVERSATION_SESSION_DIR,
@@ -993,6 +994,8 @@ export function registerSessionIpc(webContents: WebContents): () => void {
 			throw err;
 		}
 		await mkdir(targetSessionDir, { recursive: true });
+		// 会话目录整批清空后通知自动化：绑定到已删会话的任务暂停，绝不顶替（ADR-0155）。
+		notifyAutomationSessionsDeleted((path) => resolve(path).startsWith(sessionDirWithSep));
 	});
 
 	ipcMain.handle(CHANNELS.CLEAR_DEFAULT_ARTIFACTS, async (_event, scope: unknown) => {

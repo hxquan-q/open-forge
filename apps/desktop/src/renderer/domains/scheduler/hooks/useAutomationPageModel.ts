@@ -143,8 +143,7 @@ export function useAutomationPageModel(): AutomationPageModel {
 				openCreate({
 					name: t(`recommend.items.${template.id}.name`),
 					prompt: t(`recommend.items.${template.id}.prompt`),
-					cron: template.cron,
-					isOnce: template.isOnce ?? false,
+					schedule: template.schedule,
 				});
 			},
 			onSelectTask: (id: string) => {

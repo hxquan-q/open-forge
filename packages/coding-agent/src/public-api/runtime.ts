@@ -20,8 +20,10 @@ export {
 export {
 	type AgentScheduledTask,
 	type AgentScheduledTaskCreate,
+	type AgentScheduledTaskExecutionMode,
 	type AgentScheduledTaskPatch,
 	type AgentScheduledTaskPermissionTiers,
+	type AgentScheduledTaskSkillRef,
 	AUTOMATION_HOST_EVENT_NAMES,
 	AUTOMATION_PACKAGE_CAPABILITIES,
 	AUTOMATION_PACKAGE_SCHEMA_VERSION,

@@ -2,8 +2,8 @@
 import { ButtonGroup, ButtonGroupItem, cn } from "@vetta-org/ui";
 import type { JSX, ReactNode } from "react";
 
-/** active 已开启、running 运行中、paused 已暂停、done 一次性任务已完成、draft 新建未保存。 */
-export type AutomationDetailStatusTone = "active" | "running" | "paused" | "done" | "draft";
+/** active 已开启、running 运行中、paused 已暂停、suspended 目标失效暂停、done 一次性任务已完成、draft 新建未保存。 */
+export type AutomationDetailStatusTone = "active" | "running" | "paused" | "suspended" | "done" | "draft";
 
 export interface AutomationDetailPaneViewProps {
 	readonly statusLabel: string;
@@ -24,6 +24,7 @@ const STATUS_CLASS: Record<AutomationDetailStatusTone, string> = {
 	active: "text-primary",
 	running: "text-primary",
 	paused: "text-muted-foreground",
+	suspended: "text-amber-500",
 	done: "text-muted-foreground",
 	draft: "text-muted-foreground",
 };

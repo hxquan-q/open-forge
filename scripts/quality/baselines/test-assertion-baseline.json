@@ -165,7 +165,7 @@
     "apps/desktop/src/main/runtime-configuration/runtime-configuration-service.test.ts": 1,
     "apps/desktop/src/main/runtimes/git-tool.test.ts": 1,
     "apps/desktop/src/main/runtimes/manager-shutdown.test.ts": 1,
-    "apps/desktop/src/main/scheduler/task-executor.test.ts": 10,
+    "apps/desktop/src/main/scheduler/task-executor.test.ts": 22,
     "apps/desktop/src/main/shortcuts/shortcut-service.test.ts": 2,
     "apps/desktop/src/main/skills/skill-market-install.test.ts": 1,
     "apps/desktop/src/main/speech-input/speech-input-service.test.ts": 2,

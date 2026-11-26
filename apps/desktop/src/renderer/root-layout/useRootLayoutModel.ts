@@ -404,12 +404,12 @@ export function useRootLayoutModel(): RootLayoutModel {
 		});
 		return window.vetta.scheduler.onTaskEvent((event) => {
 			if (event.type !== "task.started") return;
-			if (!event.sessionPath || !event.cwd) return;
+			if (!event.sessionPath || !event.listCwd) return;
 			setScheduledSessionPaths((prev) => new Set(prev).add(event.sessionPath));
-			ensureLocalSession(event.cwd, {
+			ensureLocalSession(event.listCwd, {
 				id: event.sessionId,
 				path: event.sessionPath,
-				cwd: event.cwd,
+				cwd: event.listCwd,
 				name: event.sessionName,
 				firstMessage: event.firstMessage,
 				modifiedAt: Date.now(),

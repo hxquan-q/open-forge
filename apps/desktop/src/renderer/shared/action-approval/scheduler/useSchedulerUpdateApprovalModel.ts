@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { type ScheduledTask, scheduledTasksAtom } from "@shared/store/atoms";
 import { useAtomValue } from "jotai";
 import { useEffect, useMemo, useState } from "react";
@@ -5,6 +6,7 @@ import { useTranslation } from "react-i18next";
 import { useActionApproval } from "../useActionApproval";
 import { type SchedulerEditableData, toSchedulerApprovalJsonData } from "./SchedulerApprovalFields";
 import type { SchedulerEditApprovalDrawerViewProps } from "./SchedulerEditApprovalDrawerView";
+import { mergeV1InputIntoDraft, taskToDraft } from "./v1-draft-conversion";
 
 interface UpdateTaskData extends SchedulerEditableData {
 	skill?: { name: string; alias?: string; type: "skill" | "scene" } | null;
@@ -37,18 +39,8 @@ export function useSchedulerUpdateApprovalModel(): SchedulerUpdateApprovalModel 
 
 	const initialData = useMemo<UpdateTaskData | null>(() => {
 		if (!task || !input) return null;
-		return {
-			name: task.name,
-			prompt: task.prompt,
-			cron: task.cron,
-			isOnce: task.isOnce,
-			enabled: task.enabled,
-			cwd: task.cwd,
-			modelKey: task.modelKey,
-			executionMode: task.executionMode,
-			skill: task.skill,
-			...input.data,
-		};
+		// v1 输入（cron / isOnce）在边界换算成 v2 schedule 再叠加（ADR-0155 §7）。
+		return mergeV1InputIntoDraft(taskToDraft(task), input.data as unknown as Record<string, unknown>);
 	}, [input, task]);
 
 	const [data, setData] = useState<SchedulerEditableData | null>(null);
@@ -194,7 +186,7 @@ export function useSchedulerUpdateApprovalModel(): SchedulerUpdateApprovalModel 
 				const approvedInput = {
 					operation: "update" as const,
 					taskId: input.taskId,
-					data: toSchedulerApprovalJsonData({ ...initialData, ...data }),
+					data: toSchedulerApprovalJsonData(data),
 					approvalUi: input.approvalUi ?? "scheduler.update",
 				};
 				console.info(

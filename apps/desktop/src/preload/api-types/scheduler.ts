@@ -1,67 +1,27 @@
 // Modified by The Open Forge contributors.
-import type { SessionExecutionMode } from "@vetta/runtime-core";
-import type { ExecutionModeOverride, SelectedSkillRef } from "./shared.js";
+import type {
+	AutomationTaskCreateRequest,
+	AutomationTaskEvent,
+	AutomationTaskUpdateRequest,
+	ScheduledTask,
+	TaskExecutionRecord,
+} from "../../shared/automation.js";
 
-export interface ScheduledTaskPermissionTiers {
-	allowWorkspaceWrite?: boolean;
-	allowCommonCommands?: boolean;
-	allowBatchDelete?: boolean;
-	allowSystemTools?: boolean;
-	autoApprovePrompts?: boolean;
-}
+export type {
+	AutomationPermissionTiers,
+	AutomationRunTarget,
+	AutomationSchedule,
+	AutomationTaskCreateRequest,
+	AutomationTaskEvent,
+	AutomationTaskTrigger,
+	AutomationTaskUpdateRequest,
+	ScheduledTask,
+	TaskExecutionRecord,
+} from "../../shared/automation.js";
 
-export interface ScheduledTask {
-	id: string;
-	name: string;
-	prompt: string;
-	cron: string;
-	isOnce: boolean;
-	enabled: boolean;
-	/** Working directory used when the task executes */
-	cwd: string;
-	modelKey?: string;
-	executionMode?: ExecutionModeOverride;
-	skill?: SelectedSkillRef;
-	permissionTiers?: ScheduledTaskPermissionTiers;
-	createdAt: number;
-	updatedAt: number;
-	lastRunAt: number | null;
-	lastRunStatus: "success" | "failed" | null;
-}
-
-export interface TaskExecutionRecord {
-	id: string;
-	taskId: string;
-	sessionId: string;
-	/** Session file path for navigating to the conversation */
-	sessionPath?: string;
-	/** Working directory used for this execution */
-	cwd?: string;
-	startedAt: number;
-	completedAt: number | null;
-	status: "running" | "success" | "failed" | "aborted";
-	prompt: string;
-	responsePreview: string;
-	error?: string;
-	durationMs?: number;
-	executionMode?: SessionExecutionMode;
-}
-
-export type TaskEvent =
-	| {
-			type: "task.started";
-			taskId: string;
-			recordId: string;
-			sessionId: string;
-			sessionPath: string;
-			cwd: string;
-			sessionName: string;
-			firstMessage: string;
-	  }
-	| { type: "task.completed"; taskId: string; recordId: string; status: "success" | "failed" }
-	| { type: "task.failed"; taskId: string; error: string }
-	| { type: "record.updated"; taskId: string; sessionId: string; status: "success" | "failed" | "aborted" }
-	| { type: "tasks.changed" };
+/** 兼容别名：renderer 既有消费名。 */
+export type TaskEvent = AutomationTaskEvent;
+export type ScheduledTaskPermissionTiers = NonNullable<ScheduledTask["permissionTiers"]>;
 
 export interface AutomationPackagePreview {
 	pkg: {
@@ -106,10 +66,8 @@ export interface DiscoveredAutomationPackage {
 
 export interface DesktopSchedulerApi {
 	getTasks(): Promise<ScheduledTask[]>;
-	createTask(
-		task: Omit<ScheduledTask, "id" | "createdAt" | "updatedAt" | "lastRunAt" | "lastRunStatus">,
-	): Promise<ScheduledTask>;
-	updateTask(id: string, patch: Partial<ScheduledTask>): Promise<void>;
+	createTask(task: AutomationTaskCreateRequest): Promise<ScheduledTask>;
+	updateTask(id: string, patch: AutomationTaskUpdateRequest): Promise<void>;
 	deleteTask(id: string): Promise<void>;
 	toggleTask(id: string): Promise<void>;
 	/** Disable a task (set enabled=false and stop its scheduled job) */

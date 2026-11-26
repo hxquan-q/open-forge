@@ -1,64 +1,18 @@
 // Modified by The Open Forge contributors.
 import { atom } from "jotai";
-import type { ExecutionModeOverride, SelectedSkill, SessionExecutionMode } from "./chat-atoms";
 
-export interface ScheduledTaskPermissionTiers {
-	allowWorkspaceWrite?: boolean;
-	allowCommonCommands?: boolean;
-	allowBatchDelete?: boolean;
-	allowSystemTools?: boolean;
-	autoApprovePrompts?: boolean;
-}
+export type {
+	AutomationRunTarget,
+	AutomationSchedule,
+	ScheduledTask,
+	TaskExecutionRecord,
+} from "../../../shared/automation";
 
-export type ScheduledTaskTrigger =
-	| { type: "cron" }
-	| { type: "manual" }
-	| {
-			type: "event";
-			event: "session.created" | "project.opened" | "automation.panelOpened" | "session.switched";
-	  };
+import type { ScheduledTask } from "../../../shared/automation";
 
-export interface ScheduledTask {
-	id: string;
-	name: string;
-	prompt: string;
-	cron: string;
-	/** Whether this task runs only once and disables itself after execution */
-	isOnce: boolean;
-	enabled: boolean;
-	/** Working directory used when the task executes */
-	cwd: string;
-	modelKey?: string;
-	executionMode?: ExecutionModeOverride;
-	/** 任务级技能/场景。运行时通过 PromptRequest.promptRef 结构化传递。 */
-	skill?: SelectedSkill;
-	/** 无人值守授权分档；缺省时审批行为与改前一致。 */
-	permissionTiers?: ScheduledTaskPermissionTiers;
-	/** 触发器；缺省等同 cron。 */
-	trigger?: ScheduledTaskTrigger;
-	createdAt: number;
-	updatedAt: number;
-	lastRunAt: number | null;
-	lastRunStatus: "success" | "failed" | null;
-}
-
-export interface TaskExecutionRecord {
-	id: string;
-	taskId: string;
-	sessionId: string;
-	/** Session file path for navigating to the conversation */
-	sessionPath?: string;
-	/** Working directory used for this execution */
-	cwd?: string;
-	startedAt: number;
-	completedAt: number | null;
-	status: "running" | "success" | "failed" | "aborted";
-	prompt: string;
-	responsePreview: string;
-	error?: string;
-	durationMs?: number;
-	executionMode?: SessionExecutionMode;
-}
+/** 兼容别名：v1 模型拆除前的既有消费名。 */
+export type ScheduledTaskPermissionTiers = NonNullable<ScheduledTask["permissionTiers"]>;
+export type ScheduledTaskTrigger = NonNullable<ScheduledTask["trigger"]>;
 
 export const scheduledTasksAtom = atom<ScheduledTask[]>([]);
 /** 当前正在执行的任务 id 集合，由 task.started/record.updated 等事件维护。 */

@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { PluginOfficialApi } from "@vetta-org/plugin-sdk";
 
 export function createOfficialSchedulerApi(
@@ -31,8 +32,10 @@ export function createOfficialSchedulerApi(
 			const { modelKey, skill, ...rest } = data;
 			const patch = {
 				...rest,
-				...("modelKey" in data ? { modelKey: modelKey ?? undefined } : {}),
-				...("skill" in data ? { skill: skill ?? undefined } : {}),
+				// null 是清除语义（v1 契约 null-clearing），须原样透传给 main 侧
+				// v1PatchToV2；吞成 undefined 会让插件永远清不掉 model/skill。
+				...("modelKey" in data ? { modelKey } : {}),
+				...("skill" in data ? { skill } : {}),
 			};
 			return scheduler.updateTask(capabilitySessionId, taskId, patch);
 		},

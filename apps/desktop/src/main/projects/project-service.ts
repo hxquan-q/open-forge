@@ -18,6 +18,8 @@ export interface ProjectServiceDependencies {
 	 * 永远连不上，而那时已经看不出它指向的是一台早就被删掉的主机。
 	 */
 	readonly isKnownSshHost: (hostId: string) => Promise<boolean>;
+	/** 项目从列表移除（含归档区）并落盘后调用；自动化据此暂停以它为目标的任务（ADR-0155）。 */
+	readonly onRemoved?: (path: string) => void;
 	/**
 	 * 项目列表落盘后通知渲染进程重读。写入与广播必须成对，否则侧边栏会停在旧快照上
 	 * （插件/Action 改完项目要等重启才可见），所以统一走 {@link ProjectService.commit}。
@@ -257,5 +259,6 @@ export class ProjectService {
 			}
 			return { ...current, [fields.projectsKey]: projects, [fields.archivedKey]: archivedProjects };
 		});
+		this.dependencies.onRemoved?.(path);
 	}
 }

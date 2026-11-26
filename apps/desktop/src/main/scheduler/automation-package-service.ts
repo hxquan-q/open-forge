@@ -10,6 +10,7 @@ import {
 	assertImportMayProceed,
 	buildAutomationPackageFromTask,
 	formatIncompatibilityReason,
+	isCronTriggered,
 	parseAutomationPackageJson,
 	previewAutomationPackageImport,
 } from "@vetta/coding-agent/runtime";
@@ -24,6 +25,7 @@ import {
 } from "./automation-package-secure-fetch.js";
 import type { SchedulerService } from "./scheduler-service.js";
 import type { ScheduledTask } from "./task-storage.js";
+import { taskToV1Shape } from "./v1-shape-adapter.js";
 
 export type AutomationPackagePreviewDto = {
 	readonly pkg: AutomationPackageV1;
@@ -79,6 +81,20 @@ function focusedWindow(): BrowserWindow | undefined {
 	return BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0];
 }
 
+/**
+ * v2 → v1 封套桥（TASK-0522 前）：interval / event / manual 等无法用 5 段 cron
+ * 表达的任务不能装进 v1 封套，明确拒绝导出而不是悄悄失真。
+ */
+function buildPackageFromV2Task(task: ScheduledTask): AutomationPackageV1 {
+	const v1 = taskToV1Shape(task);
+	if (!isCronTriggered(task.trigger) || !task.schedule || v1.cron.trim().length === 0) {
+		throw new Error(
+			`Task "${task.name}" uses a schedule that cannot be represented in automation-package.v1 (interval / event / manual). Export is not supported for it yet.`,
+		);
+	}
+	return buildAutomationPackageFromTask(v1);
+}
+
 export class AutomationPackageService {
 	constructor(private readonly scheduler: SchedulerService) {}
 
@@ -96,7 +112,7 @@ export class AutomationPackageService {
 		}
 		const win = focusedWindow();
 		if (selected.length === 1) {
-			const pkg = buildAutomationPackageFromTask(selected[0]!);
+			const pkg = buildPackageFromV2Task(selected[0]!);
 			const save = await dialog.showSaveDialog(win!, {
 				title: "Export automation package",
 				defaultPath: `${pkg.id}.automation.json`,
@@ -115,7 +131,7 @@ export class AutomationPackageService {
 		if (save.canceled || !save.filePath) return { status: "canceled" };
 		const zip = new AdmZip();
 		for (const task of selected) {
-			const pkg = buildAutomationPackageFromTask(task);
+			const pkg = buildPackageFromV2Task(task);
 			zip.addFile(`${pkg.id}.automation.json`, Buffer.from(`${JSON.stringify(pkg, null, 2)}\n`, "utf8"));
 		}
 		zip.writeZip(save.filePath);

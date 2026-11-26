@@ -315,7 +315,7 @@ export class DesktopConversationService {
 					recordSessionAgentBinding(sessionPath, sessionAgentBindingIdentity(agentBinding)),
 				);
 			}
-			monitorRuntimeSession(this.runtime, result.sessionId, "interactive");
+			monitorRuntimeSession(this.runtime, result.sessionId, source === "automation" ? "automation" : "interactive");
 			log.info("session created", {
 				sessionId: result.sessionId,
 				sessionPath,

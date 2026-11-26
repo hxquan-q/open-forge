@@ -14,6 +14,7 @@ import { getAppLogger } from "../logger.js";
 import { forgetMessageAnnotations } from "../message-annotations/host.js";
 import { forgetDeletedSessionAttention } from "../notifications/index.js";
 import { getSharedRuntime } from "../runtime.js";
+import { notifyAutomationSessionsDeleted } from "../scheduler/session-deletion.js";
 
 const sessionLog = getAppLogger("session");
 
@@ -47,6 +48,7 @@ export const sessionLifecycleHostDomain: HostDomainImplementation<typeof SESSION
 		await runtime.deleteSession(sessionPath);
 		await forgetMessageAnnotations(sessionPath);
 		forgetDeletedSessionAttention((path) => path === sessionPath);
+		notifyAutomationSessionsDeleted((path) => path === sessionPath);
 		if (cwdFromHeader && isConversationSubCwd(cwdFromHeader)) {
 			await rm(resolve(cwdFromHeader), { recursive: true, force: true }).catch((err) => {
 				sessionLog.error("failed to remove conversation sub cwd", cwdFromHeader, err);
@@ -73,6 +75,7 @@ export const sessionLifecycleHostDomain: HostDomainImplementation<typeof SESSION
 		const failedSet = new Set(result.failed);
 		const deletedPaths = new Set(purgedPaths.filter((p) => !failedSet.has(p)));
 		forgetDeletedSessionAttention((path) => deletedPaths.has(path));
+		notifyAutomationSessionsDeleted((path) => deletedPaths.has(path));
 		return { deleted: result.deleted, failed: [...result.failed] };
 	},
 };

@@ -1,6 +1,7 @@
+// Modified by The Open Forge contributors.
 import type { JSX } from "react";
 
-export type ExecutionHistoryStatus = "success" | "failed" | "running" | "aborted";
+export type ExecutionHistoryStatus = "success" | "failed" | "running" | "aborted" | "skipped" | "missed";
 
 export interface ExecutionHistoryRecordView {
 	readonly durationLabel: string | null;
@@ -147,6 +148,8 @@ function StatusDot({ status }: { readonly status: ExecutionHistoryStatus }): JSX
 		failed: "bg-destructive",
 		running: "bg-primary",
 		aborted: "bg-amber-500",
+		skipped: "bg-muted-foreground/40",
+		missed: "bg-amber-500",
 	};
 	return (
 		<div className="relative flex h-2 w-2 shrink-0">
@@ -170,6 +173,8 @@ function StatusBadge({
 		failed: "text-destructive bg-destructive/10",
 		running: "text-primary bg-primary/10",
 		aborted: "text-amber-400 bg-amber-500/15",
+		skipped: "text-muted-foreground bg-accent",
+		missed: "text-amber-400 bg-amber-500/15",
 	};
 	return (
 		<span className={`rounded-md px-1.5 py-0.5 text-[10px] font-medium ${styles[status]}`}>

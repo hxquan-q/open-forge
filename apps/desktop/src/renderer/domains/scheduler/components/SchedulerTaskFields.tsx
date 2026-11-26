@@ -1,6 +1,7 @@
 // Modified by The Open Forge contributors.
 import type {
 	ExecutionModeOverride,
+	AutomationSchedule,
 	ScheduledTaskPermissionTiers,
 	ScheduledTaskTrigger,
 	SelectedSkill,
@@ -11,8 +12,8 @@ import { SchedulerTaskFieldsView } from "./SchedulerTaskFieldsView";
 export interface SchedulerTaskDraft {
 	name?: string;
 	prompt?: string;
-	cron?: string;
-	isOnce?: boolean;
+	/** v2 调度判别联合（ADR-0155）；event / manual 触发的任务不带计划。 */
+	schedule?: AutomationSchedule;
 	enabled?: boolean;
 	cwd?: string;
 	modelKey?: string | null;

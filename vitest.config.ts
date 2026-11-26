@@ -9,9 +9,12 @@ import { defineConfig } from "vitest/config";
  * repository. Their checkouts copy every test file but run no `bun install`,
  * so collecting them from the root fails on unresolvable deps. Exclude them
  * here; a worktree's own package test entry resolves its own config by cwd.
+ *
+ * `temp/` 同理：git 忽略的整仓副本（如基线对照 checkout）会把同一批测试
+ * 再收一遍并在无 install 的副本里解析失败，根收集一律排除。
  */
 export default defineConfig({
 	test: {
-		exclude: ["**/node_modules/**", ".claude/worktrees/**"],
+		exclude: ["**/node_modules/**", ".claude/worktrees/**", "temp/**"],
 	},
 });

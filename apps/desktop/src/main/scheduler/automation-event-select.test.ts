@@ -7,10 +7,9 @@ function task(partial: Partial<ScheduledTask> & Pick<ScheduledTask, "id" | "trig
 	return {
 		name: partial.name ?? partial.id,
 		prompt: "run",
-		cron: "0 9 * * *",
-		isOnce: false,
+		schedule: { kind: "daily", hour: 9, minute: 0 },
+		runTarget: { mode: "new-session", projectCwd: "C:/proj" },
 		enabled: partial.enabled ?? true,
-		cwd: partial.cwd ?? "C:/proj",
 		createdAt: 1,
 		updatedAt: 1,
 		lastRunAt: null,
@@ -32,8 +31,16 @@ describe("selectEventTriggeredTasks", () => {
 
 	it("scopes by cwd when the event carries a project path", () => {
 		const tasks = [
-			task({ id: "same", trigger: { type: "event", event: "session.created" }, cwd: "C:/a" }),
-			task({ id: "other", trigger: { type: "event", event: "session.created" }, cwd: "C:/b" }),
+			task({
+				id: "same",
+				trigger: { type: "event", event: "session.created" },
+				runTarget: { mode: "new-session", projectCwd: "C:/a" },
+			}),
+			task({
+				id: "other",
+				trigger: { type: "event", event: "session.created" },
+				runTarget: { mode: "new-session", projectCwd: "C:/b" },
+			}),
 		];
 		expect(selectEventTriggeredTasks(tasks, "session.created", { cwd: "C:/a" }).map((item) => item.id)).toEqual([
 			"same",

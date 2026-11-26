@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useThemeComponent } from "@vetta-org/theme-sdk";
@@ -7,6 +8,7 @@ import {
 } from "./SchedulerApprovalFields";
 import { SchedulerEditApprovalDrawerView } from "./SchedulerEditApprovalDrawerView";
 import { useActionApproval, type ActiveActionApproval } from "../useActionApproval";
+import { mergeV1InputIntoDraft } from "./v1-draft-conversion";
 
 interface CreateTaskData extends SchedulerEditableData {
 	name: string;
@@ -33,7 +35,10 @@ function SchedulerCreateDrawer({ approval }: { approval: ActiveActionApproval })
 	const { t } = useTranslation("common");
 	const { request, responding, error, approve, reject } = approval;
 	const input = request.input as unknown as CreateTaskInput;
-	const [data, setData] = useState<SchedulerEditableData>(input.data);
+	// Agent 输入是 v1（cron / isOnce）形状，在边界换算成 v2 schedule 进入表单（ADR-0155 §7）。
+	const [data, setData] = useState<SchedulerEditableData>(() =>
+		mergeV1InputIntoDraft({}, input.data as unknown as Record<string, unknown>),
+	);
 	const ThemedSchedulerEditApprovalDrawerView = useThemeComponent(
 		"root.approval.schedulerEditView",
 		SchedulerEditApprovalDrawerView,
@@ -59,7 +64,7 @@ function SchedulerCreateDrawer({ approval }: { approval: ActiveActionApproval })
 			onSubmit={() =>
 				approve({
 					operation: "create",
-					data: toSchedulerApprovalJsonData({ ...input.data, ...data }),
+					data: toSchedulerApprovalJsonData(data),
 					approvalUi: input.approvalUi ?? "scheduler.create",
 				})
 			}

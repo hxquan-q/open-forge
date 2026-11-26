@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { useScheduledTasks } from "@domains/scheduler/hooks/useScheduledTasks";
 import { Button } from "@shared/components/ui/button";
 import {
@@ -52,6 +53,10 @@ function statusLabel(status: TaskExecutionRecord["status"], t: TFunction<"chat">
 			return t("activityPanel.schedule.statusFailed");
 		case "aborted":
 			return t("activityPanel.schedule.statusAborted");
+		case "skipped":
+			return t("activityPanel.schedule.statusSkipped");
+		case "missed":
+			return t("activityPanel.schedule.statusMissed");
 	}
 }
 
@@ -64,6 +69,10 @@ function statusClass(status: TaskExecutionRecord["status"]): string {
 		case "failed":
 			return "bg-red-500/10 text-red-500";
 		case "aborted":
+			return "bg-amber-500/10 text-amber-500";
+		case "skipped":
+			return "bg-accent text-muted-foreground";
+		case "missed":
 			return "bg-amber-500/10 text-amber-500";
 	}
 }
@@ -82,7 +91,7 @@ export function useScheduleExecutionTabPanelModel(cwd: string): ScheduleExecutio
 	const { tasks, runNow, toggleTask, refreshTasks } = useScheduledTasks();
 	const [recordsByTaskId, setRecordsByTaskId] = useState<Record<string, TaskExecutionRecord[]>>({});
 
-	const projectTasks = useMemo(() => tasks.filter((task) => task.cwd === cwd), [tasks, cwd]);
+	const projectTasks = useMemo(() => tasks.filter((task) => task.runTarget.projectCwd === cwd), [tasks, cwd]);
 
 	const loadRecords = useCallback(async (targetTasks: ScheduledTask[]) => {
 		const entries = await Promise.all(
@@ -132,7 +141,9 @@ export function useScheduleExecutionTabPanelModel(cwd: string): ScheduleExecutio
 
 	const handleOpenSession = useCallback((record: TaskExecutionRecord) => {
 		if (!record.sessionPath || !record.cwd || !openSessionFnRef.current) return;
-		void openSessionFnRef.current(record.cwd, record.sessionPath, record.executionMode);
+		// 记录里 inherit 视为跟随会话默认：打开时不带显式覆盖。
+		const mode = record.executionMode === "inherit" ? undefined : record.executionMode;
+		void openSessionFnRef.current(record.cwd, record.sessionPath, mode);
 	}, []);
 
 	const labels: ScheduleExecutionTabPanelViewLabels = {

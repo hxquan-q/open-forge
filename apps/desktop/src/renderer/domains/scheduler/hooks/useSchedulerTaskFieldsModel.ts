@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { SessionExecutionMode } from "@shared/store/atoms";
 import { defaultConversationCwdAtom, getProjectDisplayName, projectsAtom } from "@shared/store/atoms";
 import { useAtomValue } from "jotai";
@@ -5,11 +6,12 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { SchedulerTaskDraft } from "../components/SchedulerTaskFields";
 import {
+	automationToSchedule,
+	describeAutomationSchedule,
 	describeSchedule,
 	getDefaultDailySchedule,
-	parseCronExpression,
 	type Schedule,
-	toCronExpression,
+	scheduleToAutomation,
 } from "../components/schedule-picker/cron-utils";
 
 export interface WorkDirOption {
@@ -56,15 +58,15 @@ export function useSchedulerTaskFieldsModel({
 	const defaultCwd = useAtomValue(defaultConversationCwdAtom);
 	const projectName = useCallback((cwd: string) => getProjectDisplayName(cwd, defaultCwd), [defaultCwd]);
 	const [schedule, setSchedule] = useState<Schedule>(
-		() => parseCronExpression(value.cron ?? "", value.isOnce ?? false) ?? getDefaultDailySchedule(),
+		() => automationToSchedule(value.schedule) ?? getDefaultDailySchedule(),
 	);
 	const [defaultExecutionMode, setDefaultExecutionMode] = useState<SessionExecutionMode>("full-access");
 	const [sandboxUnavailableReason, setSandboxUnavailableReason] = useState<string | null>(null);
 
 	useEffect(() => {
-		const parsed = parseCronExpression(value.cron ?? "", value.isOnce ?? false);
+		const parsed = automationToSchedule(value.schedule);
 		if (parsed && parsed.mode !== "weekly") setSchedule(parsed);
-	}, [value.cron, value.isOnce]);
+	}, [value.schedule]);
 
 	useEffect(() => {
 		void window.vetta.config.get().then((config) => {
@@ -119,7 +121,7 @@ export function useSchedulerTaskFieldsModel({
 			namePlaceholderText: namePlaceholder ?? t("form.namePlaceholder"),
 			sandboxUnavailableReason,
 			schedule,
-			scheduleLabel: describeSchedule(schedule, t),
+			scheduleLabel: value.schedule ? describeAutomationSchedule(value.schedule, t) : describeSchedule(schedule, t),
 			scheduleModes: [
 				{ key: "once", label: t("scheduleMode.once") },
 				{ key: "daily", label: t("scheduleMode.daily") },
@@ -133,8 +135,7 @@ export function useSchedulerTaskFieldsModel({
 				setSchedule(nextSchedule);
 				onChange({
 					...value,
-					cron: toCronExpression(nextSchedule),
-					isOnce: nextSchedule.mode === "once",
+					schedule: scheduleToAutomation(nextSchedule),
 				});
 			},
 		};

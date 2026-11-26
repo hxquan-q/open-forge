@@ -49,7 +49,8 @@
 			"running": "运行中",
 			"paused": "已暂停",
 			"done": "已完成",
-			"draft": "草稿"
+			"draft": "草稿",
+			"suspended": "已暂停 · 目标失效"
 		}
 	},
 	"form": {
@@ -114,7 +115,9 @@
 		"intervalOne": "每隔 1 小时执行",
 		"interval": "每隔 {{hours}} 小时执行",
 		"weekdayJoin": "、",
-		"weekdayNames": ["周日", "周一", "周二", "周三", "周四", "周五", "周六"]
+		"weekdayNames": ["周日", "周一", "周二", "周三", "周四", "周五", "周六"],
+		"intervalMinutes": "每隔 {{minutes}} 分钟执行",
+		"customFallback": "自定义计划"
 	},
 	"list": {
 		"filter": {
@@ -164,7 +167,9 @@
 		"success": "成功",
 		"failed": "失败",
 		"running": "执行中",
-		"aborted": "已中止"
+		"aborted": "已中止",
+		"skipped": "已跳过",
+		"missed": "已错过"
 	},
 	"trigger": {
 		"cron": "按计划",
@@ -199,5 +204,9 @@
 		"importDisabled": "已导入「{{id}}」（默认停用，需手动启用）",
 		"importRejected": "导入被拒绝：{{reasons}}",
 		"importFailed": "导入失败"
+	},
+	"suspended": {
+		"session-deleted": "自动化目标会话已被删除，任务已暂停",
+		"project-removed": "自动化目标项目已移除，任务已暂停"
 	}
 }

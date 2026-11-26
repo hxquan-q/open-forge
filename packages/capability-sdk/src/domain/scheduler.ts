@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { type Static, Type } from "@sinclair/typebox";
 import { createCapabilityCatalog } from "../catalog.js";
 import { CAPABILITY_LAYERS, defineCapability } from "../contracts.js";
@@ -24,6 +25,19 @@ export const SCHEDULER_RECORD_STATUSES = {
 	SUCCESS: "success",
 	FAILED: "failed",
 	ABORTED: "aborted",
+	SKIPPED: "skipped",
+	MISSED: "missed",
+} as const;
+
+export const SCHEDULER_RUN_TARGET_MODES = {
+	NEW_SESSION: "new-session",
+	SAME_SESSION: "same-session",
+} as const;
+
+export const SCHEDULER_NOT_RUN_REASONS = {
+	PREVIOUS_RUNNING: "previous-running",
+	APP_NOT_RUNNING: "app-not-running",
+	SYSTEM_SLEEP: "system-sleep",
 } as const;
 
 export const SCHEDULER_COMMAND_STATUSES = {
@@ -59,6 +73,19 @@ const schedulerRecordStatusType = Type.Union([
 	Type.Literal(SCHEDULER_RECORD_STATUSES.SUCCESS),
 	Type.Literal(SCHEDULER_RECORD_STATUSES.FAILED),
 	Type.Literal(SCHEDULER_RECORD_STATUSES.ABORTED),
+	Type.Literal(SCHEDULER_RECORD_STATUSES.SKIPPED),
+	Type.Literal(SCHEDULER_RECORD_STATUSES.MISSED),
+]);
+
+const schedulerRunTargetModeType = Type.Union([
+	Type.Literal(SCHEDULER_RUN_TARGET_MODES.NEW_SESSION),
+	Type.Literal(SCHEDULER_RUN_TARGET_MODES.SAME_SESSION),
+]);
+
+const schedulerNotRunReasonType = Type.Union([
+	Type.Literal(SCHEDULER_NOT_RUN_REASONS.PREVIOUS_RUNNING),
+	Type.Literal(SCHEDULER_NOT_RUN_REASONS.APP_NOT_RUNNING),
+	Type.Literal(SCHEDULER_NOT_RUN_REASONS.SYSTEM_SLEEP),
 ]);
 
 const schedulerCommandStatusType = Type.Union([
@@ -113,9 +140,9 @@ const schedulerTaskDataFields = {
 	isOnce: Type.Optional(Type.Boolean()),
 	enabled: Type.Optional(Type.Boolean()),
 	cwd: Type.Optional(schedulerNonBlankInputStringType),
-	modelKey: Type.Optional(schedulerNonBlankInputStringType),
+	modelKey: Type.Optional(Type.Union([schedulerNonBlankInputStringType, Type.Null()])),
 	executionMode: Type.Optional(schedulerExecutionModeType),
-	skill: Type.Optional(schedulerSkillInputType),
+	skill: Type.Optional(Type.Union([schedulerSkillInputType, Type.Null()])),
 };
 
 const schedulerTaskCreateDataType = rejectCapabilitySchemaExcess(
@@ -173,9 +200,10 @@ const schedulerExecutionRecordType = Type.Object(
 	{
 		id: Type.String(),
 		taskId: Type.String(),
-		sessionId: Type.String(),
+		sessionId: Type.Optional(Type.String()),
 		sessionPath: Type.Optional(Type.String()),
 		cwd: Type.Optional(Type.String()),
+		mode: Type.Optional(schedulerRunTargetModeType),
 		startedAt: Type.Number(),
 		completedAt: Type.Union([Type.Number(), Type.Null()]),
 		status: schedulerRecordStatusType,
@@ -183,6 +211,9 @@ const schedulerExecutionRecordType = Type.Object(
 		responsePreview: Type.String(),
 		error: Type.Optional(Type.String()),
 		durationMs: Type.Optional(Type.Number()),
+		reason: Type.Optional(schedulerNotRunReasonType),
+		missedCount: Type.Optional(Type.Number()),
+		missedUntil: Type.Optional(Type.Number()),
 		executionMode: Type.Optional(schedulerRecordExecutionModeType),
 	},
 	{ additionalProperties: false },
@@ -200,6 +231,8 @@ export type SchedulerExecutionMode = (typeof SCHEDULER_EXECUTION_MODES)[keyof ty
 export type SchedulerSkillType = (typeof SCHEDULER_SKILL_TYPES)[keyof typeof SCHEDULER_SKILL_TYPES];
 export type SchedulerLastRunStatus = (typeof SCHEDULER_LAST_RUN_STATUSES)[keyof typeof SCHEDULER_LAST_RUN_STATUSES];
 export type SchedulerRecordStatus = (typeof SCHEDULER_RECORD_STATUSES)[keyof typeof SCHEDULER_RECORD_STATUSES];
+export type SchedulerRunTargetMode = (typeof SCHEDULER_RUN_TARGET_MODES)[keyof typeof SCHEDULER_RUN_TARGET_MODES];
+export type SchedulerNotRunReason = (typeof SCHEDULER_NOT_RUN_REASONS)[keyof typeof SCHEDULER_NOT_RUN_REASONS];
 export type SchedulerCommandStatus = (typeof SCHEDULER_COMMAND_STATUSES)[keyof typeof SCHEDULER_COMMAND_STATUSES];
 export type SchedulerSkillRef = Readonly<Static<typeof schedulerSkillOutputType>>;
 export type SchedulerTask = Readonly<Static<typeof schedulerTaskType>>;
