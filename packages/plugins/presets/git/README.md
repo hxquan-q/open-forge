@@ -16,6 +16,7 @@
 ## 依赖的平台能力
 
 - 活动面板标签卡：`ui.slot.activity-tab`，`scope_use: ["project"]`。
+- 顶栏状态动作：`ui.slot.header-action`（会话页顶栏的分支与未提交计数，点开气泡切分支/提交/拉推）。
 - 对话事件：`agent.session.read`（订阅 `turn-end`）。
 - 命令执行：`agent.command.run` + `plugin.json` 的 `commands: ["git"]`。用户可在插件设置里关闭
   `git` 命令；关闭后调用被拦截并通知。详见 `docs/adr/0032`。

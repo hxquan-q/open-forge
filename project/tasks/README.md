@@ -30,6 +30,7 @@ rg -n '^status: (draft|ready|in_progress|blocked|verifying)$' project/tasks -g '
 
 | Task ID | 状态 | Plan | 任务（详情见原记录） |
 |---|---|---|---|
+| `TASK-0515` | `verifying` | PLAN-0032 | [顶栏分支状态与提交气泡](TASK-0515-header-status-action.md)：PLAN-0032 P8④；手工合并上游 fb5539dcf+f04c041c4+66ca7d7d8；87/87 + check 全绿，verifier_0515 pass，待用户实机目视。 |
 | `TASK-0514` | `verifying` | PLAN-0032 | [提交图操作](TASK-0514-commit-graph-actions.md)：PLAN-0032 P8②；手工合并上游 2dd10fc5b，保留本地 fork 详情面板与 div 行形态；74/74 + check 全绿，verifier_0514 pass，待用户实机目视。 |
 | `TASK-0513` | `verifying` | — | [团队会话删除改完成时判定](TASK-0513-team-delete-completion-time.md)：BUG-0191 收口修正；ref 镜像完成时判定 + 编排测试三用例；30/30 + 88/88 + check 全绿，verifier_0513 pass，待实机验收。 |
 | `TASK-0512` | `verifying` | PLAN-0032 | [Git 活动面板按钮组](TASK-0512-git-panel-button-group.md)：PLAN-0032 P8③；手工合并上游 54fb4d5a9+d25fa3cc8+aeae24785，保留本地 diffStat 与内联 preflight；verifier 复查 pass、check 全绿，待用户实机目视。 |
