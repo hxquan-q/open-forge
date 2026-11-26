@@ -4,7 +4,6 @@ import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import ts from "typescript";
 import { defineConfig, loadEnv, type Plugin } from "vite";
-import { createSentryBuildSetup, readValue } from "./sentry-vite";
 import {
 	resolveSpeechInputBuildConfig,
 	SPEECH_INPUT_ENABLED_ENV,
@@ -89,7 +88,6 @@ export default defineConfig(({ mode }) => {
 	}
 	// 外观「界面主题」区段：默认隐藏；VETTA_SHOW_UI_THEME=true 时展示（shell > .env）
 	const showUiTheme = process.env.VETTA_SHOW_UI_THEME ?? env.VETTA_SHOW_UI_THEME ?? "";
-	const sentry = createSentryBuildSetup(env, "dist/renderer");
 
 	// 品牌口径构建期开关：distribution（默认，外部分发 Allstr ai / 小爱ai）| self（显式，Open Forge 自用）。
 	// 档案常量折叠后未选中的品牌 JSON 与图标资产不进产物（desktop-brand.ts / brand-assets.ts）。
@@ -105,24 +103,12 @@ export default defineConfig(({ mode }) => {
 			),
 			"process.env.VETTA_BRAND_PROFILE": JSON.stringify(brandProfile),
 			[`process.env.${SPEECH_INPUT_ENABLED_ENV}`]: JSON.stringify(String(speechInputBuildConfig.enabled)),
-			"process.env.VETTA_SENTRY_ENABLED": JSON.stringify(
-				readValue(env, "VETTA_SENTRY_DSN") ? "true" : "false",
-			),
-			"process.env.VETTA_POSTHOG_KEY": JSON.stringify(readValue(env, "VETTA_POSTHOG_KEY") ?? ""),
-			"process.env.VETTA_POSTHOG_HOST": JSON.stringify(readValue(env, "VETTA_POSTHOG_HOST") ?? ""),
-			"process.env.VETTA_POSTHOG_REPLAY_ENABLED": JSON.stringify(
-				readValue(env, "VETTA_POSTHOG_REPLAY_ENABLED") ?? "",
-			),
-			"process.env.VETTA_POSTHOG_REPLAY_SAMPLE_RATE": JSON.stringify(
-				readValue(env, "VETTA_POSTHOG_REPLAY_SAMPLE_RATE") ?? "",
-			),
 		},
 		plugins: [
 			hostApiAccessTransform(),
 			react(),
 			tailwindcss(),
 			...(themeDevelopmentEnabled ? [themeDevelopmentReload()] : []),
-			...sentry.plugins,
 		],
 		root: "src/renderer",
 		base: "./",
@@ -160,9 +146,9 @@ export default defineConfig(({ mode }) => {
 		build: {
 			outDir: resolve(process.cwd(), "dist/renderer"),
 			// 打包布局整目录拷贝 dist/renderer：不清理会把历代旧哈希产物带进安装包
-			// （本仓其余 vite 配置同样各自清理 outDir；Sentry 只读该目录不注入文件）。
+			// （本仓其余 vite 配置同样各自清理 outDir）。
 			emptyOutDir: true,
-			sourcemap: sentry.enabled ? "hidden" : false,
+			sourcemap: false,
 			rollupOptions: {
 				input: {
 					main: resolve(__dirname, "src/renderer/index.html"),

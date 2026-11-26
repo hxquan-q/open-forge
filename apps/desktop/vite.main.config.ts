@@ -2,7 +2,6 @@
 import { builtinModules } from "node:module";
 import { resolve } from "node:path";
 import { defineConfig, loadEnv, type Plugin } from "vite";
-import { createSentryBuildSetup } from "./sentry-vite";
 import { DEVELOPMENT_WORKSPACE_EXTERNAL, resolveMainBundleExternals } from "./scripts/packaged-native-dependencies.mjs";
 import {
 	resolveSpeechInputBuildConfig,
@@ -39,7 +38,6 @@ export default defineConfig(({ mode }) => {
 			? [DEVELOPMENT_WORKSPACE_EXTERNAL]
 			: [];
 	const sourcemapEnabled = (process.env.VETTA_MAIN_SOURCEMAP ?? env.VETTA_MAIN_SOURCEMAP) === "true";
-	const sentry = createSentryBuildSetup(env, "dist/main");
 
 	// 云服务构建期开关：默认关闭（lite）；只有显式 true 才产出完全体。
 	const cloudEnabled = env.VETTA_CLOUD_ENABLED === "true";
@@ -81,7 +79,7 @@ export default defineConfig(({ mode }) => {
 
 	return {
 		define,
-		plugins: [toolkitSourceAlias(), ...sentry.plugins],
+		plugins: [toolkitSourceAlias()],
 		// prod 主进程走 esbuild minify：dist/main 20.12MB → 15.17MB（-24.6%）。默认会改写
 		// 函数/类名，用户日志里的主进程栈只剩行列号；keepNames 保留具名函数后为
 		// 15.90MB（-20.9%，比纯 minify 多 0.74MB），在体积与可诊断性之间取后者。
@@ -134,7 +132,7 @@ export default defineConfig(({ mode }) => {
 				],
 			},
 			minify: true,
-			sourcemap: sentry.enabled ? "hidden" : sourcemapEnabled,
+			sourcemap: sourcemapEnabled,
 		},
 	};
 });

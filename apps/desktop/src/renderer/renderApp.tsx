@@ -12,10 +12,8 @@ import { desktopThemeHost } from "./shared/theme/desktopThemeHost";
 import { ThemeRuntimeProvider } from "./shared/theme/runtime";
 import { ThemeColorOverrideBridge } from "./shared/theme/ThemeColorOverrideBridge";
 import { ThemeController } from "./shared/theme/ThemeController";
-import { initializeProductAnalytics } from "./telemetry/product-analytics";
 
 export function renderApp(root: Root): void {
-	initializeProductAnalytics();
 	// zh（默认）同步就绪；en 初值时先按需装载 en catalog 再挂载，保证首帧即正确语言。
 	const i18nReady = initI18n();
 	const mount = () => {

@@ -74,15 +74,13 @@ test("rejects an implicit edition and reports all independent problems", () => {
 		() =>
 			validateDesktopBuildEnvironment({
 				env: {
-					VETTA_POSTHOG_REPLAY_ENABLED: "yes",
-					VETTA_SENTRY_TRACES_SAMPLE_RATE: "2",
+					VETTA_SHOW_UI_THEME: "yes",
 					VETTA_VENDOR_PLATFORM: "win32-arm64",
 				},
 			}),
 		(error) => {
 			assert.match(error.message, /VETTA_CLOUD_ENABLED/);
-			assert.match(error.message, /VETTA_POSTHOG_REPLAY_ENABLED/);
-			assert.match(error.message, /VETTA_SENTRY_TRACES_SAMPLE_RATE/);
+			assert.match(error.message, /VETTA_SHOW_UI_THEME/);
 			assert.match(error.message, /win32-arm64/);
 			return true;
 		},
@@ -164,21 +162,15 @@ test("requires notarization when macOS signature verification is mandatory", () 
 	);
 });
 
-test("rejects incomplete Sentry source-map upload settings without exposing values", () => {
-	assert.doesNotThrow(() =>
-		validateDesktopBuildEnvironment({
-			env: { ...commercialEnv, VETTA_SENTRY_DSN: "https://public-key@sentry.example.com/1" },
-		}),
-	);
-	assert.throws(
-		() =>
-			validateDesktopBuildEnvironment({
-				env: { ...commercialEnv, VETTA_SENTRY_AUTH_TOKEN: "do-not-print" },
-			}),
-		(error) => {
-			assert.match(error.message, /VETTA_SENTRY_ORG/);
-			assert.doesNotMatch(error.message, /do-not-print/);
-			return true;
-		},
-	);
+test("rejects removed PostHog and Sentry settings without exposing values", () => {
+	for (const key of ["VETTA_POSTHOG_KEY", "VETTA_SENTRY_DSN", "VETTA_SENTRY_AUTH_TOKEN"]) {
+		assert.throws(
+			() => validateDesktopBuildEnvironment({ env: { ...commercialEnv, [key]: "do-not-print" } }),
+			(error) => {
+				assert.match(error.message, new RegExp(`${key} is no longer supported`));
+				assert.doesNotMatch(error.message, /do-not-print/);
+				return true;
+			},
+		);
+	}
 });

@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 const AUTHORIZATION_PATTERN = /(bearer\s+)[a-z0-9._~+/=-]+/gi;
 const EMAIL_PATTERN = /\b[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}\b/gi;
 const JWT_PATTERN = /\beyJ[a-z0-9_-]+\.[a-z0-9_-]+\.[a-z0-9_-]+\b/gi;

@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { fetchCurrentUser, onTokenRefreshed, onUnauthorized } from "@shared/lib/api";
 import { cancelProactiveRefresh, scheduleProactiveRefresh } from "@shared/lib/token-scheduler";
 import {
@@ -12,7 +13,6 @@ import { cloudLogoutAtom, subscriptionStatusAtom } from "@shared/store/auth-atom
 import { modelCatalog } from "@shared/store/model-catalog";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { useEffect, useRef } from "react";
-import { setProductAnalyticsUser } from "../../../telemetry/product-analytics";
 
 export function useAuth() {
 	const [token, setToken] = useAtom(authTokenAtom);
@@ -22,10 +22,6 @@ export function useAuth() {
 	const setSubscriptionStatus = useSetAtom(subscriptionStatusAtom);
 	const sseClient = useAtomValue(sseClientAtom);
 	const setSseState = useSetAtom(sseConnectionStateAtom);
-
-	useEffect(() => {
-		setProductAnalyticsUser(user?.id ?? null);
-	}, [user]);
 
 	// 登出逻辑收敛在 cloudLogoutAtom（见 auth-atoms.ts）：设置菜单等宿主 UI 也直接写它。
 	const logout = useSetAtom(cloudLogoutAtom);

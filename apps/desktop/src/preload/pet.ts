@@ -1,5 +1,5 @@
+// Modified by The Open Forge contributors.
 import { contextBridge, type IpcRendererEvent, ipcRenderer } from "electron";
-import "./telemetry.js";
 import {
 	PET_BEGIN_WINDOW_MOVE_CHANNEL,
 	PET_BEGIN_WINDOW_RESIZE_CHANNEL,

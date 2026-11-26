@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("electron", () => ({ ipcMain: {} }));
@@ -7,7 +8,6 @@ vi.mock("../app-monitor/app-monitor-service.js", () => ({
 	recordAppMonitorEvent: vi.fn(),
 	recordAppMonitorUserActivity: vi.fn(),
 }));
-vi.mock("../telemetry/index.js", () => ({ captureProductEvent: vi.fn() }));
 
 import { parseAppMonitorEvent } from "./app-monitor";
 

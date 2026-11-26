@@ -1,6 +1,5 @@
 // Modified by The Open Forge contributors.
 import { contextBridge, ipcRenderer, webUtils } from "electron";
-import "./telemetry.js";
 import type { DesktopApi } from "./api.js";
 import { createAbilitiesApi } from "./apis/abilities.js";
 import { createActionApprovalApi } from "./apis/action-approval.js";
@@ -36,7 +35,6 @@ import { createSpeechInputApi } from "./apis/speech-input.js";
 import { createSshApi } from "./apis/ssh.js";
 import { createSystemApi } from "./apis/system.js";
 import { createTaskApi } from "./apis/task.js";
-import { createTelemetryApi } from "./apis/telemetry.js";
 import { createTerminalApi } from "./apis/terminal.js";
 import { createThemesApi } from "./apis/themes.js";
 import { createWebhookApi } from "./apis/webhook.js";
@@ -88,7 +86,6 @@ const rawApi: Omit<DesktopApi, "hostAccess"> = {
 	remotePairing: createRemotePairingApi(ipcRenderer),
 	...createAppshotApi(ipcRenderer),
 	...createI18nApi(ipcRenderer),
-	...createTelemetryApi(ipcRenderer),
 	...createSystemApi(ipcRenderer, webUtils),
 };
 

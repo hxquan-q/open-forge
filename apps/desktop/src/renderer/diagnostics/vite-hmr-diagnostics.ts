@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 interface ViteHmrUpdateSummary {
 	type?: string;
 	path?: string;

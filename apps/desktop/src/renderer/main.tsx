@@ -8,12 +8,10 @@ import { applyPlatformAttribute } from "./shared/lib/platform";
 import { applyInitialTheme } from "./shared/theme/apply";
 import { applyStoredCursorStyle } from "./shared/theme/cursor";
 import { applyStoredSidebarStyle } from "./shared/theme/sidebar-style";
-import { captureReactError, initializeRendererErrorMonitoring } from "./telemetry/error-monitoring";
-import { initializeViteHmrDiagnostics } from "./telemetry/vite-hmr-diagnostics";
+import { initializeViteHmrDiagnostics } from "./diagnostics/vite-hmr-diagnostics";
 import "./styles.css";
 
 initializeViteHmrDiagnostics();
-initializeRendererErrorMonitoring("main");
 
 // 在首个 React 节点挂载前同步恢复持久化主题与光标，保证窗口首次可见时已使用实际设计令牌。
 applyPlatformAttribute();
@@ -30,10 +28,7 @@ if (!rootElement) {
 	throw new Error("Missing root element");
 }
 
-const root = createRoot(rootElement, {
-	onCaughtError: captureReactError,
-	onRecoverableError: captureReactError,
-});
+const root = createRoot(rootElement);
 const appReadyPromise = window.vetta.appLifecycle.whenReady().then(() => {
 	window.vetta.appLifecycle.reportStartupPhase?.("app-ready");
 });

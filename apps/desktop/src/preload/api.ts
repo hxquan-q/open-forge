@@ -53,7 +53,6 @@ import type {
 	DesktopWindowApi,
 } from "./api-types/system.js";
 import type { DesktopTaskApi } from "./api-types/task.js";
-import type { DesktopTelemetryApi } from "./api-types/telemetry.js";
 import type { DesktopTerminalApi } from "./api-types/terminal.js";
 import type { DesktopThemeApi } from "./api-types/theme.js";
 import type { DesktopThemesApi } from "./api-types/themes.js";
@@ -95,7 +94,6 @@ export type * from "./api-types/speech-input.js";
 export type * from "./api-types/ssh.js";
 export type * from "./api-types/system.js";
 export type * from "./api-types/task.js";
-export type * from "./api-types/telemetry.js";
 export type * from "./api-types/terminal.js";
 export type * from "./api-types/theme.js";
 export type * from "./api-types/themes.js";
@@ -125,7 +123,6 @@ export interface DesktopApi {
 	dialog: DesktopDialogApi;
 	theme: DesktopThemeApi;
 	themes: DesktopThemesApi;
-	telemetry: DesktopTelemetryApi;
 	i18n: DesktopI18nApi;
 	fs: DesktopFsApi;
 	skills: DesktopSkillsApi;

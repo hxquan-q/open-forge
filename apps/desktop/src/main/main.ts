@@ -1,5 +1,4 @@
 // Modified by The Open Forge contributors.
-import "./telemetry/bootstrap.js";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { URL } from "node:url";
@@ -105,7 +104,6 @@ import { initializeDesktopSchedulerService } from "./scheduler/scheduler-service
 import { StartupPhaseScheduler } from "./startup-phases.js";
 import { getDesktopFileOrganizeBroker } from "./task-activity/file-organize-broker.js";
 import { getDesktopToolApprovalBroker } from "./task-activity/tool-approval-broker.js";
-import { initializeMainTelemetry, shutdownMainTelemetry } from "./telemetry/index.js";
 import { registerThemeProtocol, THEME_PROTOCOL_PRIVILEGE } from "./themes/theme-protocol.js";
 import {
 	createTray,
@@ -174,8 +172,6 @@ const isCliMode =
 	actionCliCommand !== null ||
 	helpCliCommand !== null ||
 	agentRpcArgs !== null;
-
-initializeMainTelemetry({ enabled: !isCliMode });
 
 // 给 V8 老生代一个明确上限：超过会抛 `RangeError: Invalid string length` /
 // JS heap out of memory，能被 uncaughtException 接到并落盘栈；否则任 RSS 自然
@@ -1034,7 +1030,6 @@ setQuitCleanup(async () => {
 	} catch (err) {
 		mainLog.warn("app monitor shutdown failed", err);
 	}
-	await shutdownMainTelemetry();
 	reportDisposableLeaks();
 	mainLog.info("quit cleanup finished");
 });
