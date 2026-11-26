@@ -5,7 +5,7 @@ import { Button } from "@vetta-org/ui";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { countChanges, parseStatus } from "../git/parseStatus";
 import { initRepo, resolveRepoRoot, statusPorcelain } from "../git/run";
-import { getGitCommand, onRefreshSignal } from "../git/runtime";
+import { getGitCommand, invalidateGitTabProbe, onRefreshSignal } from "../git/runtime";
 import { isGitAvailable } from "../git/tab-visibility";
 import type { StatusGroups } from "../git/types";
 import { GitChanges } from "./GitChanges";
@@ -77,6 +77,8 @@ export function GitPanel(): JSX.Element {
 	const handleInit = useCallback(async (): Promise<void> => {
 		if (!cwd) return;
 		await initRepo(cwd);
+		// 仓库刚被初始化：标签卡要从未上栏的「+」池挪到栏上，探测结论必须重算。
+		invalidateGitTabProbe(cwd);
 		await load();
 	}, [cwd, load]);
 
