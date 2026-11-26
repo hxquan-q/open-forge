@@ -19,9 +19,11 @@ import { authUserAtom } from "@shared/store/auth-atoms";
 import { pendingInteractionPathsAtom } from "@shared/store/pending-interactions-atoms";
 import { recentSessionVisitsAtom } from "@shared/store/recent-sessions-atoms";
 import { runningSessionPathsAtom } from "@shared/store/running-sessions-atoms";
+import type { SpaceItem } from "@shared/store/spaces";
+import { spaceOf, spacesAtom } from "@shared/store/spaces";
 import { useNavigate } from "@tanstack/react-router";
 import type { CommandMenuGroupView, CommandMenuViewLabels } from "@vetta-org/theme-ui/overlays";
-import { useAtom, useAtomValue } from "jotai";
+import { useAtom, useAtomValue, useStore } from "jotai";
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { resolveDesktopSessionOpenTarget } from "@/shared/session-access";
@@ -30,6 +32,7 @@ import type { DesktopTeamSidebarConversation } from "@/shared/sidebar-conversati
 import { prefetchCommandMenuAction } from "../../../root-layout/nav-route-prefetch";
 import { usePluginTextResolver } from "../../plugins/runtime/plugin-i18n";
 import { useSessionSearch } from "../../project/hooks/useSessionSearch";
+import { rememberSpaceLocation, revealSpaceItem, spaceDisplayName } from "../../project/hooks/useSpaceNavigation";
 import { buildCommandMenuGroups, type CommandMenuGroupLabels } from "../lib/build-groups";
 import { pickLatestOpenableSession } from "../lib/latest-session";
 import { tokenizeCommandMenuQuery } from "../lib/match";
@@ -153,8 +156,11 @@ export interface UseCommandMenuModelArgs {
 export function useCommandMenuModel({ onOpenSession }: UseCommandMenuModelArgs): CommandMenuModel {
 	const { t } = useTranslation("common");
 	const { t: tSettings } = useTranslation("settings");
+	const { t: tProject } = useTranslation("project");
 	const navigate = useNavigate();
 	const [teams, setTeams] = useState<readonly DesktopTeamSidebarConversation[]>([]);
+	const spaces = useAtomValue(spacesAtom);
+	const store = useStore();
 
 	const [open, setOpen] = useAtom(commandMenuOpenAtom);
 	const [query, setQuery] = useState("");
@@ -366,13 +372,29 @@ export function useCommandMenuModel({ onOpenSession }: UseCommandMenuModelArgs):
 					action: { kind: "openTeamSession", session },
 				}),
 			);
-		// TODO(spaces): 上游在「工作空间分组」commit d6f9906c4 里给每个条目补 spaces
-		// 标签（项目行进 badge、会话行进副标题）。本仓未移植 spaces 体系，待补齐后
-		// 在此恢复同等的标签修饰。
-		const all = [...staticEntries, ...abilityEntries, ...sessionEntries, ...teamEntries];
+		const all = [...staticEntries, ...abilityEntries, ...sessionEntries, ...teamEntries].map((entry) => {
+			const item = commandSpaceItem(entry.action);
+			if (!item) return entry;
+			const label = spaceDisplayName(spaces, spaceOf(spaces, item), tProject("spaces.main"));
+			// 项目行的工作空间放进 badge；会话行的 badge 已经是所属项目，工作空间退到副标题。
+			if (entry.action.kind === "openProject") return { ...entry, badge: label };
+			return { ...entry, subtitle: entry.subtitle ? `${entry.subtitle} · ${label}` : label };
+		});
 		// 逃生行只在有查询词时出现：空态里它没有可携带的搜索词，等于一条噪音。
 		return hasQuery ? [...all, buildMarketplaceEscapeEntry(deferredQuery, sourceLabels)] : all;
-	}, [open, staticEntries, abilityEntries, sessionEntries, teams, projects, hasQuery, deferredQuery, sourceLabels]);
+	}, [
+		open,
+		staticEntries,
+		abilityEntries,
+		sessionEntries,
+		teams,
+		projects,
+		spaces,
+		tProject,
+		hasQuery,
+		deferredQuery,
+		sourceLabels,
+	]);
 
 	// 空查询只在有进行中的会话还没取到时才在「进行中」占骨架位；最近打开不占，取到了再出现即可。
 	const showActiveSkeleton =
@@ -436,6 +458,15 @@ export function useCommandMenuModel({ onOpenSession }: UseCommandMenuModelArgs):
 
 	const runAction = useCallback(
 		(action: CommandMenuAction) => {
+			// 打开前先切到条目归属的空间：全局搜索跨所有空间，落点应带上下文。
+			// 团队会话不进空间（ADR-0156），commandSpaceItem 不映射，这里自然不切换。
+			const item = commandSpaceItem(action);
+			if (
+				item &&
+				(action.kind !== "openSession" ||
+					resolveDesktopSessionOpenTarget(action.result.session.access) !== "unavailable")
+			)
+				revealSpaceItem(store, item);
 			switch (action.kind) {
 				case "openTeamSession": {
 					const { teamId, teamSessionId: sessionId } = action.session;
@@ -453,6 +484,12 @@ export function useCommandMenuModel({ onOpenSession }: UseCommandMenuModelArgs):
 							return;
 						}
 						if (latest?.target === "viewer") {
+							rememberSpaceLocation(store, {
+								kind: "conversation",
+								cwd: action.cwd,
+								path: latest.session.path,
+								viewer: true,
+							});
 							await navigate({
 								to: "/viewer/$path",
 								params: { path: encodeURIComponent(latest.session.path) },
@@ -490,6 +527,13 @@ export function useCommandMenuModel({ onOpenSession }: UseCommandMenuModelArgs):
 					const { result } = action;
 					const target = resolveDesktopSessionOpenTarget(result.session.access);
 					if (target === "viewer") {
+						if (result.sourceKind === "conversation" || result.sourceKind === "project")
+							rememberSpaceLocation(store, {
+								kind: "conversation",
+								cwd: result.sourceCwd,
+								path: result.session.path,
+								viewer: true,
+							});
 						void navigate({
 							to: "/viewer/$path",
 							params: { path: encodeURIComponent(result.session.path) },
@@ -506,7 +550,7 @@ export function useCommandMenuModel({ onOpenSession }: UseCommandMenuModelArgs):
 				}
 			}
 		},
-		[navigate, onOpenSession],
+		[navigate, onOpenSession, store],
 	);
 
 	const activate = useCallback(
@@ -607,4 +651,22 @@ export function useCommandMenuModel({ onOpenSession }: UseCommandMenuModelArgs):
 		onActivateItem: activate,
 		onClose: close,
 	};
+}
+
+/**
+ * 全局搜索条目归属的归属键。ADR-0156：团队会话不进空间，这里不映射——
+ * 行上不出现空间标注，激活时也不切空间。会话键统一为会话路径：
+ * 独立会话按路径直查，项目/批量会话回落到其来源项目。
+ */
+function commandSpaceItem(action: CommandMenuAction): SpaceItem | undefined {
+	switch (action.kind) {
+		case "openProject":
+			return { kind: "project", key: action.cwd };
+		case "openSession":
+			return action.result.sourceKind === "conversation"
+				? { kind: "conversation", key: action.result.session.path }
+				: { kind: "project", key: action.result.sourceCwd };
+		default:
+			return undefined;
+	}
 }

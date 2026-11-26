@@ -474,8 +474,13 @@
 		"spaceEdit": "编辑「{{name}}」",
 		"spaceRemove": "移除「{{name}}」",
 		"remove": "移除工作空间",
+		"removeWithProjects": "移除工作空间以及项目",
 		"removeTitle": "移除「{{name}}」？",
 		"removeDescription": "仅移除工作空间时，其中的项目和对话会移回主工作空间。",
+		"removalImpact": "从 Vetta 移除 {{projects}} 个项目，删除 {{sessions}} 条独立会话及其专属工作目录。项目文件和项目内会话会保留，{{archived}} 个归档项目将移到主工作空间。",
+		"confirmName": "请输入「{{name}}」确认",
+		"running": "请停止以下会话，或等待它们结束后再移除工作空间。",
+		"error": "操作未完成，可以重试。",
 		"intro": {
 			"subtitle": "工作空间是侧栏的分组。把项目和会话按工作内容分开放，侧栏只显示当前空间里的内容，切换时不会被其他事打扰。",
 			"title": "怎么用",

@@ -47,6 +47,7 @@ import { attentionSessionPathsAtom } from "@shared/store/attention-sessions-atom
 import { pendingInteractionPathsAtom } from "@shared/store/pending-interactions-atoms";
 import { recentSessionVisitsAtom } from "@shared/store/recent-sessions-atoms";
 import { runningSessionPathsAtom } from "@shared/store/running-sessions-atoms";
+import { INITIAL_SPACES, MAIN_SPACE, spacesAtom } from "@shared/store/spaces";
 import { useCommandMenuModel } from "./useCommandMenuModel";
 
 function sessionResult(path: string, title: string): DesktopSessionSearchResult {
@@ -92,6 +93,7 @@ beforeEach(() => {
 	store.set(recentSessionVisitsAtom, []);
 	store.set(sessionsMapAtom, new Map());
 	projectSessions.current = [];
+	store.set(spacesAtom, INITIAL_SPACES);
 	Object.defineProperty(window, "vetta", {
 		configurable: true,
 		value: {
@@ -393,4 +395,107 @@ it("does no catalog work while closed but keeps the last results for the closing
 	// 关着时状态变化不触发会话取数。
 	act(() => store.set(runningSessionPathsAtom, new Set(["/w/run.jsonl"])));
 	expect(sessionSearchCalls.at(-1)?.open).toBe(false);
+});
+
+it("labels project rows with their workspace name in the badge", async () => {
+	store.set(spacesAtom, {
+		...INITIAL_SPACES,
+		spaces: [{ id: "work", name: "Workshop", icon: { kind: "solar", value: "folder" } }],
+		projects: { "/w/alpha": "work" },
+	});
+	const { result } = render();
+	act(() => result.current.onQueryChange("alpha"));
+	await waitFor(() => expect(result.current.selectedId).toBe("project:/w/alpha"));
+
+	const items = result.current.groups.flatMap((group) => group.items);
+	// 归属自定义空间的项目行：badge 换成空间名；主空间的项目回落到主空间文案（i18n mock 回显 key）。
+	expect(items.find((item) => item.id === "project:/w/alpha")?.badge).toBe("Workshop");
+	act(() => result.current.onQueryChange("alpine"));
+	await waitFor(() => expect(result.current.selectedId).toBe("project:/w/alpine"));
+	expect(
+		result.current.groups.flatMap((group) => group.items).find((item) => item.id === "project:/w/alpine")?.badge,
+	).toBe("spaces.main");
+});
+
+it("labels session rows with the workspace in the subtitle and reveals the space on activation", async () => {
+	store.set(spacesAtom, {
+		...INITIAL_SPACES,
+		spaces: [{ id: "work", name: "Workshop", icon: { kind: "solar", value: "folder" } }],
+		conversations: { "/w/a.jsonl": "work" },
+	});
+	sessionSearchState.results = [
+		{ ...sessionResult("/w/a.jsonl", "alp talk"), sourceKind: "conversation", sourceCwd: "/chat" },
+	];
+	const { result } = render();
+	act(() => result.current.onQueryChange("alp talk"));
+	await waitFor(() => expect(result.current.groups.some((group) => group.key === "sessions")).toBe(true));
+
+	const row = result.current.groups.flatMap((group) => group.items).find((item) => item.id === "session:/w/a.jsonl");
+	// 会话行的 badge 已被归属/类型占用，空间退到副标题后缀。
+	expect(row?.subtitle).toBe("Workshop");
+
+	act(() => result.current.onActivateItem("session:/w/a.jsonl"));
+	// 全局搜索跨空间：打开前先切到会话归属的空间。
+	expect(store.get(spacesAtom).selected).toBe("work");
+});
+
+it("switches to the owning workspace when activating a project row", async () => {
+	store.set(spacesAtom, {
+		...INITIAL_SPACES,
+		spaces: [{ id: "work", name: "Workshop", icon: { kind: "solar", value: "folder" } }],
+		projects: { "/w/alpha": "work" },
+	});
+	const { result } = render();
+	act(() => result.current.onQueryChange("alpha"));
+	await waitFor(() => expect(result.current.selectedId).toBe("project:/w/alpha"));
+
+	press("enter");
+	expect(store.get(spacesAtom).selected).toBe("work");
+});
+
+it("never annotates or reveals workspaces for team sessions", async () => {
+	Object.defineProperty(window.vetta, "agentTeams", {
+		configurable: true,
+		value: {
+			listSidebarConversations: async () => [
+				{
+					kind: "agent-team",
+					teamId: "t1",
+					teamSessionId: "ts1",
+					coordinationSessionPath: "/w/coord.jsonl",
+					cwd: "/w",
+					memberAvatarUrls: [],
+					sessionTitle: "Team alpha",
+					createdAt: 1,
+					updatedAt: 2,
+					placement: { kind: "default" },
+				},
+			],
+		},
+	});
+	store.set(spacesAtom, {
+		...INITIAL_SPACES,
+		spaces: [{ id: "work", name: "Workshop", icon: { kind: "solar", value: "folder" } }],
+		conversations: { ts1: "work" },
+	});
+	const { result } = render();
+	act(() => result.current.onQueryChange("Team alpha"));
+	await waitFor(() =>
+		expect(result.current.groups.flatMap((group) => group.items).some((item) => item.id === "team-session:ts1")).toBe(
+			true,
+		),
+	);
+
+	const row = result.current.groups.flatMap((group) => group.items).find((item) => item.id === "team-session:ts1");
+	// ADR-0156：团队会话不进空间——归属记录即使存在也不标注、不切换。
+	expect(row?.badge).toBeUndefined();
+	expect(row?.subtitle).toBeUndefined();
+
+	act(() => result.current.onActivateItem("team-session:ts1"));
+	expect(store.get(spacesAtom).selected).toBe(MAIN_SPACE);
+	// 捕获值断言：导航落点本身就是合同。
+	expect(navigate.mock.calls.at(-1)?.[0]).toEqual({
+		to: "/agent-teams/$teamId/sessions/$sessionId",
+		params: { teamId: "t1", sessionId: "ts1" },
+	});
 });
