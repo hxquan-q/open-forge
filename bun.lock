@@ -802,6 +802,20 @@
         "vitest": "^4.1.11",
       },
     },
+    "packages/plugins/presets/eform-demo": {
+      "name": "@vetta/plugin-preset-eform-demo",
+      "version": "0.1.0",
+      "devDependencies": {
+        "@types/node": "^22.10.5",
+        "@vetta-org/plugin-sdk": "workspace:*",
+        "@vetta-org/plugin-vite": "workspace:*",
+        "react": "19.1.1",
+        "react-dom": "19.1.1",
+        "typescript": "^5.9.2",
+        "vite": "^7.1.7",
+        "vitest": "^4.1.11",
+      },
+    },
     "packages/plugins/presets/git": {
       "name": "@vetta/plugin-git",
       "version": "0.2.3",
@@ -3543,6 +3557,8 @@
     "@vetta/plugin-preset-allstar-coding": ["@vetta/plugin-preset-allstar-coding@workspace:packages/plugins/presets/allstar-coding"],
 
     "@vetta/plugin-preset-eform-craft": ["@vetta/plugin-preset-eform-craft@workspace:packages/plugins/presets/eform-craft"],
+
+    "@vetta/plugin-preset-eform-demo": ["@vetta/plugin-preset-eform-demo@workspace:packages/plugins/presets/eform-demo"],
 
     "@vetta/plugin-preset-mes-kit-analysis": ["@vetta/plugin-preset-mes-kit-analysis@workspace:packages/plugins/presets/mes-kit-analysis"],
 

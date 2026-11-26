@@ -1,0 +1,83 @@
+{
+	"id": "eform-demo",
+	"version": "0.1.0",
+	"name": "%plugin.name%",
+	"description": "%plugin.description%",
+	"defaultLocale": "zh",
+	"author": "Vetta",
+	"pluginApiVersion": "^2.11.0",
+	"entry": "dist/mf-manifest.json",
+	"moduleFederation": {
+		"remoteName": "eform_demo",
+		"expose": "./plugin"
+	},
+	"permissions": [],
+	"agent": {
+		"agents": [
+			{
+				"id": "demo",
+				"mode": "coding",
+				"name": "%agent.demo.name%",
+				"description": "%agent.demo.description%",
+				"mentionHandle": "eform-demo",
+				"systemPromptPath": "agent/agents/demo.md"
+			},
+			{
+				"id": "requirements",
+				"mode": "coding",
+				"name": "%agent.requirements.name%",
+				"description": "%agent.requirements.description%",
+				"mentionHandle": "eform-demo-requirements",
+				"systemPromptPath": "agent/agents/requirements.md"
+			},
+			{
+				"id": "prototype",
+				"mode": "coding",
+				"name": "%agent.prototype.name%",
+				"description": "%agent.prototype.description%",
+				"mentionHandle": "eform-demo-prototype",
+				"systemPromptPath": "agent/agents/prototype.md"
+			},
+			{
+				"id": "tester",
+				"mode": "coding",
+				"name": "%agent.tester.name%",
+				"description": "%agent.tester.description%",
+				"mentionHandle": "eform-demo-tester",
+				"systemPromptPath": "agent/agents/tester.md"
+			},
+			{
+				"id": "deployer",
+				"mode": "coding",
+				"name": "%agent.deployer.name%",
+				"description": "%agent.deployer.description%",
+				"mentionHandle": "eform-demo-deployer",
+				"systemPromptPath": "agent/agents/deployer.md"
+			}
+		],
+		"teams": [
+			{
+				"id": "eform-demo-studio",
+				"mode": "coding",
+				"name": "%team.demo.name%",
+				"description": "%team.demo.description%",
+				"workflowPath": "agent/workflows/demo.md",
+				"members": [
+					{ "agent": "demo", "responsibility": "沟通与协助交接，不复审成员产出。" },
+					{
+						"agent": "requirements",
+						"responsibility": "确认列表、表单、字段类型及核心路径。",
+						"instructionsPath": "agent/docs/field-specification.md"
+					},
+					{ "agent": "prototype", "responsibility": "实现 Vue mock 原型与 AIMES 菜单接入。" },
+					{ "agent": "tester", "responsibility": "做必要的构建检查、静态审视和按需单元测试，不操作页面。" },
+					{
+						"agent": "deployer",
+						"responsibility": "按授权集成私有分支，交付完整 CustomDev 前后端及 AIMES 部署文档。",
+						"instructionsPath": "agent/docs/static-delivery.md"
+					}
+				]
+			}
+		]
+	}
+}

@@ -21,6 +21,7 @@
         "browser",
         "build-apple-apps",
         "eform-craft",
+        "eform-demo",
         "mes-kit-analysis"
       ]
     },
@@ -41,6 +42,7 @@
         "browser",
         "build-apple-apps",
         "eform-craft",
+        "eform-demo",
         "mes-kit-analysis"
       ]
     }

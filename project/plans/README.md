@@ -7,6 +7,7 @@ Plan 记录“如何交付 Requirement”，不取代 `docs/adr/`，也不把所
 
 | ID | 名称 | 状态 | 依据 |
 |---|---|---|---|
+| `PLAN-0032` | AIMES 表单演示团队 | verifying | [方案](PLAN-0032-aimes-form-demo-team.md)、[TASK-0494](../tasks/TASK-0494-aimes-form-demo-team.md)；待 Code 会话及 AIMES 菜单实机验收 |
 | `PLAN-0031` | Windows 电脑操作 | verifying | [REQ-0033](../requirements/REQ-0033-windows-computer-use.md)、[方案](PLAN-0031-windows-computer-use.md)、[TASK-0482](../tasks/TASK-0482-windows-computer-use.md)；全局桌面实现与定向合同已落地；全量测试由用户手动执行，真实桌面验收待用户 |
 | `PLAN-0030` | Code 项目 AI 工作区隔离 | verifying | [REQ-0031](../requirements/REQ-0031-code-project-ai-workspace-isolation.md)、[方案](PLAN-0030-code-project-ai-workspace-isolation.md)、[TASK-0479](../tasks/TASK-0479-code-project-ai-workspace-isolation.md)、[ADR-0153](../../docs/adr/0153-code-project-ai-workspace-identity-and-access.md)；工程验证全绿、本地提交未推送，待用户实机验收 |
 | `PLAN-0029` | Desktop 宿主拆分、研发控制器闭环与原生 Sidecar 分工 | in_progress | [方案](PLAN-0029-desktop-host-split-and-native-sidecars.md)、REQ-0002、[RESEARCH-0049](../research/RESEARCH-0049-desktop-host-and-controller-refactor-references.md)；TS 内核 + Go 网络/远程 + Rust 系统能力按基线开启；Phase 0/1 收口（0449–0452、0454–0456 done；0448 真实基线测量待授权），Phase 2 试点与预设目录迁移已集成（0453 verifying、0458 verifying） |
