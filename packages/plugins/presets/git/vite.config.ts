@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import tailwindcss from "@tailwindcss/vite";
 import { vettaPluginFederation } from "@vetta-org/plugin-vite";
 import { defineConfig } from "vite";
@@ -9,6 +10,7 @@ export default defineConfig({
 			name: "git",
 			entry: "./src/index.tsx",
 			hostUi: true,
+			hostThemeUi: true,
 		}),
 	],
 	esbuild: {
