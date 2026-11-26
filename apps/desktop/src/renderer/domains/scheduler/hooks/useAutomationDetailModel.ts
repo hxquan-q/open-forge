@@ -4,6 +4,7 @@ import {
 	confirmDialogAtom,
 	defaultConversationCwdAtom,
 	getProjectDisplayName,
+	openSessionFnRef,
 	projectsAtom,
 	runningTaskIdsAtom,
 } from "@shared/store/atoms";
@@ -13,11 +14,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { automationTaskTone } from "../automation-status";
 import type { SchedulerTaskDraft } from "../components/SchedulerTaskFields";
-import {
-	describeTaskSchedule,
-	getDefaultDailySchedule,
-	scheduleToAutomation,
-} from "../components/schedule-picker/cron-utils";
+import { defaultScheduleFor } from "../components/schedule-picker/automation-schedule";
+import { describeTaskSchedule } from "../components/schedule-picker/cron-utils";
 import { useScheduledTasks } from "./useScheduledTasks";
 
 export interface AutomationDetailModel {
@@ -32,12 +30,15 @@ export interface AutomationDetailModel {
 	readonly statusLabel: string;
 	readonly projectLabel: string | null;
 	readonly scheduleLabel: string;
+	readonly running: boolean;
+	readonly canOpenChat: boolean;
 	readonly onChange: (value: SchedulerTaskDraft) => void;
 	readonly onSubmit: () => void;
 	readonly onDiscard: () => void;
 	readonly onToggleEnabled: () => void;
 	readonly onRunNow: () => void;
 	readonly onDelete: () => void;
+	readonly onOpenChat: () => void;
 }
 
 interface UseAutomationDetailModelOptions {
@@ -86,7 +87,7 @@ export function useAutomationDetailModel({
 					prompt: createInitial?.prompt ?? "",
 					...(createInitial?.runMode !== undefined ? { runMode: createInitial.runMode } : {}),
 					...(createInitial?.sessionPath !== undefined ? { sessionPath: createInitial.sessionPath } : {}),
-					schedule: createInitial?.schedule ?? scheduleToAutomation(getDefaultDailySchedule()),
+					schedule: createInitial?.schedule ?? defaultScheduleFor("daily", Date.now()),
 					enabled: createInitial?.enabled ?? true,
 					executionMode: createInitial?.executionMode ?? "full-access",
 					modelKey: createInitial?.modelKey,
@@ -109,6 +110,10 @@ export function useAutomationDetailModel({
 	const statusLabel = t(`detail.status.${tone}`);
 	const projectLabel = task ? getProjectDisplayName(task.runTarget.projectCwd, defaultCwd) : null;
 	const scheduleLabel = task ? describeTaskSchedule(task, t) : "";
+	const running = task ? runningTaskIds.has(task.id) : false;
+	const canOpenChat = Boolean(
+		task && (task.lastRunAt !== null || (task.runTarget.mode === "same-session" && task.runTarget.sessionPath)),
+	);
 
 	return useMemo(
 		() => ({
@@ -123,6 +128,8 @@ export function useAutomationDetailModel({
 			statusLabel,
 			projectLabel,
 			scheduleLabel,
+			running,
+			canOpenChat,
 			onChange: setDraft,
 			onSubmit: (): void => {
 				if (!canSubmit || submitting) return;
@@ -133,9 +140,7 @@ export function useAutomationDetailModel({
 				const trigger = draft.trigger ?? { type: "cron" as const };
 				const isCronTrigger = trigger.type === "cron";
 				// cron 触发缺 schedule 时按表单展示值（默认每天）落库，与 picker 显示一致。
-				const schedule = isCronTrigger
-					? (draft.schedule ?? scheduleToAutomation(getDefaultDailySchedule()))
-					: undefined;
+				const schedule = isCronTrigger ? (draft.schedule ?? defaultScheduleFor("daily", Date.now())) : undefined;
 				if (isCronTrigger && !schedule) return;
 				const permissionTiers = compactPermissionTiers(draft.permissionTiers);
 				const runTarget = task
@@ -197,7 +202,7 @@ export function useAutomationDetailModel({
 						onClose();
 						onCreated?.(saved);
 					})
-					.catch((e) => setError(e instanceof Error ? e.message : String(e)))
+					.catch((e) => setError(ipcErrorMessage(e)))
 					.finally(() => setSubmitting(false));
 			},
 			onDiscard: (): void => {
@@ -236,9 +241,23 @@ export function useAutomationDetailModel({
 					},
 				});
 			},
+			onOpenChat: (): void => {
+				if (!task || !openSessionFnRef.current) return;
+				const open = openSessionFnRef.current;
+				if (task.runTarget.mode === "same-session" && task.runTarget.sessionPath) {
+					void open(task.runTarget.projectCwd, task.runTarget.sessionPath);
+					return;
+				}
+				// 每次新建会话：打开最近一次有会话的运行。
+				void window.vetta.scheduler.getRecords(task.id).then((records) => {
+					const latest = records.find((record) => record.sessionPath && record.cwd);
+					if (latest?.sessionPath && latest.cwd) void open(latest.cwd, latest.sessionPath);
+				});
+			},
 		}),
 		[
 			canSubmit,
+			canOpenChat,
 			createTask,
 			onCreated,
 			deleteTask,
@@ -249,6 +268,7 @@ export function useAutomationDetailModel({
 			mode,
 			onClose,
 			projectLabel,
+			running,
 			runNow,
 			scheduleLabel,
 			setConfirmDialog,
@@ -277,4 +297,10 @@ function compactPermissionTiers(
 	const entries = Object.entries(tiers).filter(([, enabled]) => enabled === true);
 	if (entries.length === 0) return undefined;
 	return Object.fromEntries(entries) as ScheduledTaskPermissionTiers;
+}
+
+/** IPC 抛回的错误带着「Error invoking remote method …: XxxError:」前缀，只留主进程给的原因。 */
+function ipcErrorMessage(reason: unknown): string {
+	const message = reason instanceof Error ? reason.message : String(reason);
+	return message.replace(/^Error invoking remote method '[^']+': (?:\w*Error: )?/, "");
 }

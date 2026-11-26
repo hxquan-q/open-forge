@@ -1,18 +1,14 @@
 // Modified by The Open Forge contributors.
+
 import type { SessionExecutionMode } from "@shared/store/atoms";
 import { defaultConversationCwdAtom, getProjectDisplayName, projectsAtom } from "@shared/store/atoms";
 import { useAtomValue } from "jotai";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import type { AutomationSchedule, AutomationScheduleKind } from "@/shared/automation";
 import type { SchedulerTaskDraft } from "../components/SchedulerTaskFields";
-import {
-	automationToSchedule,
-	describeAutomationSchedule,
-	describeSchedule,
-	getDefaultDailySchedule,
-	type Schedule,
-	scheduleToAutomation,
-} from "../components/schedule-picker/cron-utils";
+import { defaultScheduleFor, SCHEDULE_KINDS } from "../components/schedule-picker/automation-schedule";
+import { describeSchedule } from "../components/schedule-picker/cron-utils";
 
 export interface WorkDirOption {
 	readonly cwd: string;
@@ -20,26 +16,25 @@ export interface WorkDirOption {
 }
 
 export interface ScheduleModeOption {
-	readonly key: CompactScheduleMode;
+	readonly key: AutomationScheduleKind;
 	readonly label: string;
 }
-
-export type CompactScheduleMode = "once" | "daily" | "interval";
 
 export interface SchedulerTaskFieldsModel {
 	readonly defaultExecutionMode: SessionExecutionMode;
 	readonly executionIcon: string;
 	readonly executionLabel: string;
 	readonly executionMode: SchedulerTaskDraft["executionMode"] | "inherit";
-	readonly mode: CompactScheduleMode;
+	readonly mode: AutomationScheduleKind;
 	readonly namePlaceholderText: string;
 	readonly sandboxUnavailableReason: string | null;
-	readonly schedule: Schedule;
+	readonly schedule: AutomationSchedule;
 	readonly scheduleLabel: string;
 	readonly scheduleModes: readonly ScheduleModeOption[];
 	readonly workDirOptions: readonly WorkDirOption[];
 	readonly onFieldChange: <Key extends keyof SchedulerTaskDraft>(key: Key, nextValue: SchedulerTaskDraft[Key]) => void;
-	readonly onScheduleChange: (nextSchedule: Schedule) => void;
+	readonly onScheduleChange: (nextSchedule: AutomationSchedule) => void;
+	readonly onScheduleModeChange: (kind: AutomationScheduleKind) => void;
 }
 
 interface UseSchedulerTaskFieldsModelOptions {
@@ -48,6 +43,11 @@ interface UseSchedulerTaskFieldsModelOptions {
 	readonly value: SchedulerTaskDraft;
 }
 
+/**
+ * 编辑器直编 v2 判别联合（ADR-0155）：表单状态就是草稿的 schedule，
+ * 不再经中间形状换算——hourly/monthly/custom/非整小时间隔也能按原档位编辑，
+ * 不再落回「每天 9:00」毁损原计划。cron 触发下 schedule 缺省（新建的初稿）按每天默认展示。
+ */
 export function useSchedulerTaskFieldsModel({
 	namePlaceholder,
 	onChange,
@@ -57,16 +57,8 @@ export function useSchedulerTaskFieldsModel({
 	const projects = useAtomValue(projectsAtom);
 	const defaultCwd = useAtomValue(defaultConversationCwdAtom);
 	const projectName = useCallback((cwd: string) => getProjectDisplayName(cwd, defaultCwd), [defaultCwd]);
-	const [schedule, setSchedule] = useState<Schedule>(
-		() => automationToSchedule(value.schedule) ?? getDefaultDailySchedule(),
-	);
 	const [defaultExecutionMode, setDefaultExecutionMode] = useState<SessionExecutionMode>("full-access");
 	const [sandboxUnavailableReason, setSandboxUnavailableReason] = useState<string | null>(null);
-
-	useEffect(() => {
-		const parsed = automationToSchedule(value.schedule);
-		if (parsed && parsed.mode !== "weekly") setSchedule(parsed);
-	}, [value.schedule]);
 
 	useEffect(() => {
 		void window.vetta.config.get().then((config) => {
@@ -97,7 +89,7 @@ export function useSchedulerTaskFieldsModel({
 	}, [defaultCwd, projects, projectName, value.cwd, t]);
 
 	return useMemo(() => {
-		const mode = schedule.mode === "weekly" ? "daily" : schedule.mode;
+		const schedule = value.schedule ?? defaultScheduleFor("daily", Date.now());
 		const executionMode = value.executionMode ?? "inherit";
 
 		return {
@@ -117,27 +109,23 @@ export function useSchedulerTaskFieldsModel({
 								mode: defaultExecutionMode === "sandbox" ? t("form.sandbox") : t("form.fullAccess"),
 							}),
 			executionMode,
-			mode,
+			mode: schedule.kind,
 			namePlaceholderText: namePlaceholder ?? t("form.namePlaceholder"),
 			sandboxUnavailableReason,
 			schedule,
-			scheduleLabel: value.schedule ? describeAutomationSchedule(value.schedule, t) : describeSchedule(schedule, t),
-			scheduleModes: [
-				{ key: "once", label: t("scheduleMode.once") },
-				{ key: "daily", label: t("scheduleMode.daily") },
-				{ key: "interval", label: t("scheduleMode.interval") },
-			],
+			scheduleLabel: describeSchedule(schedule, t),
+			scheduleModes: SCHEDULE_KINDS.map((kind) => ({ key: kind, label: t(`scheduleMode.${kind}`) })),
 			workDirOptions,
 			onFieldChange: <Key extends keyof SchedulerTaskDraft>(key: Key, nextValue: SchedulerTaskDraft[Key]): void => {
 				onChange({ ...value, [key]: nextValue });
 			},
-			onScheduleChange: (nextSchedule: Schedule): void => {
-				setSchedule(nextSchedule);
-				onChange({
-					...value,
-					schedule: scheduleToAutomation(nextSchedule),
-				});
+			onScheduleChange: (nextSchedule: AutomationSchedule): void => {
+				onChange({ ...value, schedule: nextSchedule });
+			},
+			onScheduleModeChange: (kind: AutomationScheduleKind): void => {
+				if (kind === schedule.kind) return;
+				onChange({ ...value, schedule: defaultScheduleFor(kind, Date.now(), schedule) });
 			},
 		};
-	}, [defaultExecutionMode, namePlaceholder, onChange, sandboxUnavailableReason, schedule, t, value, workDirOptions]);
+	}, [defaultExecutionMode, namePlaceholder, onChange, sandboxUnavailableReason, t, value, workDirOptions]);
 }

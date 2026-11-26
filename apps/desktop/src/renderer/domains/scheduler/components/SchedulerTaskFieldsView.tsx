@@ -2,24 +2,22 @@
 import { SkillPromptArea } from "@domains/conversation/components/SkillPromptArea";
 import { ModelSelect } from "@shared/components/ModelSelect";
 import type { ScheduledTaskTrigger } from "@shared/store/atoms";
+import type { AutomationMonthDay, AutomationSchedule } from "@/shared/automation";
+import { AUTOMATION_INTERVAL_MAX_MINUTES } from "@/shared/automation";
 import { Popover, PopoverContent, PopoverTrigger } from "@vetta-org/ui";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
 import { useSchedulerPermissionTiersModel } from "../hooks/useSchedulerPermissionTiersModel";
-import type {
-	CompactScheduleMode,
-	SchedulerTaskFieldsModel,
-} from "../hooks/useSchedulerTaskFieldsModel";
+import type { SchedulerTaskFieldsModel } from "../hooks/useSchedulerTaskFieldsModel";
 import {
-	getDefaultDailySchedule,
-	getDefaultIntervalSchedule,
-	getDefaultOnceSchedule,
-	type DailySchedule,
-	type IntervalSchedule,
-	type OnceSchedule,
-	type Schedule,
-} from "./schedule-picker/cron-utils";
+	CRON_FIELDS,
+	type CronFieldSpec,
+	formatCronField,
+	pad2,
+	parseCronField,
+	splitCron,
+} from "./schedule-picker/automation-schedule";
 import type { SchedulerTaskDraft } from "./SchedulerTaskFields";
 import { SchedulerPermissionTiersView } from "./SchedulerPermissionTiersView";
 
@@ -51,17 +49,6 @@ export interface SchedulerTaskFieldsViewProps extends SchedulerTaskFieldsModel {
 	readonly value: SchedulerTaskDraft;
 }
 
-function getDefaultSchedule(mode: CompactScheduleMode): Schedule {
-	switch (mode) {
-		case "once":
-			return getDefaultOnceSchedule();
-		case "daily":
-			return getDefaultDailySchedule();
-		case "interval":
-			return getDefaultIntervalSchedule();
-	}
-}
-
 export function SchedulerTaskFieldsView({
 	defaultExecutionMode,
 	executionIcon,
@@ -80,6 +67,7 @@ export function SchedulerTaskFieldsView({
 	workDirOptions,
 	onFieldChange,
 	onScheduleChange,
+	onScheduleModeChange,
 }: SchedulerTaskFieldsViewProps): JSX.Element {
 	const { t } = useTranslation("automation");
 	const [workDirPopoverOpen, setWorkDirPopoverOpen] = useState(false);
@@ -223,12 +211,12 @@ export function SchedulerTaskFieldsView({
 						</button>
 					</PopoverTrigger>
 					<PopoverContent align="start" className="w-72 p-3">
-						<div className="mb-2.5 flex gap-1">
+						<div className="mb-2.5 grid grid-cols-4 gap-1">
 							{scheduleModes.map((scheduleMode) => (
 								<button
 									key={scheduleMode.key}
 									type="button"
-									onClick={() => onScheduleChange(getDefaultSchedule(scheduleMode.key))}
+									onClick={() => onScheduleModeChange(scheduleMode.key)}
 									className={`flex-1 rounded-md px-2 py-1 text-[11px] font-medium transition-colors ${
 										mode === scheduleMode.key
 											? "bg-primary/10 text-primary"
@@ -239,15 +227,7 @@ export function SchedulerTaskFieldsView({
 								</button>
 							))}
 						</div>
-						{mode === "once" && (
-							<OnceEditor schedule={schedule as OnceSchedule} onChange={onScheduleChange} />
-						)}
-						{mode === "daily" && (
-							<DailyEditor schedule={schedule as DailySchedule} onChange={onScheduleChange} />
-						)}
-						{mode === "interval" && (
-							<IntervalEditor schedule={schedule as IntervalSchedule} onChange={onScheduleChange} />
-						)}
+						<KindEditor schedule={schedule} onChange={onScheduleChange} />
 					</PopoverContent>
 				</Popover>
 				) : (
@@ -325,103 +305,302 @@ export function SchedulerTaskFieldsView({
 	);
 }
 
-function OnceEditor({
-	schedule,
-	onChange,
-}: {
-	readonly schedule: OnceSchedule;
-	readonly onChange: (schedule: OnceSchedule) => void;
-}): JSX.Element {
-	const value = `${schedule.year}-${String(schedule.month).padStart(2, "0")}-${String(schedule.day).padStart(2, "0")}T${String(schedule.hour).padStart(2, "0")}:${String(schedule.minute).padStart(2, "0")}`;
+const editorInputClass =
+	// border-transparent 而非 border-none：无效 cron 需要叠 border-destructive 色，border-none 会把边框样式压掉。
+	"h-9 rounded-lg border border-transparent bg-muted px-3 text-sm text-foreground focus:outline-none [color-scheme:dark]";
 
-	return (
-		<input
-			type="datetime-local"
-			value={value}
-			onChange={(event) => {
-				const date = new Date(event.target.value);
-				if (Number.isNaN(date.getTime())) return;
-				onChange({
-					...schedule,
-					year: date.getFullYear(),
-					month: date.getMonth() + 1,
-					day: date.getDate(),
-					hour: date.getHours(),
-					minute: date.getMinutes(),
-				});
-			}}
-			className="h-9 rounded-lg border-none bg-muted px-3 text-sm text-foreground focus:outline-none [color-scheme:dark]"
-		/>
-	);
+const editorNumberClass =
+	"h-9 w-16 rounded-lg border-none bg-muted px-2 text-center text-sm text-foreground focus:outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none";
+
+function chipClassName(selected: boolean): string {
+	return `flex h-7 min-w-7 items-center justify-center rounded-md px-1.5 text-[12px] tabular-nums transition-colors ${
+		selected ? "bg-primary/15 text-primary" : "bg-muted/50 text-muted-foreground hover:text-foreground"
+	}`;
 }
 
-function DailyEditor({
+/** 弹层内按档位展开的编辑器：直编 v2 判别联合，不再有中间形状。 */
+function KindEditor({
 	schedule,
 	onChange,
 }: {
-	readonly schedule: DailySchedule;
-	readonly onChange: (schedule: DailySchedule) => void;
+	readonly schedule: AutomationSchedule;
+	readonly onChange: (schedule: AutomationSchedule) => void;
 }): JSX.Element {
-	const timeValue = `${String(schedule.hour).padStart(2, "0")}:${String(schedule.minute).padStart(2, "0")}`;
+	const { t } = useTranslation("automation");
+	switch (schedule.kind) {
+		case "once": {
+			const date = new Date(schedule.at);
+			const value = `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}T${pad2(date.getHours())}:${pad2(date.getMinutes())}`;
+			return (
+				<input
+					type="datetime-local"
+					aria-label={t("form.time")}
+					value={value}
+					onChange={(event) => {
+						const next = new Date(event.target.value);
+						if (!Number.isNaN(next.getTime())) onChange({ kind: "once", at: next.getTime() });
+					}}
+					className={editorInputClass}
+				/>
+			);
+		}
+		case "hourly":
+			return (
+				<label className="flex items-center gap-2 text-[12px] text-muted-foreground">
+					{t("form.atMinutePrefix")}
+					<input
+						type="number"
+						min={0}
+						max={59}
+						aria-label={t("form.minuteLabel")}
+						value={schedule.minute}
+						onChange={(event) => {
+							const minute = Number.parseInt(event.target.value, 10);
+							if (minute >= 0 && minute <= 59) onChange({ kind: "hourly", minute });
+						}}
+						className={editorNumberClass}
+					/>
+					{t("form.atMinuteSuffix")}
+				</label>
+			);
+		case "daily":
+			return <TimeEditor hour={schedule.hour} minute={schedule.minute} onChange={(time) => onChange({ ...schedule, ...time })} />;
+		case "weekly": {
+			const names = t("schedule.weekdayNames", { returnObjects: true }) as string[];
+			// 周一在前，符合日常习惯；取值仍是 cron 的 0 = 周日。
+			const order = [1, 2, 3, 4, 5, 6, 0];
+			return (
+				<div className="space-y-2">
+					<div role="group" aria-label={t("form.weekdays")} className="flex flex-wrap gap-1">
+						{order.map((day) => {
+							const selected = schedule.weekdays.includes(day);
+							return (
+								<button
+									key={day}
+									type="button"
+									aria-pressed={selected}
+									onClick={() =>
+										onChange({
+											...schedule,
+											weekdays: selected
+												? schedule.weekdays.filter((value) => value !== day)
+												: [...schedule.weekdays, day],
+										})
+									}
+									className={chipClassName(selected)}
+								>
+									{names[day]}
+								</button>
+							);
+						})}
+					</div>
+					<TimeEditor hour={schedule.hour} minute={schedule.minute} onChange={(time) => onChange({ ...schedule, ...time })} />
+				</div>
+			);
+		}
+		case "monthly": {
+			const toggle = (day: AutomationMonthDay): void => {
+				const selected = schedule.days.includes(day);
+				onChange({
+					...schedule,
+					days: selected ? schedule.days.filter((value) => value !== day) : [...schedule.days, day],
+				});
+			};
+			return (
+				<div className="space-y-2">
+					<div role="group" aria-label={t("form.monthDays")} className="grid grid-cols-7 gap-1">
+						{Array.from({ length: 31 }, (_, index) => index + 1).map((day) => (
+							<button
+								key={day}
+								type="button"
+								aria-pressed={schedule.days.includes(day)}
+								onClick={() => toggle(day)}
+								className={chipClassName(schedule.days.includes(day))}
+							>
+								{day}
+							</button>
+						))}
+						<button
+							type="button"
+							aria-pressed={schedule.days.includes("last")}
+							onClick={() => toggle("last")}
+							className={`${chipClassName(schedule.days.includes("last"))} col-span-3`}
+						>
+							{t("schedule.lastDay")}
+						</button>
+					</div>
+					<TimeEditor hour={schedule.hour} minute={schedule.minute} onChange={(time) => onChange({ ...schedule, ...time })} />
+					<p className="text-[11px] text-muted-foreground/70">{t("form.monthlyShortMonthHint")}</p>
+				</div>
+			);
+		}
+		case "interval":
+			return (
+				<div>
+					<label className="flex items-center gap-2 text-[12px] text-muted-foreground">
+						{t("form.intervalPrefix")}
+						<input
+							type="number"
+							min={1}
+							max={AUTOMATION_INTERVAL_MAX_MINUTES}
+							aria-label={t("form.intervalLabel")}
+							value={schedule.everyMinutes}
+							onChange={(event) => {
+								const everyMinutes = Number.parseInt(event.target.value, 10);
+								// 改了间隔就从现在重新起算，下一次在 n 分钟后。
+								if (everyMinutes >= 1 && everyMinutes <= AUTOMATION_INTERVAL_MAX_MINUTES) {
+									onChange({ kind: "interval", everyMinutes, startAt: Date.now() });
+								}
+							}}
+							className={editorNumberClass}
+						/>
+						{t("form.intervalSuffix")}
+					</label>
+					<p className="mt-1.5 text-[11px] text-muted-foreground/70">{t("form.intervalHint")}</p>
+				</div>
+			);
+		case "custom":
+			return (
+				<div>
+					<CustomCronEditor cron={schedule.cron} onChange={(cron) => onChange({ kind: "custom", cron })} />
+					<p className="mt-1.5 text-[11px] text-muted-foreground/70">{t("form.cronHint")}</p>
+				</div>
+			);
+	}
+}
 
+function TimeEditor({
+	hour,
+	minute,
+	onChange,
+}: {
+	readonly hour: number;
+	readonly minute: number;
+	readonly onChange: (time: { hour: number; minute: number }) => void;
+}): JSX.Element {
+	const { t } = useTranslation("automation");
 	return (
 		<input
 			type="time"
-			value={timeValue}
+			aria-label={t("form.time")}
+			value={`${pad2(hour)}:${pad2(minute)}`}
 			onChange={(event) => {
-				const [hour, minute] = event.target.value.split(":").map(Number);
-				if (hour != null && minute != null) onChange({ ...schedule, hour, minute });
+				const [nextHour, nextMinute] = event.target.value.split(":").map(Number);
+				if (Number.isInteger(nextHour) && Number.isInteger(nextMinute)) {
+					onChange({ hour: nextHour, minute: nextMinute });
+				}
 			}}
-			className="h-9 rounded-lg border-none bg-muted px-3 text-sm text-foreground focus:outline-none [color-scheme:dark]"
+			className={editorInputClass}
 		/>
 	);
 }
 
-function IntervalEditor({
-	schedule,
+/** 五段可视化多选与 cron 文本实时互相同步；文本里有可视化表达不了的写法时，对应段只读。 */
+function CustomCronEditor({
+	cron,
 	onChange,
 }: {
-	readonly schedule: IntervalSchedule;
-	readonly onChange: (schedule: IntervalSchedule) => void;
+	readonly cron: string;
+	readonly onChange: (cron: string) => void;
 }): JSX.Element {
 	const { t } = useTranslation("automation");
-	const [unit, setUnit] = useState<"hours" | "days">(() =>
-		schedule.intervalHours >= 24 && schedule.intervalHours % 24 === 0 ? "days" : "hours",
-	);
-	const displayValue = unit === "days" ? schedule.intervalHours / 24 : schedule.intervalHours;
+	const [text, setText] = useState(cron);
+	useEffect(() => setText(cron), [cron]);
+	const fields = splitCron(cron);
+	const valid = fields.length === 5;
 
 	return (
-		<div className="flex items-center gap-2">
-			<span className="text-sm text-muted-foreground">{t("form.every")}</span>
+		<div className="space-y-2">
+			<div className="flex flex-wrap gap-1.5">
+				{CRON_FIELDS.map((spec, index) => (
+					<CronFieldPicker
+						key={spec.key}
+						spec={spec}
+						field={valid ? fields[index] : "*"}
+						onChange={(nextField) => {
+							const next = valid ? [...fields] : ["*", "*", "*", "*", "*"];
+							next[index] = nextField;
+							onChange(next.join(" "));
+						}}
+					/>
+				))}
+			</div>
 			<input
-				type="number"
-				value={displayValue}
-				min={1}
+				type="text"
+				spellCheck={false}
+				aria-label={t("form.cronExpression")}
+				value={text}
 				onChange={(event) => {
-					const value = Number.parseInt(event.target.value, 10);
-					if (!Number.isNaN(value) && value >= 1) {
-						onChange({ ...schedule, intervalHours: unit === "days" ? value * 24 : value });
-					}
+					setText(event.target.value);
+					if (splitCron(event.target.value).length === 5) onChange(event.target.value.trim());
 				}}
-				className="h-9 w-16 rounded-lg border-none bg-muted px-2 text-center text-sm text-foreground focus:outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+				className={`${editorInputClass} w-full font-mono ${valid ? "" : "border-destructive/60"}`}
+				placeholder="0 9 * * 1-5"
 			/>
-			<select
-				value={unit}
-				onChange={(event) => {
-					const nextUnit = event.target.value as "hours" | "days";
-					setUnit(nextUnit);
-					if (nextUnit === "days") {
-						onChange({ ...schedule, intervalHours: Math.max(1, Math.round(schedule.intervalHours / 24)) * 24 });
-					} else {
-						onChange({ ...schedule, intervalHours: Math.max(1, schedule.intervalHours) });
-					}
-				}}
-				className="h-9 rounded-lg border-none bg-muted px-2 pr-6 text-sm text-foreground focus:outline-none"
-			>
-				<option value="hours">{t("form.unitHours")}</option>
-				<option value="days">{t("form.unitDays")}</option>
-			</select>
 		</div>
+	);
+}
+
+function CronFieldPicker({
+	spec,
+	field,
+	onChange,
+}: {
+	readonly spec: CronFieldSpec;
+	readonly field: string;
+	readonly onChange: (field: string) => void;
+}): JSX.Element {
+	const { t } = useTranslation("automation");
+	const parsed = parseCronField(field, spec);
+	const values = Array.from({ length: spec.max - spec.min + 1 }, (_, index) => spec.min + index);
+	const names = spec.key === "weekday" ? (t("schedule.weekdayNames", { returnObjects: true }) as string[]) : null;
+	const summary = parsed === null ? t("form.cronAny") : field;
+
+	return (
+		<Popover>
+			<PopoverTrigger asChild>
+				<button
+					type="button"
+					disabled={parsed === undefined}
+					title={parsed === undefined ? t("form.cronTextOnly") : undefined}
+					className="flex h-7 items-center gap-1.5 rounded-md border border-border/50 bg-background/60 px-2 text-[12px] text-muted-foreground hover:text-foreground disabled:opacity-60"
+				>
+					<span>{t(`form.cronField.${spec.key}`)}</span>
+					<span className="max-w-[90px] truncate font-mono text-foreground">{summary}</span>
+				</button>
+			</PopoverTrigger>
+			<PopoverContent align="start" className="w-72 p-2">
+				<button
+					type="button"
+					aria-pressed={parsed === null}
+					onClick={() => onChange("*")}
+					className={`${chipClassName(parsed === null)} mb-1.5 w-full`}
+				>
+					{t("form.cronAny")}
+				</button>
+				<div className={`grid gap-1 ${spec.key === "minute" ? "grid-cols-10" : "grid-cols-7"}`}>
+					{values.map((value) => {
+						const selected = parsed?.has(value) ?? false;
+						return (
+							<button
+								key={value}
+								type="button"
+								aria-pressed={selected}
+								onClick={() => {
+									const next = new Set(parsed ?? []);
+									if (selected) next.delete(value);
+									else next.add(value);
+									onChange(formatCronField(next.size > 0 ? next : null));
+								}}
+								className={chipClassName(selected)}
+							>
+								{names ? names[value] : value}
+							</button>
+						);
+					})}
+				</div>
+			</PopoverContent>
+		</Popover>
 	);
 }
 

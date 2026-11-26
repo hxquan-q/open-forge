@@ -54,6 +54,7 @@ export function AutomationDetailPane({
 								type="button"
 								variant="ghost"
 								size="sm"
+								disabled={model.running}
 								onClick={model.onRunNow}
 							>
 								{t("detail.runNow")}
@@ -93,6 +94,17 @@ export function AutomationDetailPane({
 				<>
 					{model.error ? (
 						<p className="flex-1 truncate text-[12px] text-destructive">{model.error}</p>
+					) : null}
+					{model.mode === "edit" ? (
+						<Button
+							type="button"
+							variant="outline"
+							size="sm"
+							disabled={!model.canOpenChat}
+							onClick={model.onOpenChat}
+						>
+							{t("detail.openChat")}
+						</Button>
 					) : null}
 					<Button type="button" variant="ghost" size="sm" onClick={model.onDiscard}>
 						{model.mode === "edit" ? t("detail.discard") : t("detail.cancel")}

@@ -55,6 +55,9 @@
 		"apps/desktop/src/renderer/domains/settings/components/usage/UsageTicketDialog.tsx": {
 			"D03": 1
 		},
+		"apps/desktop/src/renderer/domains/scheduler/components/SchedulerTaskFieldsView.tsx": {
+			"D03": 6
+		},
 		"packages/theme-ui/src/markdown/CodeBlock.tsx": {
 			"D05": 1
 		}

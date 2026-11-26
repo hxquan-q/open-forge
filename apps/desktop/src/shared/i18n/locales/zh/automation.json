@@ -29,7 +29,6 @@
 			}
 		}
 	},
-
 	"detail": {
 		"namePlaceholderEdit": "任务名称",
 		"namePlaceholderNew": "新建任务",
@@ -44,6 +43,7 @@
 		"save": "保存",
 		"saving": "保存中…",
 		"create": "创建",
+		"openChat": "打开聊天",
 		"status": {
 			"active": "已开启",
 			"running": "运行中",
@@ -68,9 +68,28 @@
 		"inherit": "跟随默认（{{mode}}）",
 		"sandbox": "沙盒",
 		"sandboxUnavailable": "{{platform}} 沙盒不可用：{{reason}}",
-		"every": "每隔",
-		"unitHours": "小时",
-		"unitDays": "天",
+		"time": "时间",
+		"atMinutePrefix": "每小时的第",
+		"atMinuteSuffix": "分",
+		"intervalPrefix": "每隔",
+		"intervalSuffix": "分钟执行一次",
+		"intervalHint": "从保存时起算；修改间隔会从修改时重新起算",
+		"intervalLabel": "间隔",
+		"minuteLabel": "分钟",
+		"weekdays": "星期",
+		"monthDays": "日期",
+		"monthlyShortMonthHint": "当月没有所选日期时（如 2 月 30 日）当月跳过；需要月底执行请选「最后一天」",
+		"cronExpression": "cron 表达式",
+		"cronHint": "分 时 日 月 星期，按本机时区；可直接编辑表达式，与上方选择实时同步",
+		"cronAny": "任意",
+		"cronTextOnly": "表达式里有无法可视化的写法，请直接编辑表达式",
+		"cronField": {
+			"minute": "分",
+			"hour": "时",
+			"day": "日",
+			"month": "月",
+			"weekday": "星期"
+		},
 		"permissionTiers": {
 			"title": "无人值守授权",
 			"description": "按能力放行低风险操作；未授权项仍会弹出审批。默认全部关闭，行为与改前一致。",
@@ -105,19 +124,34 @@
 	},
 	"scheduleMode": {
 		"once": "单次",
+		"interval": "间隔",
+		"hourly": "每小时",
 		"daily": "每天",
-		"interval": "间隔"
+		"weekly": "每周",
+		"monthly": "每月",
+		"custom": "自定义"
 	},
 	"schedule": {
-		"once": "{{year}}年{{month}}月{{day}}日 {{time}} 执行一次",
-		"daily": "每天 {{time}} 执行",
-		"weekly": "每{{days}} {{time}} 执行",
-		"intervalOne": "每隔 1 小时执行",
-		"interval": "每隔 {{hours}} 小时执行",
+		"once": "{{date}} {{time}} 执行一次",
+		"hourly": "每小时第 {{minute}} 分",
+		"daily": "每天 {{time}}",
+		"weekly": "每{{days}} {{time}}",
+		"monthly": "每月 {{days}} {{time}}",
+		"monthDay": "{{day}} 日",
+		"lastDay": "最后一天",
+		"custom": "自定义",
 		"weekdayJoin": "、",
-		"weekdayNames": ["周日", "周一", "周二", "周三", "周四", "周五", "周六"],
-		"intervalMinutes": "每隔 {{minutes}} 分钟执行",
-		"customFallback": "自定义计划"
+		"weekdayNames": [
+			"周日",
+			"周一",
+			"周二",
+			"周三",
+			"周四",
+			"周五",
+			"周六"
+		],
+		"intervalMinutes": "每隔 {{minutes}} 分钟",
+		"intervalHours": "每隔 {{hours}} 小时"
 	},
 	"list": {
 		"filter": {
@@ -169,7 +203,13 @@
 		"running": "执行中",
 		"aborted": "已中止",
 		"skipped": "已跳过",
-		"missed": "已错过"
+		"missed": "已错过",
+		"reason": {
+			"previous-running": "上次执行还没结束",
+			"app-not-running": "应用未运行",
+			"system-sleep": "系统休眠"
+		},
+		"missedMany": "错过 {{times}} 次，至 {{until}} · {{reason}}"
 	},
 	"trigger": {
 		"cron": "按计划",

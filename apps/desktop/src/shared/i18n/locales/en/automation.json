@@ -29,7 +29,6 @@
 			}
 		}
 	},
-
 	"detail": {
 		"namePlaceholderEdit": "Task name",
 		"namePlaceholderNew": "New task",
@@ -44,6 +43,7 @@
 		"save": "Save",
 		"saving": "Saving…",
 		"create": "Create",
+		"openChat": "Open chat",
 		"status": {
 			"active": "Active",
 			"running": "Running",
@@ -68,9 +68,28 @@
 		"inherit": "Follow default ({{mode}})",
 		"sandbox": "sandbox",
 		"sandboxUnavailable": "{{platform}} sandbox unavailable: {{reason}}",
-		"every": "Every",
-		"unitHours": "hours",
-		"unitDays": "days",
+		"time": "Time",
+		"atMinutePrefix": "At minute",
+		"atMinuteSuffix": "of every hour",
+		"intervalPrefix": "Every",
+		"intervalSuffix": "minutes",
+		"intervalHint": "Counted from when you save; changing the interval restarts the count",
+		"intervalLabel": "Interval",
+		"minuteLabel": "Minute",
+		"weekdays": "Weekdays",
+		"monthDays": "Days",
+		"monthlyShortMonthHint": "Months without the chosen date (e.g. Feb 30) are skipped; pick \"Last day\" to run at month end",
+		"cronExpression": "Cron expression",
+		"cronHint": "minute hour day month weekday, in local time; edit the expression directly and it stays in sync with the pickers",
+		"cronAny": "Any",
+		"cronTextOnly": "This part uses syntax the pickers can't show; edit the expression directly",
+		"cronField": {
+			"minute": "Min",
+			"hour": "Hour",
+			"day": "Day",
+			"month": "Month",
+			"weekday": "Weekday"
+		},
 		"permissionTiers": {
 			"title": "Unattended permissions",
 			"description": "Allow low-risk capabilities without prompts. Unauthorized actions still ask for approval. All off by default — same as before.",
@@ -105,19 +124,34 @@
 	},
 	"scheduleMode": {
 		"once": "Once",
+		"interval": "Interval",
+		"hourly": "Hourly",
 		"daily": "Daily",
-		"interval": "Interval"
+		"weekly": "Weekly",
+		"monthly": "Monthly",
+		"custom": "Custom"
 	},
 	"schedule": {
-		"once": "{{month}}/{{day}}/{{year}} {{time}}, once",
+		"once": "Once at {{date}} {{time}}",
+		"hourly": "Hourly at :{{minute}}",
 		"daily": "Daily at {{time}}",
-		"weekly": "Weekly on {{days}} at {{time}}",
-		"intervalOne": "Every hour",
-		"interval": "Every {{hours}} hours",
+		"weekly": "Every {{days}} at {{time}}",
+		"monthly": "Monthly on {{days}} at {{time}}",
+		"monthDay": "day {{day}}",
+		"lastDay": "Last day",
+		"custom": "Custom",
 		"weekdayJoin": ", ",
-		"weekdayNames": ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
-		"intervalMinutes": "Every {{minutes}} minutes",
-		"customFallback": "Custom schedule"
+		"weekdayNames": [
+			"Sun",
+			"Mon",
+			"Tue",
+			"Wed",
+			"Thu",
+			"Fri",
+			"Sat"
+		],
+		"intervalMinutes": "Every {{minutes}} min",
+		"intervalHours": "Every {{hours}} h"
 	},
 	"list": {
 		"filter": {
@@ -169,7 +203,13 @@
 		"running": "Running",
 		"aborted": "Aborted",
 		"skipped": "Skipped",
-		"missed": "Missed"
+		"missed": "Missed",
+		"reason": {
+			"previous-running": "The previous run was still going",
+			"app-not-running": "The app wasn't running",
+			"system-sleep": "The computer was asleep"
+		},
+		"missedMany": "Missed {{times}} times, until {{until}} · {{reason}}"
 	},
 	"trigger": {
 		"cron": "On schedule",

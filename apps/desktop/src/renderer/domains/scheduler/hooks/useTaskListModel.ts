@@ -51,8 +51,9 @@ export function useTaskListModel({ selectedTaskId, filter, search }: UseTaskList
 			}
 			return true;
 		});
+		const sorted = [...filtered].sort((a, b) => b.createdAt - a.createdAt);
 		return {
-			items: filtered.map((task) => {
+			items: sorted.map((task) => {
 				const tone = automationTaskTone(task, runningTaskIds.has(task.id));
 				const schedule = scheduleLabel(task, t);
 				const lastRun =
@@ -67,8 +68,15 @@ export function useTaskListModel({ selectedTaskId, filter, search }: UseTaskList
 					isSelected: selectedTaskId === task.id,
 				};
 			}),
+			// 一个任务都没有时由页面展示推荐模板；有任务但被筛掉时才提示。
 			emptyLabel:
-				filtered.length === 0 ? (normalizedSearch ? t("list.emptySearch") : t("list.emptyFilter")) : undefined,
+				tasks.length === 0
+					? undefined
+					: sorted.length === 0
+						? normalizedSearch
+							? t("list.emptySearch")
+							: t("list.emptyFilter")
+						: undefined,
 		};
 	}, [filter, runningTaskIds, search, selectedTaskId, t, tasks]);
 }
