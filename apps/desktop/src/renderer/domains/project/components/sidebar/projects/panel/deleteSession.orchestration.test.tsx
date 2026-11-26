@@ -2,9 +2,9 @@
 // Copyright The Open Forge contributors.
 import {
 	activeSessionAtom,
+	automationSessionLinksAtom,
 	batchProjectsAtom,
 	confirmDialogAtom,
-	scheduledSessionPathsAtom,
 	sessionsMapAtom,
 } from "@shared/store/atoms";
 import { toastsAtom } from "@shared/store/toast-atoms";
@@ -204,7 +204,7 @@ describe("会话删除编排组合链（BUG-0191）", () => {
 		store.set(activeSessionAtom, null);
 		store.set(confirmDialogAtom, null);
 		store.set(batchProjectsAtom, []);
-		store.set(scheduledSessionPathsAtom, new Set<string>());
+		store.set(automationSessionLinksAtom, new Map());
 		store.set(sessionsMapAtom, new Map([["/repo/a", [SESSION_ROW] as never]]));
 	});
 
@@ -259,7 +259,10 @@ describe("会话删除编排组合链（BUG-0191）", () => {
 		const pending = deferred();
 		sessionDelete.mockReturnValueOnce(pending.promise);
 		schedulerDeleteRecords.mockRejectedValueOnce(new Error("scheduler gone"));
-		getDefaultStore().set(scheduledSessionPathsAtom, new Set([SESSION_PATH]));
+		getDefaultStore().set(
+			automationSessionLinksAtom,
+			new Map([[SESSION_PATH, { sessionPath: SESSION_PATH, taskId: "task-1", taskName: "任务一", mode: "new-session" }]]),
+		);
 		const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
 
 		await confirmDeletion(MENU_SESSION);

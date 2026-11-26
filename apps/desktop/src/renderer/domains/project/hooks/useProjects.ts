@@ -1,5 +1,6 @@
 // Modified by The Open Forge contributors.
 import {
+	automationSessionLinksAtom,
 	DEFAULT_CONVERSATION_PROJECT_NAME,
 	defaultConversationCwdAtom,
 	defaultImConversationCwdAtom,
@@ -96,7 +97,7 @@ export function useProjectActions() {
 	const setProjectsInitialized = useSetAtom(projectsInitializedAtom);
 	const setSessionsMap = useSetAtom(sessionsMapAtom);
 	const setSessionLoadingCwds = useSetAtom(sessionLoadingCwdsAtom);
-	const setScheduledSessionPaths = useSetAtom(scheduledSessionPathsAtom);
+	const setAutomationSessionLinks = useSetAtom(automationSessionLinksAtom);
 	const setScheduledRecordsVersion = useSetAtom(scheduledRecordsVersionAtom);
 	const setExpandedProjects = useSetAtom(expandedProjectsAtom);
 	const removePinnedSessions = useSetAtom(removePinnedSessionsAtom);
@@ -426,9 +427,11 @@ export function useProjectActions() {
 			if (store.get(scheduledSessionPathsAtom).has(sessionPath)) {
 				try {
 					await window.vetta.scheduler.deleteRecordsBySession(sessionPath);
-					setScheduledSessionPaths((prev) => {
+					// 归属链接一并摘除（scheduledSessionPaths 由其派生）：被删会话回到
+					// 普通会话的样子，不再折叠进会话组。
+					setAutomationSessionLinks((prev) => {
 						if (!prev.has(sessionPath)) return prev;
-						const next = new Set(prev);
+						const next = new Map(prev);
 						next.delete(sessionPath);
 						return next;
 					});
@@ -441,7 +444,7 @@ export function useProjectActions() {
 			}
 			return { cleanupFailed };
 		},
-		[removePinnedSessions, setSessionsMap, store, setScheduledSessionPaths, setScheduledRecordsVersion],
+		[removePinnedSessions, setSessionsMap, store, setAutomationSessionLinks, setScheduledRecordsVersion],
 	);
 
 	/**

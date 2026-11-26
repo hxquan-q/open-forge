@@ -84,6 +84,8 @@ export function useAutomationDetailModel({
 					name: createInitial?.name ?? "",
 					cwd: createInitial?.cwd ?? fallbackCwd,
 					prompt: createInitial?.prompt ?? "",
+					...(createInitial?.runMode !== undefined ? { runMode: createInitial.runMode } : {}),
+					...(createInitial?.sessionPath !== undefined ? { sessionPath: createInitial.sessionPath } : {}),
 					schedule: createInitial?.schedule ?? scheduleToAutomation(getDefaultDailySchedule()),
 					enabled: createInitial?.enabled ?? true,
 					executionMode: createInitial?.executionMode ?? "full-access",
@@ -136,9 +138,14 @@ export function useAutomationDetailModel({
 					: undefined;
 				if (isCronTrigger && !schedule) return;
 				const permissionTiers = compactPermissionTiers(draft.permissionTiers);
-				const runTarget =
-					task && task.runTarget.mode === "same-session"
+				const runTarget = task
+					? task.runTarget.mode === "same-session"
 						? { ...task.runTarget, projectCwd: cwd }
+						: ({ mode: "new-session", projectCwd: cwd } as const)
+					: // 新建：右键「基于此会话创建自动化」带 same-session 绑定预填；
+						// 绑定会话必须存在，缺失时退回每次新建会话。
+						draft.runMode === "same-session" && draft.sessionPath
+						? ({ mode: "same-session", projectCwd: cwd, sessionPath: draft.sessionPath } as const)
 						: ({ mode: "new-session", projectCwd: cwd } as const);
 				setSubmitting(true);
 				const action = task

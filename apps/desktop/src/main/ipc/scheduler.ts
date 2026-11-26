@@ -29,6 +29,7 @@ const CHANNELS = {
 	GET_RECORDS: "vetta:scheduler:get-records",
 	GET_RUNNING: "vetta:scheduler:get-running",
 	GET_SESSION_PATHS: "vetta:scheduler:get-session-paths",
+	GET_SESSION_LINKS: "vetta:scheduler:get-session-links",
 	DELETE_RECORD_BY_SESSION: "vetta:scheduler:delete-record-by-session",
 	RUN_NOW: "vetta:scheduler:run-now",
 	ABORT: "vetta:scheduler:abort",
@@ -122,6 +123,10 @@ export function registerSchedulerIpc(webContents: WebContents, service: Schedule
 		return loadAllScheduledSessionPaths();
 	});
 
+	ipcMain.handle(CHANNELS.GET_SESSION_LINKS, async () => {
+		return await service.listSessionLinks();
+	});
+
 	ipcMain.handle(CHANNELS.DELETE_RECORD_BY_SESSION, async (_, sessionPath: string) => {
 		return deleteRecordsBySessionPath(sessionPath);
 	});
@@ -184,6 +189,7 @@ export function registerSchedulerIpc(webContents: WebContents, service: Schedule
 		ipcMain.removeHandler(CHANNELS.GET_RECORDS);
 		ipcMain.removeHandler(CHANNELS.GET_RUNNING);
 		ipcMain.removeHandler(CHANNELS.GET_SESSION_PATHS);
+		ipcMain.removeHandler(CHANNELS.GET_SESSION_LINKS);
 		ipcMain.removeHandler(CHANNELS.DELETE_RECORD_BY_SESSION);
 		ipcMain.removeHandler(CHANNELS.ABORT);
 		ipcMain.removeHandler(CHANNELS.RUN_NOW);

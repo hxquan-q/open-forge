@@ -1,8 +1,13 @@
 // Modified by The Open Forge contributors.
 import type { SessionContextMenuSession } from "@shared/store/atoms";
 import {
+	automationCreateRequestAtom,
+	batchProjectsAtom,
+	conversationBucketCwd,
 	conversationTagEditorAtom,
 	conversationTagsAtom,
+	defaultConversationCwdAtom,
+	NO_MESSAGES_SENTINEL,
 	pinnedSessionPathsAtom,
 	renamingSessionPathAtom,
 	runningSessionPathsAtom,
@@ -36,10 +41,22 @@ export function useSessionContextMenuModel(
 	const runningSessionPaths = useAtomValue(runningSessionPathsAtom);
 	const tags = useAtomValue(conversationTagsAtom);
 	const openTagEditor = useSetAtom(conversationTagEditorAtom);
+	const requestAutomation = useSetAtom(automationCreateRequestAtom);
+	const defaultCwd = useAtomValue(defaultConversationCwdAtom);
+	const batchProjects = useAtomValue(batchProjectsAtom);
 	const pinned = pinnedSessionPaths.has(session.path);
 	// BUG-0195：数据文件缺失的团队会话只保留「删除」——打开/改名/归档/置顶/打标签
 	// 对该条目必败或没有意义，删除链路已有降级（BUG-0087），是唯一出口。
 	const teamDataFileMissing = isAgentTeamSession(session) && session.dataFileMissing === true;
+	// 只有能续写的普通会话才能作为自动化的绑定会话：团队会话由团队编排，不接受外部投递；
+	// 批量任务的会话由批量项目编排，新建自动化绑定过去同样没有意义。
+	const batchOwned = batchProjects.some((project) => project.tasks.some((task) => task.sessionPath === session.path));
+	const canCreateAutomation =
+		allowMutations &&
+		!teamDataFileMissing &&
+		!isAgentTeamSession(session) &&
+		!batchOwned &&
+		session.access?.resume !== false;
 	// 归档只隐藏侧栏行、随时可恢复，团队会话与普通会话同等对待；运行中的会话另需先停止。
 	const canArchive = allowMutations && !teamDataFileMissing;
 	const archiveDisabled = runningSessionPaths.has(session.path);
@@ -61,6 +78,30 @@ export function useSessionContextMenuModel(
 		setSessionPinned({ path: session.path, pinned: !pinned });
 		onClose();
 	}, [onClose, pinned, session.path, setSessionPinned]);
+
+	const automationItem = useMemo<ContextMenuNode | undefined>(() => {
+		if (!canCreateAutomation) return undefined;
+		return {
+			kind: "item",
+			id: "create-automation",
+			label: t("contextMenu.createAutomation"),
+			iconClassName: "icon-[solar--clock-circle-linear]",
+			onSelect: () => {
+				// 绑定「同一个会话」：首次运行就在该会话里续写，与上游 f940900be 语义一致。
+				// prompt 预填会话首条消息（该会话最初的指令，适合按周期重跑）；占位或为空则留空。
+				const firstMessage = session.firstMessage?.trim() ?? "";
+				requestAutomation({
+					name: sessionDisplayLabel(session),
+					prompt: firstMessage === NO_MESSAGES_SENTINEL ? "" : firstMessage,
+					cwd: conversationBucketCwd(session.cwd, defaultCwd),
+					runMode: "same-session",
+					sessionPath: session.path,
+				});
+				void navigate({ to: "/automation" });
+				onClose();
+			},
+		};
+	}, [canCreateAutomation, defaultCwd, navigate, onClose, requestAutomation, session, t]);
 
 	const handleArchive = useCallback(() => {
 		// 归档可逆且不留数据痕迹，因此不弹确认框；落点信息（名字、路径、团队身份）随快照一起存，
@@ -85,7 +126,7 @@ export function useSessionContextMenuModel(
 		});
 	}, [navigate, onClose, session, t]);
 
-	const extraItems = useMemo<readonly ContextMenuNode[] | undefined>(() => {
+	const tagItems = useMemo<readonly ContextMenuNode[] | undefined>(() => {
 		if (!canTag) return undefined;
 		const assigned = new Set(conversationTagIds(tags, session.path));
 		const items: ContextMenuNode[] = [
@@ -143,6 +184,12 @@ export function useSessionContextMenuModel(
 			},
 		];
 	}, [canTag, onClose, openTagEditor, session.path, t, tags]);
+
+	// 标签子菜单与「创建自动化」并列挂进更多菜单；两者都不可用时整段省略。
+	const extraItems = useMemo<readonly ContextMenuNode[] | undefined>(() => {
+		const items = [...(tagItems ?? []), ...(automationItem ? [automationItem] : [])];
+		return items.length > 0 ? items : undefined;
+	}, [automationItem, tagItems]);
 
 	return {
 		archiveDisabled,

@@ -1,6 +1,6 @@
 // Modified by The Open Forge contributors.
 // @vitest-environment jsdom
-import { confirmDialogAtom } from "@shared/store/atoms";
+import { automationSessionLinksAtom, confirmDialogAtom } from "@shared/store/atoms";
 import { toastsAtom } from "@shared/store/toast-atoms";
 import { createStore, getDefaultStore, Provider } from "jotai";
 import type { PropsWithChildren } from "react";
@@ -125,6 +125,56 @@ describe("useProjectsPanelMenusModel", () => {
 		expect(deleteSession).not.toHaveBeenCalled();
 		expect(forgetConversations).not.toHaveBeenCalled();
 		expect(forgetArchivedSessions).not.toHaveBeenCalled();
+	});
+
+	it("删除被 same-session 自动化绑定的会话时，确认文案追加暂停提示（TASK-0521 / 上游 b67141f40）", () => {
+		const store = createStore();
+		store.set(
+			automationSessionLinksAtom,
+			new Map([
+				[
+					teamSession.path,
+					{ sessionPath: teamSession.path, taskId: "task-1", taskName: "每日巡检", mode: "same-session" as const },
+				],
+			]),
+		);
+		const wrapper = ({ children }: PropsWithChildren): JSX.Element => <Provider store={store}>{children}</Provider>;
+		const { result } = renderHook(() => useProjectsPanelMenusModel(model(vi.fn())), { wrapper });
+
+		act(() => result.current.actions.deleteSession(teamSession));
+
+		const message = store.get(confirmDialogAtom)?.message ?? "";
+		expect(message).toContain("sidebar.dialogs.deleteSessionMessage");
+		expect(message).toContain("sidebar.dialogs.deleteBoundSessionHint");
+	});
+
+	it("会话归属 new-session 运行记录时不加暂停提示：删掉一次运行不暂停自动化", () => {
+		const store = createStore();
+		store.set(
+			automationSessionLinksAtom,
+			new Map([
+				[
+					teamSession.path,
+					{ sessionPath: teamSession.path, taskId: "task-1", taskName: "每日巡检", mode: "new-session" as const },
+				],
+			]),
+		);
+		const wrapper = ({ children }: PropsWithChildren): JSX.Element => <Provider store={store}>{children}</Provider>;
+		const { result } = renderHook(() => useProjectsPanelMenusModel(model(vi.fn())), { wrapper });
+
+		act(() => result.current.actions.deleteSession(teamSession));
+
+		expect(store.get(confirmDialogAtom)?.message).toBe("sidebar.dialogs.deleteSessionMessage");
+	});
+
+	it("会话不在自动化归属里时不加暂停提示", () => {
+		const store = createStore();
+		const wrapper = ({ children }: PropsWithChildren): JSX.Element => <Provider store={store}>{children}</Provider>;
+		const { result } = renderHook(() => useProjectsPanelMenusModel(model(vi.fn())), { wrapper });
+
+		act(() => result.current.actions.deleteSession(teamSession));
+
+		expect(store.get(confirmDialogAtom)?.message).toBe("sidebar.dialogs.deleteSessionMessage");
 	});
 
 	it("asks for the archive passphrase before exporting project sessions, then reports the count via toast", async () => {

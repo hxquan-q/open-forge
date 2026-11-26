@@ -4,6 +4,7 @@ import { classifyTeamSessionRenameFailure } from "@shared/agent-teams/team-sessi
 import type { DefaultConversationFilter } from "@shared/store/atoms";
 import {
 	archivedSessionPathsAtom,
+	automationSessionLinksAtom,
 	conversationFilterTagId,
 	conversationTagsAtom,
 	pinnedSessionPathsAtom,
@@ -18,6 +19,12 @@ import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { type ConversationTagsSnapshot, conversationTagIds } from "../../../../shared/conversation-tags";
+import {
+	type AutomationGroupRowFields,
+	automationGroupContaining,
+	collapseAutomationSessions,
+	expandAutomationGroupRows,
+} from "../services/automation-session-groups";
 import {
 	isSidebarConversationActive,
 	type SidebarConversationInfo,
@@ -46,7 +53,7 @@ function sessionTagColors(
 	return colors.length > 0 ? colors : undefined;
 }
 
-export interface DefaultSessionListItemView {
+export interface DefaultSessionListItemView extends AutomationGroupRowFields {
 	key: string;
 	path: string;
 	label: string;
@@ -115,9 +122,17 @@ export function useDefaultSessionListModel({
 		[unarchivedSessions, tagFilterId, tags],
 	);
 	const tagColorById = useMemo(() => new Map(tags.tags.map((tag) => [tag.id, tag.color])), [tags.tags]);
+	// 同一自动化「每次新建会话」产生的会话折叠成一行，排序与「显示更多」都按折叠后的行数算。
+	const automationLinks = useAtomValue(automationSessionLinksAtom);
+	const collapsed = useMemo(
+		() => collapseAutomationSessions(taggedSessions, automationLinks, pinnedSessionPaths),
+		[automationLinks, pinnedSessionPaths, taggedSessions],
+	);
+	const [expandedTaskIds, setExpandedTaskIds] = useState<ReadonlySet<string>>(() => new Set<string>());
 	const ordering = useMemo(
-		() => buildSidebarSessionOrdering(taggedSessions, pinnedSessionPaths, DEFAULT_VISIBLE_DEFAULT_SESSIONS, showAll),
-		[pinnedSessionPaths, taggedSessions, showAll],
+		() =>
+			buildSidebarSessionOrdering(collapsed.sessions, pinnedSessionPaths, DEFAULT_VISIBLE_DEFAULT_SESSIONS, showAll),
+		[collapsed.sessions, pinnedSessionPaths, showAll],
 	);
 	const revealedActiveSessionRef = useRef<string | null>(null);
 	const [prevFilter, setPrevFilter] = useState(filter);
@@ -137,26 +152,34 @@ export function useDefaultSessionListModel({
 			return;
 		}
 		if (revealedActiveSessionRef.current === activeConversationKey) return;
-		const activeIndex = ordering.all.findIndex(
-			(session) => sidebarConversationKey(session) === activeConversationKey,
+		// 正在看的会话藏在会话组里时展开该组，并以组的位置判断是否要「显示更多」。
+		const groupTaskId = activeTeamSessionId
+			? undefined
+			: automationGroupContaining(collapsed.groupsByHeadPath, activeSessionPath);
+		const groupHeadPath = groupTaskId
+			? [...collapsed.groupsByHeadPath].find(([, group]) => group.taskId === groupTaskId)?.[0]
+			: undefined;
+		const activeIndex = ordering.all.findIndex((session) =>
+			groupHeadPath ? session.path === groupHeadPath : sidebarConversationKey(session) === activeConversationKey,
 		);
 		if (activeIndex < 0) return;
 		revealedActiveSessionRef.current = activeConversationKey;
-		const collapsed = buildSidebarSessionOrdering(
-			taggedSessions,
+		if (groupTaskId) setExpandedTaskIds((prev) => (prev.has(groupTaskId) ? prev : new Set(prev).add(groupTaskId)));
+		const collapsedOrdering = buildSidebarSessionOrdering(
+			collapsed.sessions,
 			pinnedSessionPaths,
 			DEFAULT_VISIBLE_DEFAULT_SESSIONS,
 			false,
 		);
-		if (activeIndex >= collapsed.visible.length) setShowAll(true);
-	}, [activeConversationKey, ordering.all, pinnedSessionPaths, taggedSessions]);
+		if (activeIndex >= collapsedOrdering.visible.length) setShowAll(true);
+	}, [activeConversationKey, activeSessionPath, activeTeamSessionId, collapsed, ordering.all, pinnedSessionPaths]);
 
 	const isClaw = filter === "claw";
 
 	// t 在 changeLanguage 后可能保持同一引用；读 i18n.language 强制语言切换时重算未命名团队会话文案。
-	const allViews: DefaultSessionListItemView[] = useMemo(() => {
+	const { allViews, visibleKeys } = useMemo(() => {
 		void i18n.language;
-		const next = ordering.all.map((session) => {
+		const toView = (session: SidebarConversationInfo): DefaultSessionListItemView => {
 			const identity = sidebarConversationIdentity(session, {
 				conversationLabel: session.kind === "conversation" ? sessionDisplayLabel(session) : undefined,
 				untitledTeamLabel: t("sidebar.session.untitledTeam"),
@@ -184,12 +207,39 @@ export function useDefaultSessionListModel({
 				...(session.kind === "agent-team" && session.dataFileMissing ? { dimmed: true } : {}),
 				session,
 			};
-		});
-		// 未变的行还回旧引用，让下游行组件的 memo 生效。
-		return reuseUnchangedSessionViews(viewCacheRef.current, next);
+		};
+		// 展开后的组员行复用占位行的视图对象：视图按 path 缓存，
+		// 同一会话先在 all 与 visible 两处投影时只算一次。
+		const viewsByPath = new Map<string, DefaultSessionListItemView>();
+		const cachedToView = (session: SidebarConversationInfo): DefaultSessionListItemView => {
+			const cached = viewsByPath.get(session.path);
+			if (cached) return cached;
+			const view = toView(session);
+			viewsByPath.set(session.path, view);
+			return view;
+		};
+		const rows = expandAutomationGroupRows(
+			ordering.all.map(cachedToView),
+			collapsed.groupsByHeadPath,
+			expandedTaskIds,
+			cachedToView,
+		);
+		const visibleRows = expandAutomationGroupRows(
+			ordering.visible.map(cachedToView),
+			collapsed.groupsByHeadPath,
+			expandedTaskIds,
+			cachedToView,
+		);
+		return {
+			// 未变的行还回旧引用，让下游行组件的 memo 生效。
+			allViews: reuseUnchangedSessionViews(viewCacheRef.current, rows),
+			visibleKeys: new Set(visibleRows.map((row) => row.key)),
+		};
 	}, [
 		activeSessionPath,
 		activeTeamSessionId,
+		collapsed.groupsByHeadPath,
+		expandedTaskIds,
 		i18n.language,
 		renamingSessionPath,
 		runningSessionPaths,
@@ -197,14 +247,16 @@ export function useDefaultSessionListModel({
 		scheduledBasenames,
 		scheduledSessionPaths,
 		ordering.all,
+		ordering.visible,
 		tagColorById,
 		tagFilterId,
 		tags,
 		t,
 	]);
 
-	const visiblePaths = useMemo(() => new Set(ordering.visible.map(({ path }) => path)), [ordering.visible]);
-	const visibleViews = allViews.filter(({ path }) => visiblePaths.has(path));
+	// 组头与组员共用 path 来源时 key 才唯一（组头 key 带 automation-group: 前缀），
+	// 可见性必须按 key 判定——按 path 会把「仅组头占位可见」误伤成「整组组员都显示」。
+	const visibleViews = allViews.filter(({ key }) => visibleKeys.has(key));
 
 	// per-row 回调必须引用稳定，否则行组件的 memo 永远命中不了。
 	const openContextMenu = useCallback(
@@ -251,6 +303,14 @@ export function useDefaultSessionListModel({
 		[cwd, onSelectSession],
 	);
 	const toggleShowAll = useCallback(() => setShowAll((value) => !value), []);
+	// 组头点击即展开/收起整组运行；展开状态只留在本组件内存，切换档位后重来。
+	const toggleGroup = useCallback((taskId: string) => {
+		setExpandedTaskIds((prev) => {
+			const next = new Set(prev);
+			if (!next.delete(taskId)) next.add(taskId);
+			return next;
+		});
+	}, []);
 
 	const emptyLabels = tagFilterId
 		? {
@@ -289,6 +349,7 @@ export function useDefaultSessionListModel({
 			rename,
 			renameDone,
 			select,
+			toggleGroup,
 			toggleShowAll,
 		},
 	};

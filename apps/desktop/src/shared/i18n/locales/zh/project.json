@@ -76,7 +76,8 @@
 			"clearClawMessage": "将删除 {{count}} 条 Claw 会话记录（保留产物），此操作不可恢复。",
 			"clearConfirm": "清空",
 			"deleteSessionFailedToast": "会话删除失败，请稍后重试。",
-			"deleteSessionPartialCleanupToast": "会话已删除，部分关联信息未清理。"
+			"deleteSessionPartialCleanupToast": "会话已删除，部分关联信息未清理。",
+			"deleteBoundSessionHint": "自动化「{{task}}」绑定在这个会话上，删除后它会暂停，需要重新选择会话才能继续运行。"
 		},
 		"time": {
 			"justNow": "刚刚",
@@ -129,7 +130,8 @@
 			"new": "新标签…",
 			"manage": "管理标签…"
 		},
-		"exportMigration": "导出项目迁移包…"
+		"exportMigration": "导出项目迁移包…",
+		"createAutomation": "基于此会话创建自动化"
 	},
 	"projectExport": {
 		"passphrasePrompt": "为归档设置口令（可留空，将打包该项目全部会话）",

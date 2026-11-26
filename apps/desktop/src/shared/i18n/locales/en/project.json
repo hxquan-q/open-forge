@@ -76,7 +76,8 @@
 			"clearClawMessage": "This will delete {{count}} Claw record(s) while keeping artifacts. This cannot be undone.",
 			"clearConfirm": "Clear",
 			"deleteSessionFailedToast": "Failed to delete the session. Please try again later.",
-			"deleteSessionPartialCleanupToast": "The session was deleted, but some related information could not be cleaned up."
+			"deleteSessionPartialCleanupToast": "The session was deleted, but some related information could not be cleaned up.",
+			"deleteBoundSessionHint": "The automation \"{{task}}\" runs in this session. Deleting it pauses that automation until you pick another session."
 		},
 		"time": {
 			"justNow": "now",
@@ -129,7 +130,8 @@
 			"new": "New tag…",
 			"manage": "Manage tags…"
 		},
-		"exportMigration": "Export Project Migration Package…"
+		"exportMigration": "Export Project Migration Package…",
+		"createAutomation": "Create automation from this session"
 	},
 	"projectExport": {
 		"passphrasePrompt": "Set a passphrase for the archive (optional; includes every session in this project)",

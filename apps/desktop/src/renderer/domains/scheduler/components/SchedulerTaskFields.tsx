@@ -16,6 +16,9 @@ export interface SchedulerTaskDraft {
 	schedule?: AutomationSchedule;
 	enabled?: boolean;
 	cwd?: string;
+	/** 新建时的运行策略；same-session 绑定既有会话（编辑态沿用任务自身 runTarget，不走这里）。 */
+	runMode?: "new-session" | "same-session";
+	sessionPath?: string;
 	modelKey?: string | null;
 	executionMode?: ExecutionModeOverride;
 	skill?: SelectedSkill | null;

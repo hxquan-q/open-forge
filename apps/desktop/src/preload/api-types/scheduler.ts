@@ -1,5 +1,6 @@
 // Modified by The Open Forge contributors.
 import type {
+	AutomationSessionLink,
 	AutomationTaskCreateRequest,
 	AutomationTaskEvent,
 	AutomationTaskUpdateRequest,
@@ -11,6 +12,7 @@ export type {
 	AutomationPermissionTiers,
 	AutomationRunTarget,
 	AutomationSchedule,
+	AutomationSessionLink,
 	AutomationTaskCreateRequest,
 	AutomationTaskEvent,
 	AutomationTaskTrigger,
@@ -77,6 +79,8 @@ export interface DesktopSchedulerApi {
 	getRunningTaskIds(): Promise<string[]>;
 	/** 所有定时任务执行过的 session 路径（侧栏据此识别定时 session）。 */
 	getScheduledSessionPaths(): Promise<string[]>;
+	/** 会话与自动化的归属（侧栏折叠会话组 / 定时标记 / 删除提示用）。 */
+	getSessionLinks(): Promise<AutomationSessionLink[]>;
 	/** 按 session 路径删除其执行记录，返回受影响的 taskId 列表。 */
 	deleteRecordsBySession(sessionPath: string): Promise<string[]>;
 	runTaskNow(id: string): Promise<void>;

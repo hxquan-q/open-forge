@@ -14,6 +14,7 @@ import {
 import type { RuntimeHost } from "@vetta/runtime-core";
 import {
 	type AutomationPermissionTiers,
+	type AutomationSessionLink,
 	type AutomationSkillRef,
 	type AutomationTaskCreateRequest,
 	type AutomationTaskInput,
@@ -33,6 +34,7 @@ import {
 	deleteRecordsBySessionPaths,
 	deleteTaskRecords,
 	generateId,
+	loadAutomationSessionLinks,
 	loadRecords,
 	loadTasks,
 	mutateTasks,
@@ -280,6 +282,11 @@ export class SchedulerService {
 
 	async listTasks(): Promise<ScheduledTask[]> {
 		return await loadTasks();
+	}
+
+	/** 会话与自动化的归属（记录驱动 new-session + same-session 当前绑定），供侧栏折叠会话组。 */
+	async listSessionLinks(): Promise<AutomationSessionLink[]> {
+		return await loadAutomationSessionLinks(await loadTasks());
 	}
 
 	async getTask(taskId: string): Promise<ScheduledTask> {

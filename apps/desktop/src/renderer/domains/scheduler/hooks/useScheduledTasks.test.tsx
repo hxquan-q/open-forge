@@ -26,6 +26,7 @@ describe("useScheduledTasks", () => {
 			getRecords: vi.fn(async () => []),
 			getRunningTaskIds: vi.fn(async () => []),
 			getScheduledSessionPaths: vi.fn(async () => []),
+			getSessionLinks: vi.fn(async () => []),
 			deleteRecordsBySession: vi.fn(async () => []),
 			runTaskNow: vi.fn(async () => undefined),
 			abortTask: vi.fn(async () => undefined),
