@@ -316,6 +316,8 @@ export const sessionContextMenuAtom = atom<{
 	allowMutations: boolean;
 	/** 仅侧边栏下方的普通会话可打标签；项目内会话没有承载标签筛选的入口。 */
 	canTag: boolean;
+	/** 会话归属独立于项目（默认区独立会话）才能单独移动工作空间；项目内会话随项目走。 */
+	independent: boolean;
 } | null>(null);
 export const renamingSessionPathAtom = atom<string | null>(null);
 export const projectContextMenuAtom = atom<{ x: number; y: number; project: Project } | null>(null);

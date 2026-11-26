@@ -399,6 +399,7 @@
 	"spaces": {
 		"main": "Main workspace",
 		"more": "More workspaces",
+		"move": "Move to workspace",
 		"settings": "Settings",
 		"settingsTitle": "Workspaces",
 		"spaceSettings": "Workspace settings",

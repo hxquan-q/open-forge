@@ -6,6 +6,7 @@ import {
 	workspaceModeByProjectAtom,
 	writeWorkspaceMode,
 } from "@shared/store/atoms";
+import { spaceOf, spacesAtom } from "@shared/store/spaces";
 import { useAtomValue, useSetAtom } from "jotai";
 import { useCallback, useMemo, useState } from "react";
 import {
@@ -40,13 +41,24 @@ export interface NewSessionProjectSelectionModel {
  * 也就不会触发按 cwd 隔离的草稿作用域切换，用户已经打好的正文不会被换走。
  */
 export function useNewSessionProjectSelection(routeCwd: string): NewSessionProjectSelectionModel {
-	const projects = useAtomValue(projectsAtom);
+	const allProjects = useAtomValue(projectsAtom);
+	const spaces = useAtomValue(spacesAtom);
+	// 选择器只列当前工作空间的项目；「对话」（默认区）每个空间都可用。
+	const projects = useMemo(
+		() =>
+			allProjects.filter(
+				(project) =>
+					project.isDefault || spaceOf(spaces, { kind: "project", key: project.cwd }) === spaces.selected,
+			),
+		[allProjects, spaces],
+	);
 	const defaultConversationCwd = useAtomValue(defaultConversationCwdAtom);
 	// undefined = 用户还没碰过选择器，选中值由路由推导（项目列表异步补齐时名字也跟着修正）。
 	const [override, setOverride] = useState<ProjectSelection | undefined>(undefined);
-	// 路由 cwd 变了就是换了一次「新会话入口」，本地覆盖作废，重新按入口推导。
-	const [overrideCwd, setOverrideCwd] = useState(routeCwd);
-	const effectiveOverride = overrideCwd === routeCwd ? override : undefined;
+	// 路由 cwd 或工作空间变了就是换了一次「新会话入口」，本地覆盖作废，重新按入口推导。
+	const scope = `${spaces.selected}:${routeCwd}`;
+	const [overrideScope, setOverrideScope] = useState(scope);
+	const effectiveOverride = overrideScope === scope ? override : undefined;
 
 	const selection = useMemo(
 		() =>
@@ -62,16 +74,17 @@ export function useNewSessionProjectSelection(routeCwd: string): NewSessionProje
 	);
 
 	const takenNames = useMemo(
-		() => projects.map((project) => project.name).filter((name): name is string => Boolean(name)),
-		[projects],
+		// 判重不分空间：项目全仓共用一套登记，名字冲突不分空间照样发生。
+		() => allProjects.map((project) => project.name).filter((name): name is string => Boolean(name)),
+		[allProjects],
 	);
 
 	const setSelection = useCallback(
 		(next: ProjectSelection) => {
-			setOverrideCwd(routeCwd);
+			setOverrideScope(scope);
 			setOverride(next);
 		},
-		[routeCwd],
+		[scope],
 	);
 
 	const setWorkspaceModes = useSetAtom(workspaceModeByProjectAtom);

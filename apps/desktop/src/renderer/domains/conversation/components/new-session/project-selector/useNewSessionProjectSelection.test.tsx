@@ -12,6 +12,7 @@ import {
 	workspaceModeByProjectAtom,
 	writeWorkspaceMode,
 } from "@shared/store/atoms";
+import { INITIAL_SPACES, spacesAtom } from "@shared/store/spaces";
 import { act, renderHook } from "@testing-library/react";
 import { createStore, Provider } from "jotai";
 import type { JSX, ReactNode } from "react";
@@ -127,5 +128,78 @@ describe("useNewSessionProjectSelection", () => {
 	it("takenNames 覆盖全部项目名，重名判断不漏掉默认与批量项目", () => {
 		const { result } = renderSelection(DEFAULT_CWD);
 		expect(result.current.takenNames).toEqual(["对话", "Alpha", "批量"]);
+	});
+
+	describe("工作空间过滤", () => {
+		const WORK_SPACE = { id: "work", name: "工作", icon: { kind: "solar", value: "code" } } as const;
+
+		function assignToWork(store: ReturnType<typeof createStore>) {
+			store.set(spacesAtom, {
+				...INITIAL_SPACES,
+				spaces: [WORK_SPACE],
+				selected: "work",
+				projects: { "/w/alpha": "work" },
+			});
+		}
+
+		it("自定义空间下可选列表只含该空间归属的项目，默认「对话」豁免可用", () => {
+			const { store, result } = renderSelection(DEFAULT_CWD);
+			act(() => assignToWork(store));
+			// alpha 归属 work 可见；主空间的项目此时不在列表里。
+			expect(result.current.options).toEqual([{ cwd: "/w/alpha", name: "Alpha" }]);
+
+			act(() =>
+				store.set(projectsAtom, [
+					...PROJECTS,
+					{ cwd: "/w/main-only", name: "主空间项目", sessionCount: 0, type: "normal" } as Project,
+				]),
+			);
+			expect(result.current.options).toEqual([{ cwd: "/w/alpha", name: "Alpha" }]);
+		});
+
+		it("工作空间过滤不影响判重：takenNames 始终覆盖全部项目", () => {
+			const { store, result } = renderSelection(DEFAULT_CWD);
+			act(() => assignToWork(store));
+			act(() =>
+				store.set(projectsAtom, [
+					...PROJECTS,
+					{ cwd: "/w/main-only", name: "主空间项目", sessionCount: 0, type: "normal" } as Project,
+				]),
+			);
+			expect(result.current.takenNames).toEqual(["对话", "Alpha", "批量", "主空间项目"]);
+		});
+
+		it("切换工作空间后本地覆盖作废，重新按入口推导", () => {
+			const { store, result } = renderSelection("/w/alpha");
+			act(() => assignToWork(store));
+			expect(result.current.selection).toEqual({ kind: "project", cwd: "/w/alpha", name: "Alpha" });
+
+			act(() => result.current.selectProject(null));
+			expect(result.current.selection).toBeNull();
+
+			// 切回主空间：alpha 不属于主空间，覆盖作废后按入口推导——
+			// 入口项目不在本空间，用户不应被静默塞进一个看不见的项目。
+			act(() =>
+				store.set(spacesAtom, { ...store.get(spacesAtom), selected: "main" }),
+			);
+			// 注：入口推导基于路由 cwd 本身，空间过滤只收窄可选列表；alpha 不在主空间的
+			// 过滤结果里，名字查不到注册名，回落 basename——这正是「覆盖已作废」的可观察证据。
+			expect(result.current.selection).toEqual({ kind: "project", cwd: "/w/alpha", name: "alpha" });
+		});
+
+		it("同一空间内不切换时覆盖保持有效（scope 未变）", () => {
+			const { store, result } = renderSelection("/w/alpha");
+			act(() => assignToWork(store));
+			act(() => result.current.selectProject(null));
+			expect(result.current.selection).toBeNull();
+			// 归属记录变动（例如别处移动了项目）不重置用户的选择。
+			act(() =>
+				store.set(spacesAtom, {
+					...store.get(spacesAtom),
+					projects: { "/w/alpha": "work", "/w/else": "work" },
+				}),
+			);
+			expect(result.current.selection).toBeNull();
+		});
 	});
 });

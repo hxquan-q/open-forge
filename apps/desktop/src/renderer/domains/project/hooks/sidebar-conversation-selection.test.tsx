@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 // @vitest-environment jsdom
 import { runningSessionPathsAtom, sessionContextMenuAtom } from "@shared/store/atoms";
 import { createStore, Provider } from "jotai";
@@ -154,6 +155,8 @@ describe("sidebar conversation selection", () => {
 			allowMutations: true,
 			// 下方对话列表里的 Team 会话与普通会话一样可打标签。
 			canTag: true,
+			// 默认区会话独立于项目归属；Team 行的「不可移动」由菜单渲染层按 kind 门控。
+			independent: true,
 		});
 	});
 
@@ -193,7 +196,33 @@ describe("sidebar conversation selection", () => {
 			allowMutations: true,
 			// 项目内的会话行没有承载标签筛选的入口，不给打标。
 			canTag: false,
+			independent: false,
 		});
+	});
+
+	it("claw 档的会话不属于任何工作空间：context menu 不带移动资格（independent=false）", () => {
+		const store = createStore();
+		const { result } = renderHook(
+			() =>
+				useDefaultSessionListModel({
+					activeSessionPath: "",
+					activeTeamSessionId: "",
+					cwd: ordinarySession.cwd,
+					filter: "claw",
+					onRenameSession: noop,
+					onSelectSession: noop,
+					sessions: [ordinarySession],
+				}),
+			{ wrapper: ({ children }) => <Provider store={store}>{children}</Provider> },
+		);
+		act(() =>
+			result.current.actions.openContextMenu(
+				{ clientX: 10, clientY: 10 } as React.MouseEvent,
+				ordinarySession,
+			),
+		);
+
+		expect(store.get(sessionContextMenuAtom)?.independent).toBe(false);
 	});
 
 	it("renames a Team session through the Team service from either sidebar placement", async () => {

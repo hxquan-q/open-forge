@@ -267,6 +267,8 @@ export function useDefaultSessionListModel({
 				session,
 				allowMutations: !isClaw,
 				canTag: !isClaw,
+				// 项目会话跟随项目归属工作空间，不能单独移动；claw 会话不属于任何空间。
+				independent: !isClaw,
 			});
 		},
 		[isClaw, setContextMenu],

@@ -1,6 +1,7 @@
 // Modified by The Open Forge contributors.
 // @vitest-environment jsdom
 import { confirmDialogAtom, migrationImportWizardAtom } from "@shared/store/atoms";
+import { INITIAL_SPACES, spacesAtom } from "@shared/store/spaces";
 import { act, renderHook } from "@testing-library/react";
 import { getDefaultStore } from "jotai";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -107,10 +108,52 @@ describe("useAddProjectMenuModel 导入项目", () => {
 		navigate.mockClear();
 		getDefaultStore().set(confirmDialogAtom, null);
 		getDefaultStore().set(migrationImportWizardAtom, null);
+		getDefaultStore().set(spacesAtom, INITIAL_SPACES);
 		installVettaBridge({
 			project: { import: projectImport },
 			sessionArchive: { previewMigration },
 		});
+	});
+
+	it("zip 项目包导入成功：新项目归属点击「导入项目」时所在的空间", async () => {
+		getDefaultStore().set(spacesAtom, {
+			...INITIAL_SPACES,
+			spaces: [{ id: "work", name: "工作", icon: { kind: "solar", value: "code" } }],
+			selected: "work",
+		});
+		const { result } = renderHook(() => useAddProjectMenuModel());
+
+		await clickImportProject(result);
+
+		expect(getDefaultStore().get(spacesAtom).projects["C:/work/proj"]).toBe("work");
+	});
+
+	it("zip 项目包导入失败时不写任何归属记录", async () => {
+		getDefaultStore().set(spacesAtom, {
+			...INITIAL_SPACES,
+			spaces: [{ id: "work", name: "工作", icon: { kind: "solar", value: "code" } }],
+			selected: "work",
+		});
+		projectImport.mockResolvedValueOnce({ error: { code: "X", message: "broken zip" } });
+		const { result } = renderHook(() => useAddProjectMenuModel());
+
+		await clickImportProject(result);
+
+		expect(Object.keys(getDefaultStore().get(spacesAtom).projects)).toEqual([]);
+	});
+
+	it(".ofar 迁移包分流不写归属：它不是项目登记，归属要等真正的项目导入", async () => {
+		getDefaultStore().set(spacesAtom, {
+			...INITIAL_SPACES,
+			spaces: [{ id: "work", name: "工作", icon: { kind: "solar", value: "code" } }],
+			selected: "work",
+		});
+		projectImport.mockResolvedValueOnce({ kind: "migration-archive", archivePath: "C:/dl/mig.ofar" });
+		const { result } = renderHook(() => useAddProjectMenuModel());
+
+		await clickImportProject(result);
+
+		expect(Object.keys(getDefaultStore().get(spacesAtom).projects)).toEqual([]);
 	});
 
 	it("zip 项目包导入不回归：刷新项目与批量列表并展示完成确认框", async () => {

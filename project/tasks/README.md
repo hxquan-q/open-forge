@@ -30,6 +30,7 @@ rg -n '^status: (draft|ready|in_progress|blocked|verifying)$' project/tasks -g '
 
 | Task ID | 状态 | Plan | 任务（详情见原记录） |
 |---|---|---|---|
+| `TASK-0525` | `verifying` | PLAN-0032 | [工作空间分组切片②b：侧栏过滤+右键移动菜单+归属写入](TASK-0525-spaces-sidebar-filter-move-menu.md)：ADR-0156 决策 1/2；上游 useProjectsPanelModel/useMoveSpaceMenu 参照适配，删 team 归属键分支。 |
 | `TASK-0524` | `verifying` | PLAN-0032 | [工作空间分组切片②a：设置页工作空间标签页+非破坏移除+弹层设置入口](TASK-0524-spaces-settings-tab.md)：TASK-0523 后续；上游 SpacesSettings/SpacesSettingsView 参照适配，移除只做非破坏档。 |
 | `TASK-0523` | `verifying` | PLAN-0032 | [工作空间分组切片①：空间状态核心+归因+底栏切换器+快捷键](TASK-0523-spaces-core-and-switcher.md)：PLAN-0032 P9；ADR-0156 落地；上游 d6f9906c4 参照适配，删 team 归属。 |
 | `TASK-0520` | `verifying` | PLAN-0032 | [自动化详情面板 UI 对齐上游](TASK-0520-automation-detail-ui-alignment.md)：TASK-0519 渲染层遗留——调度七档编辑、skipped/missed 原因、打开聊天。 |

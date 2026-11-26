@@ -28,6 +28,8 @@ export interface ProjectContextMenuViewProps {
 	clearClawDisabled?: boolean;
 	clearConversationDisabled?: boolean;
 	defaultScope?: ProjectContextMenuScope;
+	/** 插在「在文件夹中打开」之后的附加节点，例如「移动到工作空间」。 */
+	extraItems?: readonly ContextMenuNode[];
 	isDefault: boolean;
 	labels: ProjectContextMenuViewLabels;
 	onArchive: () => void;
@@ -51,6 +53,7 @@ export function ProjectContextMenuView({
 	clearClawDisabled,
 	clearConversationDisabled,
 	defaultScope,
+	extraItems = [],
 	isDefault,
 	labels,
 	onArchive,
@@ -79,6 +82,7 @@ export function ProjectContextMenuView({
 			onSelect: onOpenInFolder,
 		});
 	}
+	items.push(...extraItems);
 
 	if (isDefault && defaultScope === "conversation" && onClearConversation) {
 		items.push({

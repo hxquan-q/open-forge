@@ -18,6 +18,7 @@ import {
 	lastActiveSessionAtom,
 	pendingSessionOpenAtom,
 } from "@shared/store/atoms";
+import { MAIN_SPACE, spaceOf, spacesAtom } from "@shared/store/spaces";
 import { showToast } from "@shared/store/toast-atoms";
 import { useMatches, useNavigate } from "@tanstack/react-router";
 import { isSshProjectUri, parseProjectLocation } from "@vetta/ssh-transport/project-uri";
@@ -28,6 +29,7 @@ import { useTranslation } from "react-i18next";
 import { resolveProjectGoneCleanup } from "../../../../hooks/project-gone-cleanup";
 import { resolveSessionOpenTarget } from "../../../../hooks/session-open-target";
 import { useProjects } from "../../../../hooks/useProjects";
+import { rememberSpaceLocation } from "../../../../hooks/useSpaceNavigation";
 import {
 	projectSidebarConversations,
 	type SidebarConversationInfo,
@@ -37,6 +39,7 @@ import type { BatchProjectEntry, ProjectsPanelModel, ProjectsPanelProps } from "
 import { useSidebarSelectionIntent } from "./useSidebarSelectionIntent";
 
 const EMPTY_SESSIONS: SessionInfo[] = [];
+const EMPTY_BATCH_PROJECTS: BatchProjectEntry[] = [];
 
 /**
  * 侧栏只关心当前会话的 path / cwd。订阅 activeSession 整个对象会让 session 上任何字段
@@ -72,6 +75,7 @@ export function useProjectsPanelModel({
 	const pendingSessionPath = useAtomValue(pendingSessionPathAtom);
 	const activeSessionCwd = useAtomValue(activeSessionCwdAtom);
 	const store = useStore();
+	const spaces = useAtomValue(spacesAtom);
 	const imCwd = useAtomValue(defaultImConversationCwdAtom);
 	const setActiveSession = useSetAtom(activeSessionAtom);
 	const setInlineFilePreview = useSetAtom(inlineFilePreviewAtom);
@@ -115,7 +119,10 @@ export function useProjectsPanelModel({
 	const batchProjects = useAtomValue(batchProjectsAtom);
 	const [expandedBatchProjects, setExpandedBatchProjects] = useAtom(expandedBatchProjectsAtom);
 	const { deleteTask: deleteBatchTask, deleteProject: deleteBatchProject } = useBatchTasks();
-	const defaultConversationFilter = useAtomValue(defaultConversationFilterAtom);
+	const storedFilter = useAtomValue(defaultConversationFilterAtom);
+	// Claw 会话不属于任何工作空间：非主空间下档位回落「对话」，与过滤器隐藏选项同口径。
+	const defaultConversationFilter =
+		spaces.selected !== MAIN_SPACE && storedFilter === "claw" ? "conversation" : storedFilter;
 	// 标签档只是「对话」的一个子集视图，会话来源仍取普通对话目录。
 	const defaultConversationSource = conversationFilterSource(defaultConversationFilter);
 	const defaultConversationCwd = useAtomValue(defaultConversationCwdAtom);
@@ -174,16 +181,35 @@ export function useProjectsPanelModel({
 		[visibleBatchProjects],
 	);
 
-	const showBatchGroup = filter === "all" || filter === "batch";
+	// 批量项目只属于主空间（ADR-0156）：非主空间「批量」档回落「全部」，
+	// 与过滤器隐藏选项同口径——否则切过去会看到空侧栏。
+	const effectiveFilter = spaces.selected !== MAIN_SPACE && filter === "batch" ? "all" : filter;
+	const showBatchGroup = effectiveFilter === "all" || effectiveFilter === "batch";
 	const defaultProject = useMemo(() => projects.find((project) => project.isDefault), [projects]);
 	// 默认区的会话来源 cwd：claw 过滤读 im-gateway 自己的 cwd（ADR-0005），
 	// 与 defaultProject.cwd 是两个物理目录，选中 / 重命名都必须用这个值。
 	const defaultSessionsCwd = defaultConversationSource === "claw" ? imCwd : defaultProject?.cwd;
+	// 切换工作空间只换这里的可见集合；放进 return 里现算会让每个项目行都拿到新数组，
+	// 随便一次 atom 变动就把整块侧栏重渲染一遍。
+	const visibleUserProjects = useMemo(
+		() =>
+			projects.filter(
+				(project) =>
+					project.type !== "batch" &&
+					!project.isDefault &&
+					spaceOf(spaces, { kind: "project", key: project.cwd }) === spaces.selected,
+			),
+		[projects, spaces],
+	);
 	const filteredProjects = useMemo(() => {
-		const visible = projects.filter((project) => project.type !== "batch" && !project.isDefault);
-		if (filter === "all") return visible;
-		return visible.filter((project) => project.type === filter);
-	}, [projects, filter]);
+		if (effectiveFilter === "all") return visibleUserProjects;
+		return visibleUserProjects.filter((project) => project.type === effectiveFilter);
+	}, [visibleUserProjects, effectiveFilter]);
+	// 批量项目不做归属，只在主空间出现（ADR-0156）。
+	const visibleSpaceBatchProjects = useMemo(
+		() => (spaces.selected === MAIN_SPACE ? batchAsProjects : EMPTY_BATCH_PROJECTS),
+		[batchAsProjects, spaces.selected],
+	);
 
 	const navigateProject = useCallback(
 		(cwd: string) => {
@@ -234,13 +260,17 @@ export function useProjectsPanelModel({
 			if (target === "unavailable") return;
 			if (target === "viewer") {
 				selectAfterPaint({ kind: "conversation", path }, () =>
-					navigate({ to: "/viewer/$path", params: { path: encodeURIComponent(path) } }),
+					(async () => {
+						// 只读查看的会话没有 activeSession 写入，切换空间时靠这里记住位置。
+						rememberSpaceLocation(store, { kind: "conversation", cwd, path, viewer: true });
+						await navigate({ to: "/viewer/$path", params: { path: encodeURIComponent(path) } });
+					})(),
 				);
 				return;
 			}
 			selectAfterPaint({ kind: "conversation", path }, () => openInteractiveSession(cwd, path));
 		},
-		[navigate, openInteractiveSession, selectAfterPaint],
+		[navigate, openInteractiveSession, selectAfterPaint, store],
 	);
 
 	const selectSidebarSession = useCallback(
@@ -511,17 +541,38 @@ export function useProjectsPanelModel({
 
 	const clearConversation = useCallback(
 		(cwd: string) => {
-			const allSessions = sessionsMap.get(cwd) ?? [];
+			const spaceId = store.get(spacesAtom).selected;
+			const allSessions = (sessionsMap.get(cwd) ?? []).filter(
+				(session) => spaceOf(store.get(spacesAtom), { kind: "conversation", key: session.path }) === spaceId,
+			);
 			setConfirm({
 				title: t("sidebar.dialogs.clearConversationTitle"),
 				message: t("sidebar.dialogs.clearConversationMessage", { count: allSessions.length }),
 				confirmLabel: t("sidebar.dialogs.clearConfirm"),
 				variant: "danger",
 				onConfirm: async () => {
-					await window.vetta.session.clearDefaultConversation("conversation");
-					const removedPaths = new Set(allSessions.map((session) => session.path));
+					// 确认前用户可能又移动过会话，计数与删除都以确认这一刻的归属为准。
+					const current = store.get(spacesAtom);
+					const paths = allSessions.filter(
+						(session) => spaceOf(current, { kind: "conversation", key: session.path }) === spaceId,
+					);
+					// 运行中的会话删不得：逐条删会把它们漏在磁盘上造成「清空了一半」，
+					// 静默返回与既有清空语义一致（清空入口本就只在无运行会话时可点）。
+					const running = new Set(await window.vetta.session.listRunning());
+					if (paths.some(({ path }) => running.has(path))) return;
+					// 主空间且没有任何空间归属记录时，「清空」就是清空整个默认区，
+					// 走主进程的目录级清理；否则逐条删当前空间归属的会话。
+					if (spaceId === MAIN_SPACE && Object.keys(current.conversations).length === 0) {
+						await window.vetta.session.clearDefaultConversation("conversation");
+					} else {
+						for (const session of paths) await window.vetta.session.delete(session.path);
+					}
+					const removedPaths = new Set(paths.map((session) => session.path));
 					removePinnedSessions(removedPaths);
-					if (removedPaths.has(activeSessionPathValue) || (activeSessionCwd === cwd && !removedPaths.size)) {
+					if (
+						removedPaths.has(activeSessionPathValue) ||
+						(spaceId === MAIN_SPACE && activeSessionCwd === cwd && !removedPaths.size)
+					) {
 						setActiveSession(null);
 						void navigate({
 							to: "/new-session/$cwd",
@@ -541,6 +592,7 @@ export function useProjectsPanelModel({
 			navigate,
 			loadSessions,
 			removePinnedSessions,
+			store,
 			t,
 		],
 	);
@@ -602,7 +654,7 @@ export function useProjectsPanelModel({
 
 	const isProjectActive = useCallback((cwd: string) => activeProjectCandidates.has(cwd), [activeProjectCandidates]);
 
-	const noOtherProjects = filteredProjects.length === 0 && (!showBatchGroup || batchAsProjects.length === 0);
+	const noOtherProjects = filteredProjects.length === 0 && (!showBatchGroup || visibleSpaceBatchProjects.length === 0);
 
 	// 远程项目行的主机标签：整个面板共享一份主机清单，随主进程广播刷新。
 	// 主机被删掉的项目归 OrphanRemoteProjectGuard 接管，这里只负责显示。
@@ -637,8 +689,12 @@ export function useProjectsPanelModel({
 				ordinaryDefaultSessions,
 				defaultConversationSource === "conversation" ? teamSidebar.conversations : [],
 				{ kind: "default" },
+			).filter(
+				// 归属统一按会话路径记录（ADR-0156 无 team 归属维度）：
+				// 团队行没有归属记录，自然回落主空间。
+				(session) => spaceOf(spaces, { kind: "conversation", key: session.path }) === spaces.selected,
 			),
-		[defaultConversationSource, ordinaryDefaultSessions, teamSidebar.conversations],
+		[defaultConversationSource, ordinaryDefaultSessions, spaces, teamSidebar.conversations],
 	);
 	const projectSidebarSessions = useMemo(() => {
 		const result = new Map<string, SidebarConversationInfo[]>();
@@ -669,7 +725,7 @@ export function useProjectsPanelModel({
 	return {
 		activeSessionPath,
 		activeTeamSessionId,
-		batchProjects: batchAsProjects,
+		batchProjects: visibleSpaceBatchProjects,
 		defaultConversationFilter,
 		defaultProject,
 		defaultSessions,

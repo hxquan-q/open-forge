@@ -240,6 +240,8 @@ export function useProjectGroupModel({
 				session,
 				allowMutations: true,
 				canTag: false,
+				// 项目内会话随项目归属工作空间，不提供单独移动。
+				independent: false,
 			});
 		},
 		[setContextMenu],

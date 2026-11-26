@@ -398,6 +398,7 @@
 	"spaces": {
 		"main": "主工作空间",
 		"more": "更多工作空间",
+		"move": "移动到工作空间",
 		"settings": "设置",
 		"settingsTitle": "工作空间",
 		"spaceSettings": "工作空间设置",

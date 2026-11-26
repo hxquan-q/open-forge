@@ -17,6 +17,7 @@ import {
 	sessionLoadingCwdsAtom,
 	sessionsMapAtom,
 } from "@shared/store/atoms";
+import { assignSpace, selectSpace, spaceOf, spacesAtom } from "@shared/store/spaces";
 import { getDefaultStore, useAtomValue, useSetAtom } from "jotai";
 import { useCallback, useEffect, useRef } from "react";
 
@@ -280,12 +281,14 @@ export function useProjectActions() {
 	/** Create a new project directory in workspace and register it; returns resolved cwd. */
 	const createProject = useCallback(
 		async (name: string): Promise<string> => {
+			const spaceId = store.get(spacesAtom).selected;
 			const entry = await window.vetta.project.create({ name });
+			store.set(spacesAtom, (state) => assignSpace(state, { kind: "project", key: entry.path }, spaceId));
 			await refreshProjects();
 			setExpandedProjects((prev) => new Set([...prev, entry.path]));
 			return entry.path;
 		},
-		[refreshProjects, setExpandedProjects],
+		[refreshProjects, setExpandedProjects, store],
 	);
 
 	/**
@@ -293,25 +296,41 @@ export function useProjectActions() {
 	 *
 	 * `path` 既可以是本地绝对路径，也可以是远程项目的 `ssh://<hostId>/<路径>`——
 	 * 两者走同一个服务，校验、授权根登记和变更广播才不会有两套行为。
-	 * `name` 是侧栏显示名（远程选择器里用户起的备注），省略时服务用目录名兜底。
+	 * `name` 是侧栏显示名（远程选择器里用户起的备注），省略时服务用目录名兜底；
+	 * `spaceId` 省略时归入当前选中的工作空间。
 	 */
 	const openProjectPath = useCallback(
-		async (path: string, name?: string): Promise<string> => {
-			await window.vetta.project.open({ path, name: name?.trim() || undefined });
+		async (path: string, options?: { name?: string; spaceId?: string }): Promise<string> => {
+			const spaceId = options?.spaceId ?? store.get(spacesAtom).selected;
+			const config = await window.vetta.config.get();
+			const entry = await window.vetta.project.open({ path, name: options?.name?.trim() || undefined });
+			const resolvedPath = entry.path;
+			// 重新打开已经登记过（含已归档）的项目时跳回它既有的归属空间，
+			// 归属不随这次入口改变；只有新登记的项目才吃进当前空间。
+			const existing = [...config.projects, ...config.archivedProjects].some(
+				(project) => project.path === resolvedPath,
+			);
+			const item = { kind: "project", key: resolvedPath } as const;
+			store.set(spacesAtom, (state) =>
+				existing ? selectSpace(state, spaceOf(state, item)) : assignSpace(state, item, spaceId),
+			);
 			await refreshProjects();
-			setExpandedProjects((prev) => new Set([...prev, path]));
-			await loadSessions(path);
-			return path;
+			setExpandedProjects((prev) => new Set([...prev, resolvedPath]));
+			await loadSessions(resolvedPath);
+			return resolvedPath;
 		},
-		[refreshProjects, setExpandedProjects, loadSessions],
+		[refreshProjects, setExpandedProjects, loadSessions, store],
 	);
 
 	/** Open an existing directory and register it */
 	const openProject = useCallback(async () => {
+		// 选目录的对话框会挡一会儿：归属以点击时所在的空间为准，
+		// 期间切走空间不应把新项目吃进另一个空间。
+		const spaceId = store.get(spacesAtom).selected;
 		const cwd = await window.vetta.dialog.selectFolder();
 		if (!cwd) return null;
-		return openProjectPath(cwd);
-	}, [openProjectPath]);
+		return openProjectPath(cwd, { spaceId });
+	}, [openProjectPath, store]);
 
 	const expandProject = useCallback(
 		(cwd: string) => {

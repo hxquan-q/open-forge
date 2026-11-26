@@ -3,6 +3,7 @@ import { useBatchTasks } from "@domains/batch-tasks/hooks/useBatchTasks";
 import { isDuplicateProjectName } from "@shared/lib/project-name";
 import { pathBasename } from "@shared/lib/utils";
 import { confirmDialogAtom, migrationImportWizardAtom, projectsAtom } from "@shared/store/atoms";
+import { assignSpace, spacesAtom } from "@shared/store/spaces";
 import { useNavigate } from "@tanstack/react-router";
 import { getDefaultStore, useSetAtom } from "jotai";
 import { useEffect, useRef, useState } from "react";
@@ -93,6 +94,9 @@ export function useAddProjectMenuModel(): {
 
 	const handleImport = async (): Promise<void> => {
 		setOpen(false);
+		// 归档导入会弹口令确认框，期间用户可能切空间：
+		// 归属以点「导入项目」时所在的空间为准。
+		const spaceId = store.get(spacesAtom).selected;
 		const result = await window.vetta.project.import();
 		if (!result) return;
 		if ("error" in result) {
@@ -110,6 +114,7 @@ export function useAddProjectMenuModel(): {
 			openMigrationArchive(result.archivePath);
 			return;
 		}
+		store.set(spacesAtom, (state) => assignSpace(state, { kind: "project", key: result.path }, spaceId));
 		await Promise.all([refreshProjects(), refreshBatchProjects()]).catch(() => {});
 		const missing = result.missingSources;
 		const onJump = (): void => {
@@ -215,7 +220,7 @@ export function useAddProjectMenuModel(): {
 		confirmRemoteProject: (hostId: string, remotePath: string, name?: string) => {
 			setShowRemotePicker(false);
 			// 远程项目的标识是 ssh URI；登记走与本地项目同一个服务，校验和广播才一致。
-			void openProjectPath(`ssh://${hostId}${remotePath}`, name).catch((error: unknown) => {
+			void openProjectPath(`ssh://${hostId}${remotePath}`, { name }).catch((error: unknown) => {
 				// 主机被删掉、选中的目录其实是文件——这些都要说清楚，否则用户只会看到
 				// 对话框关了但项目没出现。
 				setConfirm({
