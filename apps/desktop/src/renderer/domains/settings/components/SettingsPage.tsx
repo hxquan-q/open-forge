@@ -29,6 +29,7 @@ const SETTINGS_CONTENT: Record<Exclude<SettingsTab, "mcp">, LazyExoticComponent<
 	pet: lazy(SETTINGS_TAB_LOADERS.pet),
 	remote: lazy(SETTINGS_TAB_LOADERS.remote),
 	sshHosts: lazy(SETTINGS_TAB_LOADERS.sshHosts),
+	spaces: lazy(SETTINGS_TAB_LOADERS.spaces),
 	usage: lazy(SETTINGS_TAB_LOADERS.usage),
 };
 

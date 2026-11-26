@@ -23,6 +23,7 @@ export const SETTINGS_TAB_LOADERS = {
 	pet: async () => ({ default: (await import("./PetSettings")).PetSettings }),
 	sshHosts: async () => ({ default: (await import("./SshHostsSettings")).SshHostsSettings }),
 	shortcuts: async () => ({ default: (await import("./ShortcutsSettings")).ShortcutsSettings }),
+	spaces: async () => ({ default: (await import("./SpacesSettings")).SpacesSettings }),
 	team: async () => ({ default: (await import("./TeamSettings")).TeamSettings }),
 	usage: async () => ({ default: (await import("./usage/UsageSettings")).UsageSettings }),
 	webhook: async () => ({ default: (await import("./WebhookSettings")).WebhookSettings }),

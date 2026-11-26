@@ -61,6 +61,7 @@ export type SettingsTab =
 	| "permissions"
 	| "im"
 	| "webhook"
+	| "spaces"
 	| "shortcuts"
 	| "launcher"
 	| "appshot"

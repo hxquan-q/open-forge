@@ -3,6 +3,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@shared/components/ui/p
 import { useShortcutBindings } from "@shared/hooks/useShortcuts";
 import { getEffectiveShortcut } from "@shared/lib/shortcuts";
 import { cn } from "@shared/lib/utils";
+import { useNavigate } from "@tanstack/react-router";
 import {
 	MAIN_SPACE,
 	MAIN_SPACE_ICON,
@@ -42,6 +43,7 @@ export function SpaceSwitcher(): JSX.Element {
 	const [state, setSpaces] = useAtom(spacesAtom);
 	const switchSpace = useSpaceNavigation();
 	const editSpace = useSetAtom(spaceEditorAtom);
+	const navigate = useNavigate();
 	const bindings = useShortcutBindings();
 	const row = useRef<HTMLDivElement>(null);
 	const [slots, setSlots] = useState(4);
@@ -148,9 +150,16 @@ export function SpaceSwitcher(): JSX.Element {
 									);
 								})}
 							</div>
-							{/* 底部只留「新建」：工作空间设置页属切片②。 */}
 							<div className="flex items-center gap-1">
 								<SpaceSideAction icon="icon-[solar--add-linear]" label={t("spaces.new")} onClick={createSpace} />
+								<SpaceSideAction
+									icon="icon-[solar--settings-minimalistic-linear]"
+									label={t("spaces.spaceSettings")}
+									onClick={() => {
+										setOpen(false);
+										void navigate({ to: "/settings/$tab", params: { tab: "spaces" } });
+									}}
+								/>
 							</div>
 						</PopoverContent>
 					</Popover>

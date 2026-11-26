@@ -230,6 +230,13 @@ export type {
 	SpaceEditorIconOption,
 } from "./SpaceEditorDialogView";
 export { SpaceEditorDialogView } from "./SpaceEditorDialogView";
+export type {
+	SpacesFeatureView,
+	SpacesSettingsViewItem,
+	SpacesSettingsViewLabels,
+	SpacesSettingsViewProps,
+} from "./SpacesSettingsView";
+export { SpacesSettingsView } from "./SpacesSettingsView";
 export type { SshHostFormFieldsLabels, SshHostFormValues } from "./SshHostFormFieldsView";
 export { SshHostFormFieldsView } from "./SshHostFormFieldsView";
 export { SubscriptionActionsView } from "./SubscriptionActionsView";

@@ -11,6 +11,7 @@ export type SettingsTabLabelKey =
 	| "tabModels"
 	| "tabIm"
 	| "tabWebhook"
+	| "tabSpaces"
 	| "tabArchive"
 	| "tabShortcuts"
 	| "tabLauncher"
@@ -67,6 +68,7 @@ export const SETTINGS_TABS: readonly SettingsTabRegistration[] = [
 	// MCP 管理已迁至侧栏「扩展 → 连接器」
 	{ key: "im", label: "Claw", labelKey: "tabIm", icon: "icon-[mdi--message-text-outline]" },
 	{ key: "webhook", label: "消息推送", labelKey: "tabWebhook", icon: "icon-[mdi--webhook]" },
+	{ key: "spaces", label: "工作空间", labelKey: "tabSpaces", icon: "icon-[solar--widget-linear]" },
 	// { key: "team", label: "团队管理", labelKey: "tabTeam", icon: "icon-[mdi--account-group-outline]", personalOnly: true },
 	{ key: "archive", label: "已归档", labelKey: "tabArchive", icon: "icon-[mdi--archive-outline]" },
 	{ key: "shortcuts", label: "快捷键", labelKey: "tabShortcuts", icon: "icon-[mdi--keyboard-outline]" },
@@ -144,6 +146,7 @@ export const SETTINGS_SECTIONS = [
 	{ tab: "im", id: "imbridge-status", title: "状态与日志", titleKey: "section_imbridge-status" },
 	{ tab: "im", id: "imbridge-logs", title: "实时日志", titleKey: "section_imbridge-logs" },
 	{ tab: "webhook", id: "webhook-channels", title: "渠道列表", titleKey: "section_webhook-channels" },
+	{ tab: "spaces", id: "workspaces", title: "工作空间", titleKey: "section_workspaces" },
 	{ tab: "shortcuts", id: "shortcuts-global", title: "全局快捷键", titleKey: "section_shortcuts-global" },
 	{ tab: "launcher", id: "launcher-features", title: "能做什么", titleKey: "section_launcher-features" },
 	{ tab: "launcher", id: "launcher-shortcut", title: "快捷键", titleKey: "section_launcher-shortcut" },

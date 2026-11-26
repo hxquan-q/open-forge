@@ -1,5 +1,4 @@
 // Modified by The Open Forge contributors.
-// 切片①弹层不设「工作空间设置」入口，上游对应的两个用例已删除（切片②恢复）。
 // @vitest-environment jsdom
 import { pendingInteractionPathsAtom } from "@shared/store/pending-interactions-atoms";
 import { sessionsMapAtom } from "@shared/store/project-atoms";
@@ -124,13 +123,26 @@ describe("SpaceSwitcher 新建工作空间", () => {
 		expect(add.textContent).toBe("");
 		// 列表与底部操作之间靠留白，不画分隔线。
 		expect(popover.innerHTML).not.toContain("bg-border");
-		// 切片①不设工作空间设置入口。
-		expect(within(popover).queryByRole("button", { name: "Workspace settings" })).toBeNull();
 
 		await user.click(add);
 		await waitFor(() => expect(document.querySelector('[data-slot="popover-content"]')).toBeNull());
 		const editor = await screen.findByRole("dialog");
 		expect(within(editor).getByLabelText("Workspace name")).toBeTruthy();
+	});
+
+	it("弹层底部的工作空间设置入口打开设置页的工作空间标签", async () => {
+		const user = userEvent.setup();
+		const { group } = renderSwitcher(2, 68);
+		await user.click(within(group).getByRole("button", { name: "More workspaces" }));
+		const popover = await screen.findByRole("dialog");
+
+		navigate.mockClear();
+		await user.click(within(popover).getByRole("button", { name: "Workspace settings" }));
+
+		expect(navigate.mock.calls.map((call) => call[0])).toEqual([
+			{ to: "/settings/$tab", params: { tab: "spaces" } },
+		]);
+		await waitFor(() => expect(document.querySelector('[data-slot="popover-content"]')).toBeNull());
 	});
 
 	it("加号自带的是不带外圈的加号图标", () => {
