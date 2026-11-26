@@ -1,11 +1,14 @@
+// Modified by The Open Forge contributors.
 import { useTranslation } from "@vetta-org/plugin-sdk";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { graphLog, listBranches } from "../../git/log";
 import { parseLog } from "../../git/parseLog";
-import { resizePanel } from "../../git/runtime";
+import { onRefreshSignal, resizePanel } from "../../git/runtime";
 import type { BranchRef, CommitNode, GraphSelection } from "../../git/types";
 import { SplitHandle } from "../SplitHandle";
 import { BranchSelector } from "./BranchSelector";
+import type { CommitMenuTarget } from "./CommitActions";
+import { CommitActions } from "./CommitActions";
 import { CommitDetailPane } from "./CommitDetailPane";
 import { GitGraphCanvas } from "./GitGraphCanvas";
 
@@ -32,6 +35,9 @@ export function GraphView({ root, reloadToken }: { root: string; reloadToken: nu
 	const [hasMore, setHasMore] = useState(false);
 	const [loadingMore, setLoadingMore] = useState(false);
 	const [selectedHash, setSelectedHash] = useState<string | null>(null);
+	const [menu, setMenu] = useState<CommitMenuTarget | null>(null);
+	const [refresh, setRefresh] = useState(0);
+	useEffect(() => onRefreshSignal(() => setRefresh((n) => n + 1)), []);
 	const loadIdRef = useRef(0);
 	const loadingMoreRef = useRef(false);
 
@@ -48,14 +54,17 @@ export function GraphView({ root, reloadToken }: { root: string; reloadToken: nu
 		return () => {
 			alive = false;
 		};
-	}, [root, selection.scope, reloadToken]);
+	}, [root, selection.scope, reloadToken, refresh]);
 
 	// (Re)load the first window whenever selection / root / refresh changes.
 	useEffect(() => {
 		const id = ++loadIdRef.current;
+		loadingMoreRef.current = false;
+		setLoadingMore(false);
 		setStatus("loading");
 		setNodes([]);
 		setSelectedHash(null);
+		setMenu(null);
 		graphLog(root, selection, PAGE, 0)
 			.then((raw) => {
 				if (id !== loadIdRef.current) return;
@@ -69,21 +78,27 @@ export function GraphView({ root, reloadToken }: { root: string; reloadToken: nu
 				setErrMsg(err instanceof Error ? err.message : String(err));
 				setStatus("error");
 			});
-	}, [root, selection, reloadToken]);
+		return () => {
+			++loadIdRef.current;
+		};
+	}, [root, selection, reloadToken, refresh]);
 
 	// Auto-pagination: guarded by a ref so rapid scroll events can't double-fire.
 	const loadMore = useCallback(() => {
 		if (loadingMoreRef.current || !hasMore || status !== "ready") return;
+		const id = loadIdRef.current;
 		loadingMoreRef.current = true;
 		setLoadingMore(true);
 		graphLog(root, selection, PAGE, nodes.length)
 			.then((raw) => {
+				if (id !== loadIdRef.current) return;
 				const more = parseLog(raw);
 				setNodes((prev) => [...prev, ...more]);
 				setHasMore(more.length === PAGE);
 			})
 			.catch(() => {})
 			.finally(() => {
+				if (id !== loadIdRef.current) return;
 				loadingMoreRef.current = false;
 				setLoadingMore(false);
 			});
@@ -134,7 +149,16 @@ export function GraphView({ root, reloadToken }: { root: string; reloadToken: nu
 					<div className="px-3 py-4 text-[12px] text-muted-foreground">{t("list.empty")}</div>
 				) : (
 					<>
-						<GitGraphCanvas nodes={nodes} selectedHash={selectedHash} onSelect={handleSelect} onReachEnd={loadMore} />
+						<GitGraphCanvas
+							nodes={nodes}
+							selectedHash={selectedHash}
+							onSelect={handleSelect}
+							onReachEnd={loadMore}
+							onContextMenu={(node, event) => {
+								event.preventDefault();
+								setMenu({ node, x: event.clientX, y: event.clientY });
+							}}
+						/>
 						{loadingMore && (
 							<div className="shrink-0 border-t border-border py-1.5 text-center text-[12px] text-muted-foreground">{t("state.loading")}</div>
 						)}
@@ -145,6 +169,7 @@ export function GraphView({ root, reloadToken }: { root: string; reloadToken: nu
 
 	return (
 		<div className="flex min-h-0 flex-1 flex-col">
+			<CommitActions key={root} root={root} target={menu} onClose={() => setMenu(null)} />
 			<BranchSelector selection={selection} branches={branches} onChange={setSelection} />
 			<div ref={containerRef} className="flex min-h-0 flex-1 overflow-hidden">
 				{showDetail ? (
@@ -155,7 +180,9 @@ export function GraphView({ root, reloadToken }: { root: string; reloadToken: nu
 				) : (
 					<div className="flex min-h-0 flex-1 flex-col overflow-hidden">{graphBody}</div>
 				)}
-				{showDetail && selectedNode && <CommitDetailPane root={root} node={selectedNode} onClose={handleClose} />}
+				{showDetail && selectedNode && (
+					<CommitDetailPane key={`${root}:${selectedNode.hash}`} root={root} node={selectedNode} onClose={handleClose} />
+				)}
 			</div>
 		</div>
 	);

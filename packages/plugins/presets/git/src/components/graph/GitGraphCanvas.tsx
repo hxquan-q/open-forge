@@ -1,4 +1,6 @@
+// Modified by The Open Forge contributors.
 import { useTranslation } from "@vetta-org/plugin-sdk";
+import type { MouseEvent } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { computeGraphLayout, type GraphLine } from "../../git/graphLayout";
 import type { CommitNode } from "../../git/types";
@@ -88,11 +90,13 @@ export function GitGraphCanvas({
 	selectedHash,
 	onSelect,
 	onReachEnd,
+	onContextMenu,
 }: {
 	nodes: readonly CommitNode[];
 	selectedHash: string | null;
 	onSelect: (hash: string) => void;
 	onReachEnd?: () => void;
+	onContextMenu?: (node: CommitNode, event: MouseEvent<HTMLElement>) => void;
 }): JSX.Element {
 	const mode = useHostMode();
 	const { locale } = useTranslation();
@@ -187,6 +191,7 @@ export function GitGraphCanvas({
 							top={i * ROW_HEIGHT}
 							height={ROW_HEIGHT}
 							locale={locale}
+							onContextMenu={onContextMenu}
 							onSelect={onSelect}
 						/>
 					);

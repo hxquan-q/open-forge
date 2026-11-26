@@ -129,7 +129,8 @@ export function CommitDetailPane({ root, node, onClose }: { root: string; node: 
 				// the natural-height diff all scroll together when they exceed the viewport.
 				<div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
 					<CommitMeta node={node} />
-					<div className="flex h-7 shrink-0 items-center justify-end border-b border-border px-1.5">
+					<div className="flex h-7 shrink-0 items-center justify-between border-b border-border px-1.5">
+						<span className="text-[12px] text-muted-foreground">{t("commit.files", { count: files.length })}</span>
 						<Button
 							type="button"
 							variant="ghost"
@@ -142,7 +143,9 @@ export function CommitDetailPane({ root, node, onClose }: { root: string; node: 
 					</div>
 					{/* File list: auto height, capped, scrolls internally past the cap. */}
 					<div className="max-h-[40%] shrink-0 overflow-y-auto border-b border-border">
-						{viewMode === "tree" ? (
+						{files.length === 0 ? (
+							<div className="px-3 py-2 text-[12px] text-muted-foreground">{t("commit.noFiles")}</div>
+						) : viewMode === "tree" ? (
 							<GitFileTree entries={files} selectedPaths={selectedPaths} onSelectionChange={handleSelection} />
 						) : (
 							<GitFlatList entries={files} selectedPaths={selectedPaths} onSelectionChange={handleSelection} />

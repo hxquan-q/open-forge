@@ -1,3 +1,5 @@
+// Modified by The Open Forge contributors.
+import type { MouseEvent } from "react";
 import type { CommitNode } from "../../git/types";
 
 type RefChip = { key: string; label: string; kind: "head" | "branch" | "tag" };
@@ -46,6 +48,7 @@ export function CommitRow({
 	top,
 	height,
 	locale,
+	onContextMenu,
 	onSelect,
 }: {
 	node: CommitNode;
@@ -54,12 +57,14 @@ export function CommitRow({
 	top: number;
 	height: number;
 	locale: string;
+	onContextMenu?: (node: CommitNode, event: MouseEvent<HTMLElement>) => void;
 	onSelect: (hash: string) => void;
 }): JSX.Element {
 	const chips = classifyRefs(node.refs);
 	return (
 		// biome-ignore lint/a11y/useKeyWithClickEvents: rows mirror the file-list affordance; pointer selection only
 		<div
+			onContextMenu={(event) => onContextMenu?.(node, event)}
 			onClick={() => onSelect(node.hash)}
 			style={{ position: "absolute", top, height, left: 0, right: 0 }}
 			className="group cursor-pointer"

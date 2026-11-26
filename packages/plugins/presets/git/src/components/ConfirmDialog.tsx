@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { useTranslation } from "@vetta-org/plugin-sdk";
 import { Button, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@vetta-org/ui";
 import type { ReactNode } from "react";
@@ -18,6 +19,7 @@ export function ConfirmDialog({
 	confirmLabel,
 	destructive = false,
 	busy = false,
+	confirmDisabled = false,
 	onConfirm,
 	onCancel,
 }: {
@@ -29,6 +31,7 @@ export function ConfirmDialog({
 	confirmLabel: string;
 	destructive?: boolean;
 	busy?: boolean;
+	confirmDisabled?: boolean;
 	onConfirm: () => void;
 	onCancel: () => void;
 }): JSX.Element {
@@ -50,7 +53,13 @@ export function ConfirmDialog({
 					<Button type="button" variant="ghost" size="sm" disabled={busy} onClick={onCancel}>
 						{t("confirm.cancel")}
 					</Button>
-					<Button type="button" variant={destructive ? "destructive" : "default"} size="sm" disabled={busy} onClick={onConfirm}>
+					<Button
+						type="button"
+						variant={destructive ? "destructive" : "default"}
+						size="sm"
+						disabled={busy || confirmDisabled}
+						onClick={onConfirm}
+					>
 						{confirmLabel}
 					</Button>
 				</DialogFooter>
