@@ -1,7 +1,7 @@
 ---
 id: TASK-0505
 type: task
-status: in_progress
+status: verifying
 priority: P2
 owner: packages/theme-ui + apps/desktop
 requirement: REQ-0008
@@ -29,9 +29,9 @@ write_paths:
   - apps/desktop/src/renderer/domains/scheduler/
 exclusive_paths: []
 depends_on: [TASK-0500, TASK-0504]
-integration_status: pending
+integration_status: integrated
 created: 2026-11-25
-updated: 2026-11-25
+updated: 2026-11-26
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -84,4 +84,4 @@ updated: 2026-11-25
 - P4a 共享布局：完成（`10410561b` 新增、`5f13c033c` 修正）。
 - P4b 自动化分屏：完成（`12d79c636`；含 `automation-status.ts`、`useAutomationDetailModel`/`AutomationDetailPane`、删除 `HistoryDrawer*`/`TaskFormDialog*`/`useTaskFormModel*`，D03 例外已登记 DESIGN.md 与 design-exceptions.json）。
 - P4c 记忆：完成（`9d4bb3144`；`useMemoryPageModel` 聚合纠正/忘记面板态，`MemoryPageView` 走 SplitDetailLayout + SegmentedControl；顺手修掉 `useMemoryListModel.refresh` 依赖 `items` 造成的无限刷新循环）。
-- P4d WeKnora：待做。
+- P4d WeKnora：完成——改由 TASK-0506 承接交付（`7add1f22d` 实现、`3fad2b08a` 集成 main），P4 四切片全部收口，本任务转 `verifying`，待用户实机走查。

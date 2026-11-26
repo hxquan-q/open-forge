@@ -43,9 +43,10 @@ function withinHighlightBudget(code: string, lang: string): boolean {
 	return true;
 }
 
+/** 内边距对齐表格单元格（左侧 20px、其余 16px），代码正文与表头/表格正文同一光学边线。 */
 function PlainCode({ code, fontSizeClass }: { code: string; fontSizeClass: string }): JSX.Element {
 	return (
-		<pre className="overflow-x-auto p-3">
+		<pre className="overflow-x-auto py-3 pr-4 pl-5">
 			<code className={`${fontSizeClass} leading-[1.6] text-foreground`}>{code}</code>
 		</pre>
 	);
@@ -129,7 +130,7 @@ export function SyntaxHighlightedCode({
 				<PlainCode code={code} fontSizeClass={fontSizeClass} />
 			) : (
 				<div
-					className={`overflow-x-auto ${fontSizeClass} leading-[1.6] [&_pre]:!bg-transparent [&_pre]:!p-3 [&_code]:!bg-transparent`}
+					className={`overflow-x-auto ${fontSizeClass} leading-[1.6] [&_pre]:!bg-transparent [&_pre]:!py-3 [&_pre]:!pr-4 [&_pre]:!pl-5 [&_code]:!bg-transparent`}
 					// biome-ignore lint/security/noDangerouslySetInnerHtml: shiki generates safe HTML
 					dangerouslySetInnerHTML={{ __html: html }}
 				/>

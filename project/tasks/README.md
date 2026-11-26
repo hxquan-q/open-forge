@@ -30,9 +30,11 @@ rg -n '^status: (draft|ready|in_progress|blocked|verifying)$' project/tasks -g '
 
 | Task ID | 状态 | Plan | 任务（详情见原记录） |
 |---|---|---|---|
+| `TASK-0511` | `verifying` | PLAN-0032 | [代码块与表格统一外框](TASK-0511-markdown-unified-frame.md)：PLAN-0032 P8①；手工合并上游 29ba5969b+4866771a5，保留本地流式渲染预算与隔离合同；verifier 复查 pass、check 全绿，待用户实机目视。 |
 | `TASK-0510` | `verifying` | PLAN-0032 | [顶栏按钮组（registerHeaderAction + 拖动排序 + 更多菜单）](TASK-0510-header-actions-plugin.md)：PLAN-0032 P7；升 Plugin API 2.14.0；conflicts_with TASK-0509，需协调集成顺序。 |
 | `TASK-0509` | `verifying` | PLAN-0032 | [本机用量页（app-monitor + chart.js）](TASK-0509-usage-page-app-monitor.md)：PLAN-0032 P6；聚合落位 `app-monitor/`（非 `main/usage/`）+ `settings/components/usage/` 独占；已集成 main，待人工验收。 |
 | `TASK-0508` | `verifying` | PLAN-0032 | [Work 右栏按容器宽度切换布局 + 窄屏抽屉入口 + CollapsePanel 分节](TASK-0508-work-right-panel-layout.md)：PLAN-0032 P5b；并行 worktree，仅 `WorkWorkspacePanel.tsx` 独占，待派工。 |
+| `TASK-0505` | `verifying` | PLAN-0032 | [通用「列表 + 详情」分屏布局与本地面板第一批](TASK-0505-list-detail-layout-and-first-panels.md)：PLAN-0032 P4；P4a~P4c 已集成 main，P4d WeKnora 由 TASK-0506 承接收口；待用户实机走查。 |
 | `TASK-0507` | `verifying` | PLAN-0032 | [Allstar 页头「打开项目/新建会话」迁入 ButtonGroup](TASK-0507-allstar-header-button-group.md)：PLAN-0032 P5a；并行 worktree，仅 `AllstarDevHomePageView.tsx` 独占，待派工。 |
 | `TASK-0506` | `verifying` | PLAN-0032 | [WeKnora 接入 SplitDetailLayout，平铺 props 收 view model](TASK-0506-weknora-split-detail-and-view-model.md)：PLAN-0032 P4d；最大回归面（68 个测试文件），并行 worktree，`weknora/` 整目录独占，待派工。 |
 | `TASK-0492` | `verifying` | — | [版块会话行接入三项操作菜单](TASK-0492-allstar-session-row-menu.md)：BUG-0194，抽 `AllstarSessionRow`（标题按钮 + `···` 菜单：重命名/在文件夹打开/删除），20/20 + 4/4 + `check:quick` 全绿，待实机走查。 |
