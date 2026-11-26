@@ -13,8 +13,10 @@ vi.mock("react-i18next", () => ({
 	useTranslation: () => ({ t: (key: string) => key }),
 }));
 
-// 删除确认后还要摘掉该会话的标签标注与归档标记，走 preload 的 conversationTags / archivedSessions 通道；
-// 项目会话导出走 sessionArchive.exportProject，迁移包导出走 sessionArchive.exportMigration。
+// 标注/归档标记的清理自 BUG-0191 起移进 panel 删除编排（删除成功后才执行），
+// 菜单层只确认与调用；项目会话导出走 sessionArchive.exportProject，迁移包导出走 sessionArchive.exportMigration。
+// 断言深度豁免理由：菜单 Hook 的合同就是「确认后调用哪个边界、以什么参数」——
+// 确认对话框 atom 与 IPC/服务调用是该层的全部可观察输出，调用类断言即合同本身。
 const forgetConversations = vi.fn();
 const forgetArchivedSessions = vi.fn();
 type ExportProjectResult = { saved: boolean; sessionCount?: number; reason?: "no-sessions" };
@@ -97,16 +99,32 @@ describe("useProjectsPanelMenusModel", () => {
 		expect(deleteSession).toHaveBeenCalledWith(teamSession);
 	});
 
-	it("clears the deleted session's tag and archive flags", () => {
+	it("menus layer only confirms and delegates: metadata cleanup moved into the panel orchestration (BUG-0191)", () => {
 		const store = createStore();
 		const wrapper = ({ children }: PropsWithChildren): JSX.Element => <Provider store={store}>{children}</Provider>;
-		const { result } = renderHook(() => useProjectsPanelMenusModel(model(vi.fn())), { wrapper });
+		const deleteSession = vi.fn();
+		const { result } = renderHook(() => useProjectsPanelMenusModel(model(deleteSession)), { wrapper });
 
 		act(() => result.current.actions.deleteSession(teamSession));
 		act(() => store.get(confirmDialogAtom)?.onConfirm(false));
 
-		expect(forgetConversations).toHaveBeenCalledWith([teamSession.path]);
-		expect(forgetArchivedSessions).toHaveBeenCalledWith([teamSession.path]);
+		// 标注/归档清理移进 panel 的删除编排（删除成功后才执行），菜单层自身不再触碰。
+		expect(deleteSession).toHaveBeenCalledWith(teamSession);
+		expect(forgetConversations).not.toHaveBeenCalled();
+		expect(forgetArchivedSessions).not.toHaveBeenCalled();
+	});
+
+	it("cancelled confirmation deletes nothing and clears no flags", () => {
+		const store = createStore();
+		const wrapper = ({ children }: PropsWithChildren): JSX.Element => <Provider store={store}>{children}</Provider>;
+		const deleteSession = vi.fn();
+		const { result } = renderHook(() => useProjectsPanelMenusModel(model(deleteSession)), { wrapper });
+
+		act(() => result.current.actions.deleteSession(teamSession));
+
+		expect(deleteSession).not.toHaveBeenCalled();
+		expect(forgetConversations).not.toHaveBeenCalled();
+		expect(forgetArchivedSessions).not.toHaveBeenCalled();
 	});
 
 	it("asks for the archive passphrase before exporting project sessions, then reports the count via toast", async () => {

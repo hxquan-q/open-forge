@@ -1,7 +1,7 @@
 ---
 id: TASK-0489
 type: task
-status: ready
+status: verifying
 priority: P1
 owner: desktop
 requirement: []
@@ -36,9 +36,9 @@ write_paths:
 exclusive_paths: []
 depends_on: []
 conflicts_with: []
-integration_status: pending
+integration_status: integrated
 created: 2026-11-17
-updated: 2026-11-18
+updated: 2026-11-26
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -78,5 +78,13 @@ updated: 2026-11-18
   - `:298-299`：批量分支 `void deleteBatchTask(...)` 同样无 catch，且 `goToProjectDetail` 立即执行。
   - `useProjectsPanelMenusModel.ts:54-56`：确认对话框 onConfirm 里先 `conversationTags.forgetConversations` / `archivedSessions.forget` 再调删除，主删除失败即丢标记。
   - `useProjects.ts:406-433`：`await window.vetta.session.delete()` 拒绝直接抛出，后续 `removePinnedSessions`/scheduler 清理/摘行均不执行；上游调用方是 `void`，无人承接 → unhandled rejection。
+
+- 2026-11-26 实施交付（主代理直接实施，红绿流程）：
+  - 红灯证据：修复前运行定向测试 27 用例 12 失败，含 4 条 unhandled rejection（`scheduler gone`/`locked`/`disk busy`），正是缺陷实锤。
+  - 实现：`useProjects.ts` deleteSession 摘行/清置顶紧随主删除成功、scheduler 清理独立 try/catch 并以返回值 `cleanupFailed` 区分部分完成；`useProjectsPanelModel.ts` 删除编排收口（失败 Toast+日志/成功后清理元数据/完成时以 `store.get(activeSessionAtom)` 与 `currentPathRef` 判定活动与路由）；`useProjectsPanelMenusModel.ts` 菜单层不再清标记；`useConfirmDialogModel.ts` 同步异常就地捕获；新增 zh/en `deleteSessionPartialCleanupToast`（warning 变体）。
+  - 绿灯证据：定向 vitest 3 文件 27 用例全绿（新增组合测试 `deleteSession.orchestration.test.tsx`：真实菜单+panel+useProjects+useBatchTasks，仅 `window.vetta` IPC fake，deferred Promise 控制 pending，覆盖主拒绝/延迟成功/等待期切换/scheduler 清理失败/失败重试/批量分支拒绝与成功/取消确认）；邻近回归 6 文件 30 用例全绿（`newSession`/`selectSession`/`projectWrites`/`sessionsChanged`/`useProjectDetailPageModel`/`DefaultConversationSection`）；`bun run check`（types+lint+guards 含断言深度门禁）全绿。
+  - 断言深度豁免：三个测试文件的调用类断言基线显式上调（21/14/14），理由写入各文件头——编排层合同即「哪步调用哪个边界、失败时哪步不调用」，无更深可观察状态；负向断言（不得调用）无法从最终状态区分。
+  - 合同边界遵守：Team 分支合同未变；批量底层引擎未改；未触碰主进程删除能力；未自动跑 impact/全量/UI verify（按任务约定）；未访问真实会话/配置，未启动 dev。
+  - 验收分层：工程验证已执行（上述）；技术评审：独立复查进行中；集成：pending（提交后落 main 推 xquan）；人工功能验收：待用户实机验证删除失败提示与标记保留。
   - 既有修复边界：`a263429c1`（BUG-0114）只给 `agent-team` 分支补 `catch` + 失败 Toast（该文件仅 +7 行），其测试 `useProjectsPanelModel.deleteSession.test.tsx` 只构造 `kind: "agent-team"`；`4fb65a823`（BUG-0087/TASK-0226）只改主进程团队删除服务。普通/批量分支零改动。
   - 复用条件：i18n 文案 `sidebar.dialogs.deleteSessionFailedToast` 已在 zh/en `project.json:77` 存在，无需新增 key；合同其余条款与 `write_paths` 不变。

@@ -406,19 +406,10 @@ export function useProjectActions() {
 	const deleteSession = useCallback(
 		async (_cwd: string, sessionPath: string) => {
 			await window.vetta.session.delete(sessionPath);
+			// 主删除已确认成功：先摘行与清置顶（本地状态变更不会失败），再做
+			// 关联清理。关联清理失败不回滚、不中断摘行，由返回值区分「已删除但
+			// 部分信息未清理」，调用方据此给出与「删除失败」不同的反馈（BUG-0191）。
 			removePinnedSessions([sessionPath]);
-			// 定时任务 session：同步删掉「自动化」里的执行记录，否则历史列表会残留。
-			if (store.get(scheduledSessionPathsAtom).has(sessionPath)) {
-				await window.vetta.scheduler.deleteRecordsBySession(sessionPath);
-				setScheduledSessionPaths((prev) => {
-					if (!prev.has(sessionPath)) return prev;
-					const next = new Set(prev);
-					next.delete(sessionPath);
-					return next;
-				});
-				// 驱动正在展示的执行历史重新拉取。
-				setScheduledRecordsVersion((v) => v + 1);
-			}
 			setSessionsMap((prev) => {
 				// ADR-0007: 「对话」项目下的 session.cwd 是 per-session 子目录，但
 				// sessionsMap 的 key 仍是项目根。这里不再用传入的 cwd 反查，而是
@@ -430,6 +421,25 @@ export function useProjectActions() {
 				}
 				return next;
 			});
+			let cleanupFailed = false;
+			// 定时任务 session：同步删掉「自动化」里的执行记录，否则历史列表会残留。
+			if (store.get(scheduledSessionPathsAtom).has(sessionPath)) {
+				try {
+					await window.vetta.scheduler.deleteRecordsBySession(sessionPath);
+					setScheduledSessionPaths((prev) => {
+						if (!prev.has(sessionPath)) return prev;
+						const next = new Set(prev);
+						next.delete(sessionPath);
+						return next;
+					});
+					// 驱动正在展示的执行历史重新拉取。
+					setScheduledRecordsVersion((v) => v + 1);
+				} catch (error) {
+					cleanupFailed = true;
+					console.error("[projects] delete session: scheduler records cleanup failed", sessionPath, error);
+				}
+			}
+			return { cleanupFailed };
 		},
 		[removePinnedSessions, setSessionsMap, store, setScheduledSessionPaths, setScheduledRecordsVersion],
 	);

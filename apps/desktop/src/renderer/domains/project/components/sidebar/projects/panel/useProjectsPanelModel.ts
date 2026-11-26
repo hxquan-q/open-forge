@@ -79,6 +79,12 @@ export function useProjectsPanelModel({
 	const navigate = useNavigate();
 	const matches = useMatches();
 	const currentPath = matches[matches.length - 1]?.pathname ?? "/";
+	// 删除是异步的：完成时判断「是否还在首页」要用那时的路由，而不是发起删除时
+	// 闭包里的旧值——否则等待期间离开首页的用户会被拉回新建页（BUG-0191）。
+	const currentPathRef = useRef(currentPath);
+	useEffect(() => {
+		currentPathRef.current = currentPath;
+	}, [currentPath]);
 	const routeParams = matches[matches.length - 1]?.params as
 		| { path?: string; cwd?: string; sessionId?: string }
 		| undefined;
@@ -269,54 +275,93 @@ export function useProjectsPanelModel({
 
 	const deletePanelSession = useCallback(
 		(session: SidebarConversationInfo) => {
+			// 删除编排收口在这里（BUG-0191）：菜单层只确认与调用。主删除失败时
+			// 只弹失败 toast——列表/标记/活动会话/路由全部保留，用户可重试；
+			// 标注/归档标记、摘行与必要导航只在删除成功之后执行。活动会话以
+			// 完成时最新状态判定，旧闭包不得清掉用户等待期间切到的新会话。
+			const failToast = (context: string, error: unknown): void => {
+				console.error(context, error);
+				showToast({ variant: "error", message: t("sidebar.dialogs.deleteSessionFailedToast") });
+			};
+			// 会话没了，它留下的标注与归档标记就是孤儿；删除确认成功后才清理，
+			// 清理失败不回滚删除结果，但属于「部分关联信息未清理」。
+			const cleanupMetadata = async (path: string): Promise<boolean> => {
+				let failed = false;
+				try {
+					await window.vetta.conversationTags.forgetConversations([path]);
+				} catch (error) {
+					failed = true;
+					console.error("[projects-panel] forget conversation tags failed", path, error);
+				}
+				try {
+					await window.vetta.archivedSessions.forget([path]);
+				} catch (error) {
+					failed = true;
+					console.error("[projects-panel] forget archived session failed", path, error);
+				}
+				return failed;
+			};
+			const reportPartialCleanup = (): void => {
+				showToast({ variant: "warning", message: t("sidebar.dialogs.deleteSessionPartialCleanupToast") });
+			};
+			// 完成时重新读活动会话与路由：用户可能在等待期间切走或离开首页，
+			// 只有删的仍是当前活动会话才允许清活动/导航，其余情况只摘行。
+			const settleActiveSession = (path: string, projectCwd: string): void => {
+				if (store.get(activeSessionAtom)?.sessionPath !== path) return;
+				setActiveSession(null);
+				if (currentPathRef.current === "/") {
+					void navigate({ to: "/new-session/$cwd", params: { cwd: encodeURIComponent(projectCwd) } });
+				}
+			};
 			if (session.kind === "agent-team") {
 				const wasActive = activeTeamSessionId === session.teamSessionId;
 				void window.vetta.agentTeams
 					.deleteSession({ id: session.teamSessionId, coordinationSessionPath: session.path })
-					.then(() => {
+					.then(async () => {
+						const metadataFailed = await cleanupMetadata(session.path);
+						if (metadataFailed) reportPartialCleanup();
 						notifyTeamSessionsChanged(session.teamId);
 						if (wasActive) void navigate({ to: "/" });
 					})
 					.catch((error: unknown) => {
 						// IPC rejection 无出口会升级成 unhandled rejection，用户侧零反馈（BUG-0114）。
-						console.error("[projects-panel] delete team session failed", error);
-						showToast({ variant: "error", message: t("sidebar.dialogs.deleteSessionFailedToast") });
+						failToast("[projects-panel] delete team session failed", error);
 					});
 				return;
 			}
-			const wasActive = activeSessionPathValue === session.path;
-			const goToProjectDetail = (projectCwd: string): void => {
-				if (!wasActive) return;
-				setActiveSession(null);
-				if (currentPath === "/") {
-					void navigate({ to: "/new-session/$cwd", params: { cwd: encodeURIComponent(projectCwd) } });
-				}
-			};
 			const batchMatch = batchProjects.find((project) =>
 				project.tasks.some((task) => task.sessionPath === session.path),
 			);
 			if (batchMatch) {
 				const task = batchMatch.tasks.find((item) => item.sessionPath === session.path);
 				if (task) {
-					void deleteBatchTask(batchMatch.id, task.id);
-					goToProjectDetail(batchMatch.id);
+					void (async () => {
+						try {
+							await deleteBatchTask(batchMatch.id, task.id);
+						} catch (error) {
+							failToast("[projects-panel] delete batch task session failed", error);
+							return;
+						}
+						if (await cleanupMetadata(session.path)) reportPartialCleanup();
+						settleActiveSession(session.path, batchMatch.id);
+					})();
 					return;
 				}
 			}
-			void deleteSession(session.cwd, session.path);
-			goToProjectDetail(session.cwd);
+			void (async () => {
+				let result: { cleanupFailed: boolean };
+				try {
+					result = await deleteSession(session.cwd, session.path);
+				} catch (error) {
+					failToast("[projects-panel] delete session failed", error);
+					return;
+				}
+				const metadataFailed = await cleanupMetadata(session.path);
+				if (result.cleanupFailed || metadataFailed) reportPartialCleanup();
+				settleActiveSession(session.path, session.cwd);
+			})();
 		},
-		[
-			activeSessionPathValue,
-			activeTeamSessionId,
-			batchProjects,
-			deleteBatchTask,
-			deleteSession,
-			setActiveSession,
-			currentPath,
-			navigate,
-			t,
-		],
+		[activeTeamSessionId, batchProjects, deleteBatchTask, deleteSession, setActiveSession, store, navigate, t],
 	);
 
 	const renamePanelSession = useCallback(

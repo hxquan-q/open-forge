@@ -75,7 +75,8 @@
 			"clearClawTitle": "Clear Claw records",
 			"clearClawMessage": "This will delete {{count}} Claw record(s) while keeping artifacts. This cannot be undone.",
 			"clearConfirm": "Clear",
-			"deleteSessionFailedToast": "Failed to delete the session. Please try again later."
+			"deleteSessionFailedToast": "Failed to delete the session. Please try again later.",
+			"deleteSessionPartialCleanupToast": "The session was deleted, but some related information could not be cleaned up."
 		},
 		"time": {
 			"justNow": "now",

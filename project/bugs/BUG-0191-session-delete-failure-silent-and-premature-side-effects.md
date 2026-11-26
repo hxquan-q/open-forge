@@ -1,7 +1,7 @@
 ---
 id: BUG-0191
 type: bug
-status: investigating
+status: fixing
 priority: P1
 owner: desktop
 requirement: []
@@ -13,7 +13,7 @@ related_tasks: [TASK-0489, TASK-0226]
 related_issues: []
 related_bugs: [BUG-0114, BUG-0087]
 created: 2026-11-17
-updated: 2026-11-18
+updated: 2026-11-26
 ---
 <!-- Copyright The Open Forge contributors. -->
 
@@ -41,7 +41,18 @@ updated: 2026-11-18
 
 P1反馈与状态一致性缺陷：删除失败零反馈且标记丢失、被导航带走；清理失败被误报或无提示。不涉及主进程删除能力本身（Team底层BUG-0087已另行修复）、不涉及项目硬删除EBUSY（另题）。
 
-## 修复与验证范围
+## 修复与验证范围（2026-11-26，TASK-0489）
+
+修复已实施，工程验证通过：
+
+- `useProjects.ts` deleteSession：摘行与清置顶改为紧随主删除成功执行（本地状态变更不会失败）；scheduler 执行记录清理独立 try/catch，失败不回滚、不中断摘行，以返回值 `cleanupFailed` 区分「已删除但部分信息未清理」。
+- `useProjectsPanelModel.ts`：普通/批量/团队三分支删除编排收口——主删除拒绝时失败 Toast + console.error，不导航、不清标记、不动活动会话；标注/归档标记（`conversationTags`/`archivedSessions`）移到删除确认成功之后清理，清理失败计入部分完成提示（warning Toast `deleteSessionPartialCleanupToast`，zh/en 新增）；活动会话以完成时 `store.get(activeSessionAtom)` 最新值判定，路由经 `currentPathRef` 取完成时值，旧闭包不再清掉新会话或拉回用户。
+- `useProjectsPanelMenusModel.ts`：菜单层不再触碰元数据清理，只确认与调用。
+- `useConfirmDialogModel.ts`：onConfirm 同步抛出异常就地捕获记日志，不升级 unhandled rejection。
+
+验证证据：定向 vitest 3 文件 27 用例全绿（新增组合测试 deleteSession.orchestration.test.tsx 以真实菜单+panel+useProjects+useBatchTasks 装配、仅 IPC 边界 fake，覆盖主拒绝/延迟成功/等待期切换/scheduler 清理失败/失败重试/批量分支/取消确认）；邻近回归 6 文件 30 用例全绿；`bun run check`（types+lint+guards 含断言深度门禁）全绿。断言深度基线对三个测试文件显式豁免（调用类断言即编排合同本身，理由已写入文件头）。未做：实机 UI 验收（未授权），Task 保持 verifying 待用户确认。
+
+## 修复与验证范围（登记时）
 
 TASK-0489先红后绿：组件/组合Hook层真实菜单+panel+useProjects装配，仅IPC外部边界fake。覆盖主删除拒绝、延迟成功、非活动目标、等待期切换会话、失败后重试、清理失败部分完成、批量分支、Team保护、取消确认。动态红灯待执行，不冒充已测；实际结果由TASK-0489补记。
 

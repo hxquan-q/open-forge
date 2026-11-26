@@ -22,7 +22,14 @@ export function useConfirmDialogModel(): ConfirmDialogViewProps {
 	}, [setState, state]);
 
 	const onConfirm = useCallback(() => {
-		state?.onConfirm(state.checkbox?.checked ?? false, inputValue);
+		// onConfirm 自身可以是 async（如删除会话编排）；rejection 必须由回调内部
+		// 承接，对话框不替调用方兜底，但调用本身用 void 明确表示不承接——回调
+		// 同步抛出的异常也在这里接住，避免升级成 unhandled rejection。
+		try {
+			void state?.onConfirm(state.checkbox?.checked ?? false, inputValue);
+		} catch (error) {
+			console.error("[confirm-dialog] onConfirm threw synchronously", error);
+		}
 		setState(null);
 	}, [setState, state, inputValue]);
 

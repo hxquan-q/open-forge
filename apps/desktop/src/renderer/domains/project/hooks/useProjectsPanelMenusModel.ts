@@ -50,9 +50,9 @@ export function useProjectsPanelMenusModel(model: ProjectsPanelModel) {
 					confirmLabel: t("sidebar.dialogs.deleteConfirm"),
 					variant: "danger",
 					onConfirm: () => {
-						// 会话没了，它留下的标注与归档标记就是孤儿；与置顶的清理时机保持一致。
-						void window.vetta.conversationTags.forgetConversations([session.path]);
-						void window.vetta.archivedSessions.forget([session.path]);
+						// 删除编排（失败反馈、成功后清理标注/归档、导航时机）全部收口在
+						// panel model（BUG-0191）；菜单层只负责确认与调用，不在结果未知时
+						// 提前清标记——主删除失败时标记必须原样保留。
 						model.actions.deleteSession(session);
 					},
 				});
