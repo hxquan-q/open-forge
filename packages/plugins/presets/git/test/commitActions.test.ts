@@ -93,7 +93,7 @@ describe("commit history in an isolated repository", () => {
 			{ path: "renamed.txt", origPath: "first.txt", code: "R" },
 			{ path: "second.txt", code: "M" },
 		]);
-		expect(await commitFileDiff(root, latest, files[0].path, files[0].origPath)).toContain("rename from first.txt");
+		expect(await commitFileDiff(root, latest, files[0])).toContain("rename from first.txt");
 
 		await out(["checkout", "-b", "side", initial]);
 		await writeFile(join(root, "third.txt"), "three\n");

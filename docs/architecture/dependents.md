@@ -72,7 +72,7 @@
 | `@vetta/skill-presets` | — |
 | `@vetta/ssh-transport` | `@vetta/desktop`<br>`@vetta/runtime-desktop`<br>`@vetta/runtime-ssh` |
 | `@vetta-org/theme-sdk` | `@vetta-org/theme-ui`<br>`@vetta/desktop`<br>`@vetta/theme-xianxia` |
-| `@vetta-org/theme-ui` | `@vetta/desktop`<br>`@vetta/plugin-kanban`<br>`@vetta/theme-xianxia` |
+| `@vetta-org/theme-ui` | `@vetta/desktop`<br>`@vetta/plugin-git`<br>`@vetta/plugin-kanban`<br>`@vetta/theme-xianxia` |
 | `@vetta/theme-xianxia` | — |
 | `@vetta/toolkit` | `@vetta/desktop`<br>`@vetta/plugin-content-creation`<br>`@vetta/theme-xianxia` |
 | `@vetta-org/ui` | `@vetta-org/theme-ui`<br>`@vetta/desktop`<br>`@vetta/plugin-chart-renderer`<br>`@vetta/plugin-content-creation`<br>`@vetta/plugin-git`<br>`@vetta/plugin-image-gen`<br>`@vetta/plugin-kanban`<br>`@vetta/plugin-media-viewer`<br>`@vetta/plugin-office-viewer`<br>`@vetta/plugin-plugin-workbench`<br>`@vetta/plugin-remotion-renderer`<br>`@vetta/plugin-scripts`<br>`@vetta/plugin-svg-viewer`<br>`@vetta/theme-xianxia` |

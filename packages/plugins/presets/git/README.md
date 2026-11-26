@@ -60,5 +60,6 @@ consumes:  []
 internal_dependencies:
   - "@vetta-org/plugin-sdk"
   - "@vetta-org/plugin-vite"
+  - "@vetta-org/theme-ui"
   - "@vetta-org/ui"
 ```

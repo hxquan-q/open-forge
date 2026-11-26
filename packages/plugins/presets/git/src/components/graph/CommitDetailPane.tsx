@@ -5,16 +5,15 @@ import { useCallback, useEffect, useState } from "react";
 import { commitFileDiff, commitFiles } from "../../git/log";
 import { parseNameStatus } from "../../git/parseLog";
 import type { ChangeEntry, CommitNode } from "../../git/types";
-import { DiffView } from "../DiffView";
 import { GitFileTree } from "../GitFileTree";
 import { GitFlatList } from "../GitFlatList";
 import { CloseIcon, ListViewIcon, TreeViewIcon } from "../icons";
+import { PatchContent } from "../PatchContent";
 import { StatusBadge } from "../StatusBadge";
 import { CommitMeta } from "./CommitMeta";
 
 type ViewMode = "tree" | "flat";
-// Shared with GitChanges so the tree/flat preference stays consistent across views.
-const VIEW_MODE_KEY = "vetta-git-view-mode";
+const VIEW_MODE_KEY = "vetta-git-commit-view-mode";
 
 function basename(path: string): string {
 	const i = path.lastIndexOf("/");
@@ -31,20 +30,23 @@ function CommitFileDiff({ root, hash, entry }: { root: string; hash: string; ent
 		let alive = true;
 		setPatch(null);
 		setError(null);
-		commitFileDiff(root, hash, entry.path, entry.origPath)
+		commitFileDiff(root, hash, entry)
 			.then((p) => alive && setPatch(p))
 			.catch((err: unknown) => alive && setError(err instanceof Error ? err.message : String(err)));
 		return () => {
 			alive = false;
 		};
-	}, [root, hash, entry.path, entry.origPath]);
+	}, [root, hash, entry]);
 
 	return (
 		// Natural height (no cap, no internal scroll): the panel scrolls as a whole.
-		// Background matches the activity panel (--muted).
-		<div className="shrink-0 border-t border-border bg-muted">
+		// Use the same diff surface as the working-changes pane.
+		<div className="shrink-0 border-t border-border bg-background">
 			<div className="flex h-7 items-center gap-1.5 border-b border-border px-2">
-				<span className="min-w-0 flex-1 truncate text-[12px] text-foreground" title={entry.origPath ? `${entry.origPath} → ${entry.path}` : entry.path}>
+				<span
+					className="min-w-0 flex-1 truncate text-[12px] text-foreground"
+					title={entry.origPath ? `${entry.origPath} → ${entry.path}` : entry.path}
+				>
 					{basename(entry.path)}
 				</span>
 				<StatusBadge code={entry.code} />
@@ -56,14 +58,22 @@ function CommitFileDiff({ root, hash, entry }: { root: string; hash: string; ent
 			) : patch.trim().length === 0 ? (
 				<div className="px-3 py-2 text-[12px] text-muted-foreground">{t("diff.empty")}</div>
 			) : (
-				<DiffView patch={patch} />
+				<PatchContent patch={patch} />
 			)}
 		</div>
 	);
 }
 
 /** Right-hand slide-out: commit metadata, then a tree/flat file list above the selected file's diff. */
-export function CommitDetailPane({ root, node, onClose }: { root: string; node: CommitNode; onClose: () => void }): JSX.Element {
+export function CommitDetailPane({
+	root,
+	node,
+	onClose,
+}: {
+	root: string;
+	node: CommitNode;
+	onClose: () => void;
+}): JSX.Element {
 	const { t } = useTranslation();
 	const [files, setFiles] = useState<ChangeEntry[] | null>(null);
 	const [error, setError] = useState<string | null>(null);
@@ -73,9 +83,13 @@ export function CommitDetailPane({ root, node, onClose }: { root: string; node: 
 	const handleSelection = useCallback((_paths: string[], added: string | null) => {
 		if (added) setSelectedPath(added);
 	}, []);
-	const [viewMode, setViewMode] = useState<ViewMode>(() =>
-		typeof localStorage !== "undefined" && localStorage.getItem(VIEW_MODE_KEY) === "flat" ? "flat" : "tree",
-	);
+	const [viewMode, setViewMode] = useState<ViewMode>(() => {
+		try {
+			return localStorage.getItem(VIEW_MODE_KEY) === "tree" ? "tree" : "flat";
+		} catch {
+			return "flat";
+		}
+	});
 
 	const toggleView = useCallback(() => {
 		setViewMode((m) => {
@@ -130,7 +144,9 @@ export function CommitDetailPane({ root, node, onClose }: { root: string; node: 
 				<div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
 					<CommitMeta node={node} />
 					<div className="flex h-7 shrink-0 items-center justify-between border-b border-border px-1.5">
-						<span className="text-[12px] text-muted-foreground">{t("commit.files", { count: files.length })}</span>
+						<span className="text-[12px] text-muted-foreground">
+							{t("commit.files", { count: files.length })}
+						</span>
 						<Button
 							type="button"
 							variant="ghost"
@@ -138,11 +154,15 @@ export function CommitDetailPane({ root, node, onClose }: { root: string; node: 
 							onClick={toggleView}
 							title={viewMode === "tree" ? t("view.switchToFlat") : t("view.switchToTree")}
 						>
-							{viewMode === "tree" ? <ListViewIcon className="h-3.5 w-3.5" /> : <TreeViewIcon className="h-3.5 w-3.5" />}
+							{viewMode === "tree" ? (
+								<ListViewIcon className="h-3.5 w-3.5" />
+							) : (
+								<TreeViewIcon className="h-3.5 w-3.5" />
+							)}
 						</Button>
 					</div>
-					{/* File list: auto height, capped, scrolls internally past the cap. */}
-					<div className="max-h-[40%] shrink-0 overflow-y-auto border-b border-border">
+					{/* The virtual tree needs a definite viewport height; max-height alone collapses its host. */}
+					<div className="shrink-0 overflow-y-auto border-b border-border" style={{ height: 192 }}>
 						{files.length === 0 ? (
 							<div className="px-3 py-2 text-[12px] text-muted-foreground">{t("commit.noFiles")}</div>
 						) : viewMode === "tree" ? (

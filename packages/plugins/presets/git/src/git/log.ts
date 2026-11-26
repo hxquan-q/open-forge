@@ -1,7 +1,7 @@
 // Modified by The Open Forge contributors.
 import type { PluginCommandRunResult } from "@vetta-org/plugin-sdk";
 import { getGitCommand } from "./runtime";
-import type { BranchRef, GraphScope, GraphSelection } from "./types";
+import type { BranchRef, ChangeEntry, GraphScope, GraphSelection } from "./types";
 
 function git(cwd: string, args: string[]): Promise<PluginCommandRunResult> {
 	return getGitCommand().run("git", args, { cwd });
@@ -73,7 +73,7 @@ export async function commitFiles(root: string, hash: string): Promise<string> {
 }
 
 /** Unified diff for one file at a commit (vs its first parent). */
-export async function commitFileDiff(root: string, hash: string, path: string, originalPath?: string): Promise<string> {
+export async function commitFileDiff(root: string, hash: string, entry: ChangeEntry): Promise<string> {
 	const res = await git(root, [
 		"--literal-pathspecs",
 		"-c",
@@ -86,7 +86,7 @@ export async function commitFileDiff(root: string, hash: string, path: string, o
 		"--pretty=format:",
 		"--find-renames",
 		"--",
-		...(originalPath ? [originalPath, path] : [path]),
+		...(entry.origPath ? [entry.origPath, entry.path] : [entry.path]),
 	]);
 	if (res.exitCode !== 0) {
 		throw new Error(res.stderr.trim() || `git show failed (exit ${res.exitCode})`);

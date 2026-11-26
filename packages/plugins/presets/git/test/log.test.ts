@@ -83,7 +83,7 @@ describe("commit details against isolated Git", () => {
 				throw new Error("Unexpected spawn");
 			},
 		});
-		await expect(commitFileDiff("/fixture", "HEAD", "a.txt")).rejects.toThrow("show failed");
+		await expect(commitFileDiff("/fixture", "HEAD", { path: "a.txt", code: "M" })).rejects.toThrow("show failed");
 	});
 
 	it("reads literal bracket paths without selecting a glob-matching neighbor", async () => {
@@ -97,7 +97,7 @@ describe("commit details against isolated Git", () => {
 		expect(parseNameStatus(await commitFiles(root, hash))).toEqual(
 			expect.arrayContaining([{ path: "file[1].txt", code: "M" }]),
 		);
-		const patch = await commitFileDiff(root, hash, "file[1].txt");
+		const patch = await commitFileDiff(root, hash, { path: "file[1].txt", code: "M" });
 		expect(patch).toContain("+literal after");
 		expect(patch).not.toContain("+neighbor after");
 	}, 10_000);
@@ -109,7 +109,7 @@ describe("commit details against isolated Git", () => {
 		const hash = await commit(["old.txt", "new.txt"]);
 		const [entry] = parseNameStatus(await commitFiles(root, hash));
 		expect(entry).toEqual({ code: "R", path: "new.txt", origPath: "old.txt" });
-		const patch = await commitFileDiff(root, hash, entry.path, entry.origPath);
+		const patch = await commitFileDiff(root, hash, entry);
 		expect(patch).toContain("rename from old.txt");
 		expect(patch).toContain("rename to new.txt");
 	}, 10_000);
