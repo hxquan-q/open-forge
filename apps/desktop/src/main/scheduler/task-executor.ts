@@ -119,6 +119,8 @@ async function executeTaskInner(task: ScheduledTask, runtime: RuntimeHost, optio
 		});
 
 		let responseText = "";
+		// 失败的一轮同样以 agent_end 收尾，只看生命周期分不出成败；失败先以带 turnId 的 error 事件到达。
+		let turnFailure: string | undefined;
 		let unsubscribed = false;
 		let unsubscribe: () => void = () => {};
 		const safeUnsubscribe = (): void => {
@@ -166,6 +168,11 @@ async function executeTaskInner(task: ScheduledTask, runtime: RuntimeHost, optio
 					type: "message.delta",
 					delta: event.delta,
 				});
+			}
+
+			if (event.type === "error" && event.turnId) {
+				turnFailure = event.error.message;
+				return;
 			}
 
 			if (event.type === "thinking.delta") {
@@ -218,13 +225,15 @@ async function executeTaskInner(task: ScheduledTask, runtime: RuntimeHost, optio
 				});
 
 				if (event.phase === "agent_end" || event.phase === "aborted") {
-					record.status = event.phase === "aborted" ? "aborted" : "success";
+					const status = event.phase === "aborted" ? "aborted" : turnFailure ? "failed" : "success";
+					record.status = status;
+					if (status === "failed") record.error = turnFailure;
 					record.completedAt = Date.now();
 					record.responsePreview = responseText.slice(0, 500);
 					record.durationMs = record.completedAt - record.startedAt;
 
 					await updateRecordMetadata(record);
-					await updateTaskLastRun(task.id, event.phase === "aborted" ? "failed" : "success");
+					await updateTaskLastRun(task.id, status === "success" ? "success" : "failed");
 					if (event.phase === "aborted" && record.sessionPath) {
 						recordSessionAttention(record.sessionPath, "unread-result");
 					}
@@ -239,7 +248,7 @@ async function executeTaskInner(task: ScheduledTask, runtime: RuntimeHost, optio
 						type: "record.updated",
 						taskId: task.id,
 						sessionId,
-						status: event.phase === "aborted" ? "aborted" : "success",
+						status,
 					});
 
 					// Auto-disable one-time tasks after execution completes

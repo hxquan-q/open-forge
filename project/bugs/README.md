@@ -16,6 +16,7 @@
 
 | ID | 标题 | 状态 | 优先级 | 关联计划 |
 |---|---|---|---|---|
+| `BUG-0198` | 失败的定时任务仍记成成功、列表与历史误显绿色：执行器只看 `agent_end` 生命周期，忽略 runtime `error(turnId)`；上游 c83d5c220 等价行为缺失 | fixing | P2 | PLAN-0032 |
 | `BUG-0196` | 版块「从版块移除」成功后卡片不消失（会话池仍聚合建卡），再点即静默 `Project not found`；菜单未按 `registered` 收口、移除非幂等 | in_progress | P2 | REQ-0030 |
 | `BUG-0195` | 团队会话协调文件缺失后重命名必失败并抛 `No RuntimeHost session backend owns`：列表不校验文件、重命名无降级（删除已有）；文件消失成因待调查 | in_progress | P1 | REQ-0030 |
 | `BUG-0194` | 版块会话行尾「···」点了直接打开会话而非展开菜单（占位图标冒泡到整行打开回调）；已抽 `AllstarSessionRow` 接三项菜单，待实机走查 | verifying | P2 | REQ-0030 |
