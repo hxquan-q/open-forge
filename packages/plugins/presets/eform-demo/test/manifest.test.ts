@@ -106,6 +106,7 @@ describe("AIMES form demo preset", () => {
 		expect(prototype).toContain("在构建时导入并嵌入前端产物");
 		expect(prototype).toContain("不要 `fetch` 本地 JSON");
 		expect(prototype).toContain("默认接入目标 AIMES 的 qiankun 主界面");
+		expect(prototype).toContain("不要在界面上加「原型」「演示」「Mock」或「非生产」");
 	});
 
 	it("limits team testing to builds, static review, and optional unit tests", async () => {
@@ -127,6 +128,16 @@ describe("AIMES form demo preset", () => {
 		expect(prototype).toContain("保留既有模块的真实 API");
 		const tester = await prompt("tester");
 		expect(tester).toContain("已依赖真实后端的现有模块");
+	});
+
+	it("builds immediately after a clean merge and hands off without post-build checks", async () => {
+		const deployer = await prompt("deployer");
+		expect(deployer).toContain("合并无冲突就直接构建");
+		expect(deployer).toContain("仅在合并出现实际冲突时");
+		expect(deployer).toContain("构建成功后不再追加测试、静态检测或制品复验");
+		const workflow = await read("../agent/workflows/demo.md");
+		expect(workflow).toContain("构建成功即出部署指导");
+		expect(await memberGuide("deployer")).toContain("不加跑测试或制品复验");
 	});
 
 	it("preserves demo mock across master integration and documents user-run acceptance", async () => {
