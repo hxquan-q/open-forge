@@ -65,8 +65,6 @@ export interface LauncherSettingsViewProps {
 	readonly onShortcutChange: (shortcut: string) => void;
 	readonly onShortcutReset: () => void;
 	readonly eventToShortcut: (event: KeyboardEvent) => string | null;
-	/** 宿主提供持久化快捷键的展示格式化（本地 ShortcutRecorderView 要求）。 */
-	readonly formatShortcut: (shortcut: string) => string;
 	readonly onOpenLauncher: () => void;
 }
 
@@ -88,7 +86,6 @@ export function LauncherSettingsView({
 	onShortcutChange,
 	onShortcutReset,
 	eventToShortcut,
-	formatShortcut,
 	onOpenLauncher,
 }: LauncherSettingsViewProps): JSX.Element {
 	return (
@@ -148,7 +145,6 @@ export function LauncherSettingsView({
 						placeholder={labels.shortcutPlaceholder}
 						resetLabel={labels.resetLabel}
 						eventToShortcut={eventToShortcut}
-						formatShortcut={formatShortcut}
 					/>
 				</SettingRow>
 			</SettingSection>

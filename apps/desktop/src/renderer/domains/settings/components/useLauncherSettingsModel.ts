@@ -1,5 +1,5 @@
 // Modified by The Open Forge contributors.
-import { eventToShortcut, formatShortcut } from "@shared/lib/platform";
+import { eventToShortcut } from "@shared/lib/platform";
 import {
 	getEffectiveShortcut,
 	loadShortcutBindings,
@@ -160,7 +160,6 @@ export function useLauncherSettingsModel(): LauncherSettingsModel {
 		onShortcutChange,
 		onShortcutReset,
 		eventToShortcut,
-		formatShortcut,
 		onOpenLauncher: () => setLauncherOpen(true),
 	};
 }

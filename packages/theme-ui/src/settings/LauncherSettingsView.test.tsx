@@ -52,7 +52,6 @@ function render(overrides: Partial<LauncherSettingsViewProps> = {}): HTMLDivElem
 		onShortcutChange: () => {},
 		onShortcutReset: () => {},
 		eventToShortcut: () => null,
-		formatShortcut: (shortcut: string) => shortcut,
 		onOpenLauncher: () => {},
 		...overrides,
 	};
