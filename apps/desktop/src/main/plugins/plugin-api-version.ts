@@ -19,9 +19,10 @@
  *   拖拽排序持久化于本机键 `forge.headerActions.order`），对应上游能力集
  *   `7e0a8b130`（顶栏重写）+ `b669f73ae`（label/tone/pin/surfaces 扩展字段）+
  *   `234885a88`/`8efa385a8`/`ffe0d5e90`（收纳托盘与调整模式）+ `25c43ece2`（过窄收进更多菜单）。
- *   活动面板插件 `useMeta`（上游 `62b2749f8`）由 PLAN-0032 P9 登记。
+ * - 2.15.0：活动面板标签卡自报这一帧的 meta（`registerActivityTab` 的 `useMeta`），
+ *   按面板工作空间解析 cwd，支持 `pinned: true` 固定上栏且不可移除。对应上游 `62b2749f8`。
  *
  * 清单校验对未知字段 fail-closed。作者把 `pluginApiVersion` 写成用到的那一档，
  * 旧宿主才能给出明确的版本错误。
  */
-export const PLUGIN_API_VERSION = "2.14.0";
+export const PLUGIN_API_VERSION = "2.15.0";

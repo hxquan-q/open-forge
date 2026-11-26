@@ -401,6 +401,16 @@ interface PluginActivityTabContribution {
   retention?: "active-only" | "warm" | "pinned"; // 缺省 warm
   /** @deprecated true=pinned，false=active-only */
   keepAliveWhenAvailable?: boolean;
+  /** 按当前面板工作空间决定这一帧；null = 本帧不进入候选（见下「useMeta」） */
+  useMeta?: (scope: { cwd: string | null }) => PluginActivityTabMeta | null;
+}
+
+interface PluginActivityTabMeta {
+  label?: string;
+  icon?: ReactNode;
+  badge?: number;
+  /** true = 固定上栏且不可移除，忽略上栏记录与 initiallyVisible */
+  pinned?: boolean;
 }
 ```
 
@@ -424,6 +434,44 @@ function StatsPanel() {
   // warm/pinned 会保留组件；昂贵的轮询或动画应在 active=false 时主动暂停。
   // ...
 }
+```
+
+### useMeta（按工作空间决定这一帧）
+
+```ts
+useMeta?: (scope: { cwd: string | null }) => { label?; icon?; badge?; pinned?: boolean } | null;
+```
+
+注册时声明 `useMeta`，标签卡的显隐就不再只靠「用户上栏记录 + `setActivityTabVisible`」，而是**每帧按当前面板的工作空间重新算**（需要 Plugin API `^2.15.0`）：
+
+- 返回 `null`：本帧不进入候选——不上栏，也不在「+」可添加池里。适合「这块目录根本不是这个工具能处理的」的情况。
+- 返回 `{ pinned: true }`：**固定上栏且不可移除**。忽略上栏/下栏记录与 `initiallyVisible`，用户不能再用减号把它挤出去。「只要工作空间里有这个东西就必须看得到」的面板用这个（如项目根存在 `.git` 的 Git 面板）。
+- 返回 `{}` / 只带 label：行为回到注册时声明——`initiallyVisible` 与用户可移除的上栏记录决定去留。
+
+它是一个 **React hook**，宿主在**每个挂载的活动面板**上调用它：会话页、新会话页、项目详情页都能拿到各自的工作空间 cwd（新会话页是所选项目根，项目详情页是项目根）。这比只靠 `ctx.conversation.on("conversation-changed")` 可靠：后者在没有会话的页面上永远不会触发，插件也拿不到那些页面的 cwd。
+
+约束：
+
+- 渲染期必须是纯计算。探测一类的异步工作放进 `useEffect`，结果写回自己的缓存 store，并用 `useSyncExternalStore`（或等价订阅）让宿主重算。
+- 首帧还没有结论时返回 `null`，不要先按错误的判断占位。
+- 缓存要能被作废：仓库状态是变的（`git init`、agent 自己跑的命令）。宿主不会替插件重算——自行在 `turn-end` 与自己的写操作后作废缓存，否则标签卡会一直沿用旧结论。
+- 抛错等同于返回 `null`，只影响这一项。
+
+```tsx
+// git：仓库目录里固定在栏上，其它目录退回「+」池（初始化仓库仍从那里进）。
+ctx.ui.registerActivityTab({
+  id: "changes",
+  label: "%tab.label%",
+  component: GitPanel,
+  scope_use: ["project", "batch", "automation"],
+  initiallyVisible: false,
+  useMeta: ({ cwd }) => {
+    if (!cwd) return null;
+    const probe = useCachedGitProbe(cwd); // 自己的缓存 + effect 里的异步探测
+    if (probe === null) return null;      // 还没结论
+    return { pinned: probe !== "not-repo" };
+  },
+});
 ```
 
 ### openActivityTab
@@ -472,6 +520,8 @@ ctx.ui.registerInputAction({
 ```
 
 上栏记录按 cwd 持久化，所以**只需在条件变化时调用**；用户之后用减号手动隐藏的结果不会被重复调用覆盖。当前没有活动会话时是 no-op（无处记录），插件应在会话就绪后重新判定。异步判定要注意丢弃过期结果：写入落在**调用时**的活动会话上，探测期间切走了就别再写。
+
+它只能影响**有会话在场的**面板：写入前宿主把会话 cwd 翻成当前挂载的工作空间键，新会话页/项目详情页没有会话可寻址。这类页面上的显隐用 `useMeta`（「看目录里有没有 .git」这类依赖工作空间的条件不要写在这里）。
 
 ## 会话底部面板 registerBottomPanel
 

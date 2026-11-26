@@ -352,6 +352,9 @@ export function createPluginUiApi({
 		) {
 			throw new Error("Activity tab retention is invalid");
 		}
+		if (contribution.useMeta !== undefined && typeof contribution.useMeta !== "function") {
+			throw new Error("Activity tab useMeta must be a function");
+		}
 		const normalized: PluginActivityTabContribution = {
 			id: contribution.id,
 			label: contribution.label,
@@ -361,6 +364,7 @@ export function createPluginUiApi({
 			initiallyVisible: contribution.initiallyVisible,
 			retention: contribution.retention,
 			keepAliveWhenAvailable: contribution.keepAliveWhenAvailable,
+			useMeta: contribution.useMeta,
 		};
 		activityTabs.push(normalized);
 		console.debug(

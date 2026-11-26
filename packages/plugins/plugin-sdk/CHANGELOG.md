@@ -5,6 +5,8 @@ All notable changes to `@vetta-org/plugin-sdk` are documented in this file.
 
 ## [Unreleased]
 
+- 活动面板标签卡新增 `useMeta({ cwd })`：插件按当前面板的工作空间决定这一帧的 label / icon / badge 与显隐，返回 `null` 表示本帧不进入候选，返回 `{ pinned: true }` 表示**固定上栏且不可移除**（忽略上栏记录与 `initiallyVisible`）。此前显隐只能靠 `setActivityTabVisible`，而它需要一份会话上下文：新会话页与项目详情页没有会话，靠 `conversation.on` 判定的面板（如 Git）在这些页面上要么不出现、要么只能按上一个会话残留的记录猜。现在宿主在每个挂载的面板上调用 `useMeta`，并把它当作 hook 使用（渲染期需纯计算，异步探测放 `useEffect`）。省略该字段行为不变。需要 Plugin API `^2.15.0`。
+
 - 新增 `ctx.ui.registerHeaderAction()` 和权限 `ui.slot.header-action`，要求 Plugin API `^2.14.0`。插件可以在普通会话或新会话页提供常用操作，用户可以把它们放在顶栏或收纳区并调整顺序。
 
 - **清单新增 `agent.agents[].lifecycle`（`resident` / `oneshot`）——委任生命周期标记**：声明即表示该智能体是 worker 型，用户在新会话选择器选中它时不再由它的人格接管会话，而是由默认会话保持驾驶、任务落在其域内时按定义委派（`resident` 常驻：spawn 一次 durable 会话，后续任务 followup_task 顺序排队，绝不重复起实例；`oneshot` 一次性：每个任务起 one-shot 子代理）。**缺省不带标记 = 主控/接管型，行为与现状完全一致**；团队是否有主控由队长的 `lifecycle` 推导，成员各自的标记决定被委派时的生命周期。存量清单零迁移。使用者应声明 `pluginApiVersion: ^2.13.0`（清单校验 fail-closed，旧宿主会整份拒绝带该字段的清单）。

@@ -249,6 +249,9 @@ export function PluginGlobalSlotHost(): JSX.Element | null {
 				initiallyVisible: tab.initiallyVisible,
 				retention: tab.retention,
 				keepAliveWhenAvailable: tab.keepAliveWhenAvailable,
+				// 上游 62b2749f8 遗漏透传，本地先行修复：useMeta 不到达 atom 时
+				// pinned/按工作空间可用性在生产链路完全不生效。
+				useMeta: tab.useMeta,
 			})),
 		);
 		if (tabs.length > 0 || !hostLoading) setActivityTabs(tabs);
