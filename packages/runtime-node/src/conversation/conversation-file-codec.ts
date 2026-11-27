@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import {
 	applyConversationDocumentCommand,
 	applyStoredEventToConversationDocument,
@@ -34,7 +35,7 @@ import {
 	readConversationEventRecord,
 } from "@vetta/runtime-storage/conversation";
 
-type ConversationBodyRecord = NormalizedReadConversationEventRecord | ConversationDocumentOperationRecord;
+export type ConversationBodyRecord = NormalizedReadConversationEventRecord | ConversationDocumentOperationRecord;
 
 export interface ParsedConversationFile {
 	readonly header: ReadConversationFileHeader;
@@ -274,25 +275,84 @@ export function documentFromFile(sessionId: string, file: ParsedConversationFile
 		if (seedName !== undefined) {
 			document = { ...document, name: seedName };
 		}
-		for (const record of file.records) {
-			if (record.recordType === "conversation.event") {
-				const reference = record.schemaVersion === CONVERSATION_SCHEMA_VERSION ? record.documentEntry : undefined;
-				document = applyStoredEventToConversationDocument(
-					document,
-					record.event,
-					record.sequence,
-					reference ?? undefined,
-				);
-				continue;
-			}
-			const result = applyConversationDocumentCommand(document, record.command, record.revision);
-			if (!result.changed) throw new Error(`Document operation ${record.revision} is a persisted no-op`);
-			document = result.document;
-		}
-		return document;
+		return replayConversationRecords(document, file.records);
 	} catch (error) {
 		throw corruptConversation(sessionId, "invalid conversation document projection", error);
 	}
+}
+
+/**
+ * 解析接在一份已校验文件之后的整行记录，事件按与整份解析相同的规则校验版本、序号与内容。
+ * 种子记录只允许出现在文件开头，遇到时返回 undefined，调用方回退整份解析；格式错误直接抛出。
+ * 文档节点的重复与父节点检查留给 {@link extendDocumentWithRecords} 的重放。
+ */
+export function parseAppendedConversationRecords(
+	text: string,
+	sessionId: string,
+	header: ReadConversationFileHeader,
+	expectedEventSequence: number,
+): { readonly records: ConversationBodyRecord[]; readonly nextEventSequence: number } | undefined {
+	const records: ConversationBodyRecord[] = [];
+	let nextEventSequence = expectedEventSequence;
+	for (const record of parseRecords(text, sessionId)) {
+		if (isConversationDocumentOperationRecord(record)) {
+			if (header.schemaVersion !== CONVERSATION_SCHEMA_VERSION) return undefined;
+			records.push(record);
+			continue;
+		}
+		const eventRecord = readConversationEventRecord(record);
+		if (!eventRecord) return undefined;
+		if (eventRecord.schemaVersion !== header.schemaVersion || eventRecord.sequence !== nextEventSequence) {
+			return undefined;
+		}
+		validateConversationEvent(sessionId, eventRecord.event);
+		if (
+			eventRecord.schemaVersion === CONVERSATION_SCHEMA_VERSION &&
+			(eventRecord.documentEntry !== null) !==
+				(conversationDocumentEntryPersistence(eventRecord.event) === "reference")
+		) {
+			return undefined;
+		}
+		nextEventSequence += 1;
+		records.push(eventRecord);
+	}
+	return { records, nextEventSequence };
+}
+
+/** 在已有文档投影上按读盘规则重放记录；增量追加与整份投影共用，保证两条路径结果一致。 */
+export function extendDocumentWithRecords(
+	sessionId: string,
+	document: ConversationDocument,
+	records: readonly ConversationBodyRecord[],
+): ConversationDocument {
+	try {
+		return replayConversationRecords(document, records);
+	} catch (error) {
+		throw corruptConversation(sessionId, "invalid conversation document projection", error);
+	}
+}
+
+function replayConversationRecords(
+	initial: ConversationDocument,
+	records: readonly ConversationBodyRecord[],
+): ConversationDocument {
+	let document = initial;
+	for (const record of records) {
+		if (record.recordType === "conversation.event") {
+			const reference = record.schemaVersion === CONVERSATION_SCHEMA_VERSION ? record.documentEntry : undefined;
+			document = applyStoredEventToConversationDocument(
+				document,
+				record.event,
+				record.sequence,
+				reference ?? undefined,
+			);
+			continue;
+		}
+		const result = applyConversationDocumentCommand(document, record.command, record.revision);
+		if (!result.changed) throw new Error(`Document operation ${record.revision} is a persisted no-op`);
+		document = result.document;
+	}
+	return document;
 }
 
 export function createDocumentEntryReference(

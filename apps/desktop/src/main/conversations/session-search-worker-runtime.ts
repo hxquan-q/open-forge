@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { stat } from "node:fs/promises";
 import { resolve } from "node:path";
 import type { MessagePort } from "node:worker_threads";
@@ -22,7 +23,7 @@ export function startSessionSearchWorker(port: Pick<MessagePort, "on" | "postMes
 	);
 	const reader = new CompositeRuntimeSessionFileHistoryReader([
 		historical.sessionFileHistoryReader,
-		new FileConversationRuntimeSessionFileHistoryReader(),
+		new FileConversationRuntimeSessionFileHistoryReader({ cacheEntries: 0 }),
 	]);
 	const ownership = new ConversationOwnershipCatalog();
 	const legacyOwnedPaths = listLegacyTeamSessionDocuments().then(

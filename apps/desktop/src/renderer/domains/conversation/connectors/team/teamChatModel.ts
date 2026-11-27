@@ -487,7 +487,8 @@ export function computeTeamTimelineBase(
 	// member histories are available. Member Runtime histories contain their own
 	// user input entries as execution context; those entries are not user-authored
 	// Team messages and never enter either aggregate or member-scoped display.
-	const coordinationItems = snapshot ? projectLegacySnapshotMessages(snapshot) : [];
+	const coordination = snapshot ? projectCoordination(snapshot) : EMPTY_COORDINATION;
+	const coordinationItems = coordination.items;
 	const coordinationUserItems = coordinationItems.filter((item) => item.kind === "user");
 	const userAnnotationsByMessageId = new Map(
 		(snapshot?.userMessageAnnotations ?? []).map((annotation) => [annotation.messageEntryId, annotation]),
@@ -502,9 +503,7 @@ export function computeTeamTimelineBase(
 			: annotatedCoordinationUserItems.filter((item) =>
 					userAnnotationsByMessageId.get(item.entryId ?? item.id)?.participantIds.includes(memberId),
 				);
-	const coordinationAgentItems = mergeTeamAgentTurns(
-		coordinationItems.filter((item): item is ConversationAgentMessageViewModel => item.kind === "agent"),
-	);
+	const coordinationAgentItems = coordination.agentItems;
 	const coordinationDisplayItems = [...visibleCoordinationUserItems, ...coordinationAgentItems].sort(
 		(left, right) => itemTimestamp(left) - itemTimestamp(right),
 	);
@@ -844,6 +843,35 @@ export function projectTeamConversationTimeline({
 	return items;
 }
 
+/**
+ * 时间线在每个流式 delta 都会重投影，投影过程把内容未变的项也包成新对象。
+ * 行级 memo 与高度缓存依赖对象身份：字段全相同的项沿用上一份投影的对象，
+ * 全部未变时直接返回上一份数组本身，让整段 feed 跳过重渲染。
+ */
+export function reuseUnchangedTimelineItems(
+	previous: readonly ChatConversationItem[],
+	next: ChatConversationItem[],
+): ChatConversationItem[] {
+	if (previous.length === 0) return next;
+	const previousById = new Map(previous.map((item) => [item.id, item]));
+	let changed = previous.length !== next.length;
+	const result = next.map((item, index) => {
+		const prior = previousById.get(item.id);
+		const kept = prior !== undefined && prior !== item && shallowEqualTimelineItems(prior, item) ? prior : item;
+		if (kept !== previous[index]) changed = true;
+		return kept;
+	});
+	return changed ? result : (previous as ChatConversationItem[]);
+}
+
+function shallowEqualTimelineItems(left: ChatConversationItem, right: ChatConversationItem): boolean {
+	const leftRecord = left as unknown as Record<string, unknown>;
+	const rightRecord = right as unknown as Record<string, unknown>;
+	const leftKeys = Object.keys(leftRecord);
+	if (leftKeys.length !== Object.keys(rightRecord).length) return false;
+	return leftKeys.every((key) => Object.hasOwn(rightRecord, key) && leftRecord[key] === rightRecord[key]);
+}
+
 export function placeTeamErrorInTimeline(
 	items: readonly ChatConversationItem[],
 	error: TeamDisplayError | undefined,
@@ -989,7 +1017,33 @@ function dedupeTeamUserItems(items: readonly ChatConversationItem[]): ChatConver
 	});
 }
 
+/**
+ * 成员会话投影是其输入的纯函数，而主进程 display service 在 journal/revision
+ * 版本未变时复用同一份 history 数组。按输入身份缓存投影：快照逐帧重建时
+ * 未变成员的整段历史不必重投影，行对象保持身份也让成员视图的 memo 行跳过重渲染。
+ * 键含 mediaSessionId 维度：媒体解析路径不同则投影结果不同。
+ */
+const memberConversationCache = new WeakMap<readonly HistoryEntry[], Map<string, ChatConversationItem[]>>();
+
 function projectMemberConversation(memberId: string, history: readonly HistoryEntry[], mediaSessionId?: string) {
+	let byMember = memberConversationCache.get(history);
+	if (!byMember) {
+		byMember = new Map();
+		memberConversationCache.set(history, byMember);
+	}
+	const cacheKey = `${memberId} ${mediaSessionId ?? ""}`;
+	const cached = byMember.get(cacheKey);
+	if (cached) return cached;
+	const projected = projectMemberConversationUncached(memberId, history, mediaSessionId);
+	byMember.set(cacheKey, projected);
+	return projected;
+}
+
+function projectMemberConversationUncached(
+	memberId: string,
+	history: readonly HistoryEntry[],
+	mediaSessionId?: string,
+) {
 	const projected = splitTeamMemberHistoryTurns(history).flatMap((turn) =>
 		fullHistoryToChat([...turn], mediaSessionId),
 	);
@@ -1023,6 +1077,31 @@ function splitTeamMemberHistoryTurns(history: readonly HistoryEntry[]): HistoryE
 	}
 	if (current.length > 0) turns.push(current);
 	return turns;
+}
+
+interface CoordinationProjection {
+	readonly items: readonly ChatConversationItem[];
+	readonly agentItems: readonly ConversationAgentMessageViewModel[];
+}
+
+const EMPTY_COORDINATION: CoordinationProjection = { items: [], agentItems: [] };
+// 协调会话投影只依赖 snapshot；快照只在落盘时更换。按快照身份缓存后，未传入
+// 预计算基座的投影（含直接调用 projectTeamConversationTimeline 的测试与工具）
+// 也复用同一批行对象，字段浅比较才有机会命中。
+const coordinationCache = new WeakMap<DesktopTeamSessionSnapshot, CoordinationProjection>();
+
+function projectCoordination(snapshot: DesktopTeamSessionSnapshot): CoordinationProjection {
+	const cached = coordinationCache.get(snapshot);
+	if (cached) return cached;
+	const items = projectLegacySnapshotMessages(snapshot);
+	const projection = {
+		items,
+		agentItems: mergeTeamAgentTurns(
+			items.filter((item): item is ConversationAgentMessageViewModel => item.kind === "agent"),
+		),
+	};
+	coordinationCache.set(snapshot, projection);
+	return projection;
 }
 
 /** Compatibility for legacy Team snapshots that predate member histories. */

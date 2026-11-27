@@ -164,6 +164,9 @@ export function diffViewerHistory(
 	// 无 beforeEntry 的尾页切片不可能 stale，由重载签名直接收窄为 HistoryPage。
 	const reset = (): ViewerHistoryUpdate => ({ kind: "reset", page: sliceHistoryPage(next) });
 	if (prev === null) return { kind: "snapshot", history: [...next] };
+	// 文件历史读取按追加增量缓存：文件没有新整行时返回同一份历史数组，
+	// 引用相等即内容未变，直接跳过逐条签名比较。
+	if (prev === next) return null;
 	if (next.length === prev.length) {
 		return isPrefix(prev, next) ? null : reset();
 	}

@@ -27,6 +27,7 @@ import {
 	aiTerminalCommandFromToolCall,
 	aiTerminalOutputFromResult,
 	aiTerminalTeamKey,
+	type ChatConversationItem,
 	markAiTerminalEntryDone,
 	pushAiTerminalEntry,
 	reasoningByModelAtom,
@@ -63,6 +64,7 @@ import {
 	projectTeamConversationTimeline,
 	reduceTeamStreamState,
 	resolveTeamMembers,
+	reuseUnchangedTimelineItems,
 	type TeamAttachmentViewModel,
 	type TeamChatActions,
 	type TeamChatStatus,
@@ -632,8 +634,12 @@ export function useTeamChatModel(
 	// 持久侧投影基座只依赖 snapshot 与成员视图：流式 delta 期间 streams 变化不再
 	// 触发 O(会话规模) 的持久项视图模型重建（coordination 投影/成员会话投影/排序）。
 	const timelineBase = useMemo(() => computeTeamTimelineBase(snapshot, memberViewId), [snapshot, memberViewId]);
-	const feedItems = useMemo(
-		() =>
+	// 行级 memo 与高度缓存依赖对象身份：流式帧之间未变的行沿用上一份投影的对象，
+	// 全部未变时数组本身也是同一份，整段 feed 跳过重渲染。
+	const previousFeedItemsRef = useRef<ChatConversationItem[]>([]);
+	const feedItems = useMemo(() => {
+		const next = reuseUnchangedTimelineItems(
+			previousFeedItemsRef.current,
 			placeTeamErrorInTimeline(
 				projectTeamConversationTimeline({
 					snapshot,
@@ -650,19 +656,21 @@ export function useTeamChatModel(
 				error,
 				session?.leaderMemberId ?? team?.leaderMemberId ?? "leader",
 			),
-		[
-			error,
-			memberViewId,
-			members,
-			session?.leaderMemberId,
-			snapshot,
-			streams,
-			t,
-			team?.leaderMemberId,
-			timelineBase,
-			visiblePending,
-		],
-	);
+		);
+		previousFeedItemsRef.current = next;
+		return next;
+	}, [
+		error,
+		memberViewId,
+		members,
+		session?.leaderMemberId,
+		snapshot,
+		streams,
+		t,
+		team?.leaderMemberId,
+		timelineBase,
+		visiblePending,
+	]);
 
 	// 阶段条只出现在团队全景：成员视图本身就是明细，且条内点成员会再次进入成员视图。
 	const leaderMemberId = session?.leaderMemberId ?? team?.leaderMemberId;

@@ -20,6 +20,7 @@ import {
 	projectTeamConversationTimeline,
 	reduceTeamStreamState,
 	resolveTeamMembers,
+	reuseUnchangedTimelineItems,
 	stripAttachmentContext,
 	type TeamMemberViewModel,
 	updateScopedTeamDraft,
@@ -2085,5 +2086,53 @@ describe("team timeline persisted base", () => {
 		expect(streamingItems).not.toEqual(completedItems); // 流差异必须呈现
 		expect(streamingItems.find((item) => item.id === "live-turn")).toBeDefined();
 		expect(completedItems.find((item) => item.id === "live-turn")).toBeDefined();
+	});
+});
+
+describe("team timeline identity while streaming", () => {
+	const labels = { delegation: (from: string, to: string) => `${from} -> ${to}`, unknownMember: "Unknown" };
+	const persisted = snapshot({
+		messages: [
+			userMessage("prompt-1", "request-1", "First", 1),
+			agentMessage("result-1", "request-1", "leader", "First answer", 2),
+		],
+	});
+
+	it("keeps persisted rows as the same objects while a new reply streams", () => {
+		const project = (streams: Parameters<typeof projectTeamConversationTimeline>[0]["streams"]) =>
+			projectTeamConversationTimeline({
+				snapshot: persisted,
+				pending: undefined,
+				streams,
+				members: [member],
+				labels,
+			});
+		const first = reduceTeamStreamState({}, streamEvent("live", 1, "Sec", "leader", "request-2"));
+		const second = reduceTeamStreamState(first, streamEvent("live", 2, "ond", "leader", "request-2"));
+
+		const before = project(first);
+		const after = reuseUnchangedTimelineItems(before, project(second));
+
+		expect(after).not.toBe(before);
+		const persistedIds = new Set(["prompt-1", "result-1"]);
+		const persistedRows = after.filter((entry) => persistedIds.has(entry.id));
+		expect(persistedRows).toHaveLength(2);
+		for (const item of persistedRows) {
+			expect(item).toBe(before.find((entry) => entry.id === item.id));
+		}
+		const live = after.find((item) => item.kind === "agent" && item.phase === "streaming");
+		expect(live).not.toBe(before.find((item) => item.id === live?.id));
+	});
+
+	it("returns the previous array when nothing changed", () => {
+		const items = projectTeamConversationTimeline({
+			snapshot: persisted,
+			pending: undefined,
+			streams: {},
+			members: [member],
+			labels,
+		});
+		const again = items.map((item) => ({ ...item }));
+		expect(reuseUnchangedTimelineItems(items, again)).toBe(items);
 	});
 });
