@@ -110,7 +110,7 @@ TASK-0535 只移植更新说明的 Markdown 渲染、外链转系统浏览器和
 ### 改写后采纳（11 个）
 
 - ~~`5fd12b81f`~~ Kimi 预设分国际站与国内站——**已由 TASK-0546 实施**：`catalogId` 共享机制按上游移植，`kimi-cn` 不进 `PROVIDER_KEYS`、不提 catalog 版本（快照按预设 id 存 `kimi` 一份，`kimi-cn` 经 catalogId 共享读取；原预测「加别名并提升版本」与实际落地不符，以上游最终态为准）。
-- `69edb1958` 基于预设人设自建的智能体不被插件预设认领。`apps/desktop/src/main/agent-teams/plugin-agent-preset-reconcile.ts:235` 已修主体，但 `findLibraryProfile` 没排除用户自建档案，`findPresetAgent` 没有 claims/taken 去重。后一个缺口能否实际触发未证实。
+- ~~`69edb1958`~~ 基于预设人设自建的智能体不被插件预设认领——**已由 TASK-0547 实施**：`findLibraryProfile` 排除用户自建档案（成员永远解析到提供方档案）；`findPresetAgent` 按上游三级可信度+taken 去重重写、claims/claimed 预分配修正 handle 让位集；上游两个测试已移植，变异测试实证断言有效。
 - 侧栏三个。本仓固定按项目分组、只按 `modifiedAt` 排序，结构已分叉：
   - `6ca4b9479` 平铺展示与按创建或回复时间排序。`apps/desktop/src/renderer/domains/project/components/sidebar/projects/panel/ProjectsPanel.tsx:23,60`、`ProjectGroupsSection.tsx:16`、`services/sidebar-session-order.ts:29-40`。
   - `5428d5f18` 本仓没有 `SidebarSectionActionButton`，标题按钮没有 `focus-visible`。`packages/theme-ui/src/project/DefaultConversationSectionView.tsx:39-65`、`AddProjectMenuTriggerView.tsx:36-46`。
@@ -207,7 +207,7 @@ TASK-0535 只移植更新说明的 Markdown 渲染、外链转系统浏览器和
 - 置信度：
   - 高：标注「已核对」的条目；已处理的 22 个（有 Task 记录和提交）；Magpie、品牌素材、纯测试这三组不用跟的判断。
   - 中：未标注的可直接采纳和改写后采纳条目。缺口是否存在、落点是否准确来自子代理报告，未逐条复核。
-  - 低：`69edb1958` 的去重缺口能否实际触发；`613e2e20f` 是否真的没有对应的重渲染问题；IM 网关未知帧时序的影响。
+  - 低：`613e2e20f` 是否真的没有对应的重渲染问题；IM 网关未知帧时序的影响。
 - 性能类条目没有基线数据。如果实施前的测量显示本仓没有可感知的问题，对应条目可以降级或不做。
 
 ## 下一步触发信号
