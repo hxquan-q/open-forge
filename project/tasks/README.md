@@ -30,6 +30,7 @@ rg -n '^status: (draft|ready|in_progress|blocked|verifying)$' project/tasks -g '
 
 | Task ID | 状态 | Plan | 任务（详情见原记录） |
 |---|---|---|---|
+| `TASK-0536` | `verifying` | PLAN-0032 | [上游功能错误四项修复](TASK-0536-upstream-functional-bug-fixes.md)：基线外增量；手工合并上游 245f0dc4f+057b22c1d+50d6f5f86+29e678a97——预设对齐失败回退、团队换模型快照只进不退、预设请求头保留、csh/tcsh 登录 shell。 |
 | `TASK-0535` | `verifying` | PLAN-0032 | [发布说明进入更新 feed，更新弹窗渲染 Markdown](TASK-0535-release-notes-into-update-feed.md)：基线外增量；上游 e4af417d9 批次按 fork 实际适配——修复打包从未携带发布说明的断链，弹窗纯文本改 Markdown 渲染。 |
 | `TASK-0532` | `verifying` | PLAN-0032 | [导出诊断包改为引导弹窗并让用户选择保存位置](TASK-0532-diagnostics-export-dialog.md)：基线外增量；手工合并上游 2c376e998+925ce0cdc，main 编排按本地 IPC 薄层边界拆 diagnostics-export.ts。 |
 | `TASK-0533` | `verifying` | PLAN-0032 | [主窗口导航拦截精细化：自身导航放行、外部链接转系统浏览器](TASK-0533-main-window-navigation-refine.md)：基线外增量；手工合并上游 9741f73ae，TASK-0309 全量拦截细化为白名单语义。 |

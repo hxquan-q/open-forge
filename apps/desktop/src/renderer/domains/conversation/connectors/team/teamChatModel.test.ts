@@ -14,6 +14,7 @@ import {
 import { createAssistantMessage } from "@vetta/ai";
 import { describe, expect, it } from "vitest";
 import {
+	adoptTeamSessionSnapshot,
 	computeTeamTimelineBase,
 	placeTeamErrorInTimeline,
 	projectTeamConversationTimeline,
@@ -218,6 +219,35 @@ describe("resolveTeamMembers", () => {
 		);
 
 		expect(resolved?.workspaceMode).toBe("coding");
+	});
+});
+
+describe("adoptTeamSessionSnapshot", () => {
+	const current = snapshot({
+		session: { ...session, revision: 3, modelSettings: { modelKey: "openai/gpt-5" } },
+		conversationRevision: 2,
+	});
+
+	it("takes newer conversation entries without moving the session document back", () => {
+		const incoming = snapshot({
+			session: { ...session, revision: 2, modelSettings: { modelKey: "agy/opus" } },
+			conversationRevision: 4,
+		});
+
+		expect(adoptTeamSessionSnapshot(current, incoming)).toEqual({ ...incoming, session: current.session });
+	});
+
+	it("rejects a snapshot that trails on both revisions", () => {
+		const incoming = snapshot({ session: { ...session, revision: 2 }, conversationRevision: 1 });
+
+		expect(adoptTeamSessionSnapshot(current, incoming)).toBeUndefined();
+	});
+
+	it("adopts a newer session document as a whole", () => {
+		const incoming = snapshot({ session: { ...session, revision: 4 }, conversationRevision: 1 });
+
+		expect(adoptTeamSessionSnapshot(current, incoming)).toBe(incoming);
+		expect(adoptTeamSessionSnapshot(undefined, incoming)).toBe(incoming);
 	});
 });
 

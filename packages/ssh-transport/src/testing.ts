@@ -1,6 +1,6 @@
 // Modified by The Open Forge contributors.
 import { spawnSync } from "node:child_process";
-import { chmodSync, mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -22,14 +22,23 @@ import { SshConnection, type SshConnectionOptions } from "./ssh-connection.js";
  */
 export function createLoopbackSshConnection(
 	hostId = "loopback",
-	options: Pick<SshConnectionOptions, "helper"> = {},
+	options: Pick<SshConnectionOptions, "helper"> & {
+		/**
+		 * 「远端」账号的登录 shell。sshd 用它解释整条远端命令串，并把它放进 `SHELL`；
+		 * 缺省 `/bin/sh`。用来证明命令在 csh、fish 这类非 POSIX 登录 shell 下照样能跑。
+		 */
+		readonly loginShell?: string;
+	} = {},
 ): SshConnection {
+	const { loginShell = "/bin/sh", ...connectionOptions } = options;
 	const directory = mkdtempSync(join(tmpdir(), "vetta-loopback-ssh-"));
 	// 「远端」有自己的家目录：helper 会往 ~/.cache 里装东西，不能装进开发者真实的家目录。
 	const home = join(directory, "home");
 	mkdirSync(home);
 	const runner: SshProcessRunner =
-		process.platform === "win32" ? createWindowsBashLoopbackRunner(home) : createPosixLoopbackRunner(directory, home);
+		process.platform === "win32"
+			? createWindowsBashLoopbackRunner(home)
+			: createPosixLoopbackRunner(directory, home, loginShell);
 	return new SshConnection(
 		{ id: hostId, label: hostId, target: hostId, source: "manual" },
 		{
@@ -37,13 +46,13 @@ export function createLoopbackSshConnection(
 			// 这里把宿主环境也对齐）。HOME 指向临时目录，别污染开发者真实的家。
 			runner,
 			controlPath: join(directory, "cp"),
-			...options,
+			...connectionOptions,
 		},
 	);
 }
 
 /** POSIX：伪造的 `ssh` 脚本 + 真实 node runner，保留 ControlMaster/取消的完整进程语义。 */
-function createPosixLoopbackRunner(directory: string, home: string): SshProcessRunner {
+function createPosixLoopbackRunner(directory: string, home: string, loginShell: string): SshProcessRunner {
 	const fakeSsh = join(directory, "ssh");
 	// sshd 为每条无 pty 的会话调用 setsid()；远端命令的「整组终止」依赖这一点。回环里用 perl
 	// 补上同样的一步，否则命令会落在测试运行器自己的进程组里。没有 perl 时不建新会话——
@@ -54,17 +63,17 @@ function createPosixLoopbackRunner(directory: string, home: string): SshProcessR
 			"#!/bin/sh",
 			"for last; do :; done",
 			"if command -v perl >/dev/null 2>&1; then",
-			"  exec perl -MPOSIX -e 'POSIX::setsid(); exec @ARGV' /bin/sh -c \"$last\"",
+			`  exec perl -MPOSIX -e 'POSIX::setsid(); exec @ARGV' ${loginShell} -c "$last"`,
 			"fi",
-			'exec /bin/sh -c "$last"',
+			`exec ${loginShell} -c "$last"`,
 			"",
 		].join("\n"),
 	);
 	chmodSync(fakeSsh, 0o755);
 	return createNodeSshProcessRunner({
 		sshBinary: fakeSsh,
-		// 固定 /bin/sh 当登录 shell：开发者自己的 zsh profile 既慢，又让结果因人而异。
-		baseEnv: { ...process.env, SHELL: "/bin/sh", HOME: home, LANG: "C", LC_ALL: "C" },
+		// 固定登录 shell：开发者自己的 zsh profile 既慢，又让结果因人而异。
+		baseEnv: { ...process.env, SHELL: loginShell, HOME: home, LANG: "C", LC_ALL: "C" },
 	});
 }
 
@@ -73,7 +82,7 @@ function createPosixLoopbackRunner(directory: string, home: string): SshProcessR
  * 管线（stdout/stderr/stdin/取消/超时与 POSIX 路径同一条代码路径）。
  */
 function createWindowsBashLoopbackRunner(home: string): SshProcessRunner {
-	const bash = resolveWindowsBash();
+	const bash = resolveWindowsGitBash();
 	const baseEnv: NodeJS.ProcessEnv = {
 		...process.env,
 		HOME: home,
@@ -97,13 +106,48 @@ function createWindowsBashLoopbackRunner(home: string): SshProcessRunner {
 	};
 }
 
-/** 定位 Git Bash；缺位时抛出明确的前置缺失错误，而不是静默跳过测试。 */
-function resolveWindowsBash(): string {
-	const probe = spawnSync("bash", ["-c", "exit 0"], { encoding: "utf8" });
-	if (probe.error === undefined) return "bash";
+/**
+ * 定位语义完整的 Git Bash；缺位时抛出明确的前置缺失错误，而不是静默跳过测试。
+ *
+ * 也供真实 shell 测试使用：裸 `bash` 在 PATH 里排第一的往往是 WSL 的 bash.exe
+ * （System32），它是个转发启动器，对 `-c` 脚本的引号与赋值转译不完整——脚本静默执行错。
+ * 必须用一次真实的赋值往返确认拿到的是 POSIX 语义完整的 Git Bash。
+ */
+export function resolveWindowsGitBash(): string {
+	const probe = (candidate: string): boolean => {
+		const result = spawnSync(candidate, ["-c", 'l=ok; printf %s "[$l]"'], { encoding: "utf8" });
+		return result.error === undefined && result.stdout === "[ok]";
+	};
+	const candidates = (process.env.PATH ?? "")
+		.split(process.platform === "win32" ? ";" : ":")
+		.filter(Boolean)
+		.map((dir) => join(dir, "bash.exe"))
+		.filter((candidate) => existsSync(candidate));
+	if (process.env.ProgramFiles) candidates.push(join(process.env.ProgramFiles, "Git", "bin", "bash.exe"));
+	if (process.env.LOCALAPPDATA) candidates.push(join(process.env.LOCALAPPDATA, "Programs", "Git", "bin", "bash.exe"));
+	for (const candidate of candidates) {
+		if (probe(candidate)) return candidate;
+	}
 	throw new Error(
 		"Windows SSH 回环需要 PATH 里的 Git Bash（bash）执行真实 POSIX shell 命令；" +
 			"请安装 Git for Windows 或把 bash 加入 PATH 后重跑，不能把该套件当作已测试。",
+	);
+}
+
+/**
+ * 还原 {@link wrapForLoginShell} 包过的命令串，拿回真正交给 `/bin/sh` 的那条命令行。
+ *
+ * 只供断言用：测试关心的是「发出去的是哪条命令」，不是它为了过登录 shell 穿了哪层外衣。
+ * 认不出的输入原样返回。
+ */
+export function unwrapLoginShellCommand(remoteCommand: string): string {
+	const outer = /^\/bin\/sh -c '((?:[^']|'\\'')*)'$/.exec(remoteCommand);
+	if (!outer) return remoteCommand;
+	const command = outer[1].replaceAll("'\\''", "'");
+	const encoded = /^eval "\$\(printf '([^']*)'\)"$/.exec(command);
+	if (!encoded) return command;
+	return encoded[1].replace(/%%|\\([0-7]{3})/g, (_match, octal: string | undefined) =>
+		octal === undefined ? "%" : String.fromCharCode(Number.parseInt(octal, 8)),
 	);
 }
 

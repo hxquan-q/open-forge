@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -279,5 +280,22 @@ describe("Agent Team file repository", () => {
 
 		expect(loaded.agents).toEqual([]);
 		expect(loaded.teams).toEqual([]);
+	});
+
+	it("falls back to the stored configuration when preset reconcile fails", async () => {
+		const { repository, root } = await createRepository();
+		const fixture = createAgentTeamFixture();
+		await repository.write(fixture);
+		const indexBefore = await readFile(join(root, "index.json"), "utf8");
+		vi.spyOn(agentBlueprintRegistry, "listPluginAgents").mockImplementationOnce(() => {
+			throw new Error("Duplicate library agent handle: master");
+		});
+
+		const loaded = await createAgentTeamFileRepository({ root }).read();
+
+		// 一轮重铺失败不该让用户失去全部智能体与团队，也不该改写磁盘。
+		expect(loaded.agents.map((agent) => agent.id).sort()).toEqual(fixture.agents.map((agent) => agent.id).sort());
+		expect(loaded.teams.map((team) => team.id).sort()).toEqual(fixture.teams.map((team) => team.id).sort());
+		expect(await readFile(join(root, "index.json"), "utf8")).toBe(indexBefore);
 	});
 });
