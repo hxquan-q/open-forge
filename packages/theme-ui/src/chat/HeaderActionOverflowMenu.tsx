@@ -12,6 +12,7 @@ import {
 } from "@vetta-org/ui";
 import { ButtonGroup, ButtonGroupItem } from "@vetta-org/ui/button-group";
 import { SessionTopMenuItems } from "@vetta-org/ui/session-top-item";
+import { chromeButtonGroupVariant } from "../shared/platform";
 import type { HeaderActionBarItem } from "./HeaderActionBarView";
 import { HeaderActionDialogContent } from "./HeaderActionDialogContent";
 import { HEADER_ACTION_POPOVER_WIDTH, headerActionToneBadgeClass } from "./header-action-appearance";
@@ -119,7 +120,7 @@ export function HeaderActionOverflowMenu({
 	return (
 		<>
 			<DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
-				<ButtonGroup blur={false}>
+				<ButtonGroup blur={false} variant={chromeButtonGroupVariant}>
 					<DropdownMenuTrigger asChild>
 						<ButtonGroupItem
 							ref={trigger}

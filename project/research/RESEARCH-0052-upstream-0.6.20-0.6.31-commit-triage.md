@@ -52,7 +52,7 @@ related_issue: []
 | 需用户拍板 | 22 | 新功能、删除既有功能或打包范围，不能由 Agent 定 |
 | 不用跟 | 38 | 本仓没有对应功能、已有等价实现或与品牌相关 |
 
-### 已处理（25 个）
+### 已处理（28 个）
 
 | Task | 上游提交 |
 |---|---|
@@ -70,6 +70,7 @@ related_issue: []
 | [TASK-0538](../tasks/TASK-0538-compute-render-performance.md) | `01ceb15c1` `566455dae` `15b901f49` `82f7ab230` |
 | [TASK-0539](../tasks/TASK-0539-design-gallery-iframe-budget.md) | `d99e32377` `57e3136a1` `867179b27`（含基线前漏项） |
 | [TASK-0543](../tasks/TASK-0543-upstream-perf-trio-adaptation.md) | `502fe4dc5` `770602579` `ac62b5c2d` |
+| [TASK-0544](../tasks/TASK-0544-windows-chrome-button-group.md) | `069cad7fa` `4b7cb3a17` `4e0914d70`（`SettingsMenuTriggerView` 本仓已重写，上游该处不适用） |
 
 TASK-0535 只移植更新说明的 Markdown 渲染、外链转系统浏览器和开发预览，不做上游的多版本说明管道：本仓走 generic/R2 更新渠道，没有上游依赖的 `fullChangelog`。
 
@@ -106,7 +107,7 @@ TASK-0535 只移植更新说明的 Markdown 渲染、外链转系统浏览器和
 - `c06d02e3a` 监听 `models.json` 外部改动，不重启刷新模型。本仓没有 watcher（已核对），落点 `apps/desktop/src/main/models/model-settings-host.ts:27`、`apps/desktop/src/main/ipc/settings.ts:51`。上游的动机是 Magpie 从外部写这个文件，本仓没有这个写入方，只对手工编辑有用。
 - `99f06b428` 会话历史摘要带创建时间。`packages/runtime-core/src/contracts.ts:370-387`、`packages/coding-agent/src/sessions/legacy/catalog.ts:112-123`。要配合侧栏按创建时间排序（`6ca4b9479`）才有意义。
 
-### 改写后采纳（14 个）
+### 改写后采纳（11 个）
 
 - `5fd12b81f` Kimi 预设分国际站与国内站。本仓只有国际站，用 `PROVIDER_KEYS` 重映射，要加 `kimi-cn` 别名并提升 catalog 版本。落点 `apps/desktop/src/main/models/presets/catalog.ts:61`、`presets/models-dev.ts:87`。
 - `69edb1958` 基于预设人设自建的智能体不被插件预设认领。`apps/desktop/src/main/agent-teams/plugin-agent-preset-reconcile.ts:235` 已修主体，但 `findLibraryProfile` 没排除用户自建档案，`findPresetAgent` 没有 claims/taken 去重。后一个缺口能否实际触发未证实。
@@ -116,10 +117,6 @@ TASK-0535 只移植更新说明的 Markdown 渲染、外链转系统浏览器和
   - `6f301eb5f` 对话区空列表常驻本仓已有；「添加项目」触发器结构不同。
 - `cd80a2b17` 较早的用户消息也能编辑重发，后续对话留作另一个版本。本仓只能改最后一条，走 `replaceLastUserMessage`。`useUserMessageActions.ts:188,190`、`useSessionMessageSender.ts:328`、`preload/apis/session.ts:310`。这是本组里最大的一项。
 - `be92ee50e` `d6cea463a` `4d4e9dd6b` `f2c779da1` `eb61be3a8` 用户消息操作按钮移到气泡左侧并居中。本仓操作区在页脚右侧，还分只读和可编辑两套组件。`SessionUserMessage.tsx:93-98,119-139`、`ReadonlyUserMessage.tsx:40-44`、`UserMessage.tsx:123-139`。
-- Windows 按钮组三个：
-  - `069cad7fa` `packages/ui/src/button-group.tsx:22` 已有 glass/flat/ghost 三种外观（来自 [TASK-0497](../tasks/TASK-0497-ui-sdk-base-exports-and-first-components.md)，已核对）。但上游同一提交还在 `apps/desktop/src/renderer/styles.css` 加了 `:root[data-platform="windows"] [data-slot="button-group"][data-variant="glass"]` 去玻璃规则，本仓没有（已核对）。子代理判为已有等价，协调者改判为部分缺失。本仓 CSS 已在用 `:root[data-platform="mac"]` 这类选择器，可照同样写法补。
-  - `4b7cb3a17` 是 `069cad7fa` 之前的组件内写法，已被后者取代，按后者的 CSS 方案实现即可。
-  - `4e0914d70` 本仓已有 `chromeButtonGroupVariant`（`packages/theme-ui/src/shared/platform.ts:10`），`SpaceSwitcher.tsx:89` 已使用。`HeaderActionBarView.tsx:656`、`HeaderActionOverflowMenu.tsx:122` 的按钮组没传 variant，`SettingsMenuTriggerView.tsx:29` 不是 `ButtonGroup`。
 ### 需用户拍板（22 个）
 
 四项都还没有决定。写本记录时已向用户提出，未获答复。

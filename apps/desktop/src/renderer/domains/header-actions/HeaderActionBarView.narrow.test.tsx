@@ -142,3 +142,101 @@ describe("会话顶栏在极窄时收成下拉菜单", () => {
 		expect(screen.queryByRole("button", { name: "导出" })).toBeNull();
 	});
 });
+
+describe("窗口 chrome 常驻按钮组的外观", () => {
+	// chromeButtonGroupVariant 在模块求值时按平台定死（Windows 为 ghost、其余为 glass），
+	// 所以每个用例先打桩 navigator.platform，再 resetModules + 动态导入让模块重新求值。
+	function stubNavigatorPlatform(platform: string): () => void {
+		const descriptor = Object.getOwnPropertyDescriptor(window.navigator, "platform");
+		Object.defineProperty(window.navigator, "platform", { configurable: true, value: platform });
+		return () => {
+			if (descriptor) Object.defineProperty(window.navigator, "platform", descriptor);
+			else Reflect.deleteProperty(window.navigator, "platform");
+		};
+	}
+
+	/** 某按钮所在的按钮组胶囊的 data-variant；按钮必须真的渲染出来，找不到直接失败。 */
+	function variantOfGroupContaining(button: HTMLElement): string {
+		const group = button.closest<HTMLElement>('[data-slot="button-group"]');
+		expect(group, "按钮应当位于某个按钮组胶囊内").not.toBeNull();
+		return group?.dataset.variant ?? "";
+	}
+
+	async function loadChromeAppearanceModules() {
+		vi.resetModules();
+		const [{ HeaderActionBarView: FreshHeaderActionBarView }, { chromeButtonGroupVariant }] = await Promise.all([
+			import("@vetta-org/theme-ui/chat"),
+			import("@vetta-org/theme-ui/shared"),
+		]);
+		return { FreshHeaderActionBarView, chromeButtonGroupVariant };
+	}
+
+	function renderFreshBar(
+		FreshHeaderActionBarView: typeof HeaderActionBarView,
+		crowded: boolean,
+		top: readonly HeaderActionBarItem[],
+		tray: readonly HeaderActionBarItem[] = [],
+	): void {
+		render(
+			<FreshHeaderActionBarView
+				crowded={crowded}
+				top={top}
+				tray={tray}
+				maxTop={7}
+				labels={labels}
+				onMove={() => undefined}
+				pinned={<button type="button">活动面板</button>}
+			/>,
+		);
+	}
+
+	it.each([
+		{ platform: "Win32", expected: "ghost", name: "Windows 上改幽灵外观" },
+		{ platform: "MacIntel", expected: "glass", name: "macOS 上保持玻璃" },
+	])("宽布局常驻组在$name", async ({ platform, expected }) => {
+		const restore = stubNavigatorPlatform(platform);
+		try {
+			const { FreshHeaderActionBarView, chromeButtonGroupVariant } = await loadChromeAppearanceModules();
+			// 打桩驱动：模块常量必须真的随平台变化，否则后面的断言全在比同一个值。
+			expect(chromeButtonGroupVariant).toBe(expected);
+			renderFreshBar(FreshHeaderActionBarView, false, [action("builtin:export", "导出", vi.fn())]);
+
+			expect(variantOfGroupContaining(screen.getByRole("button", { name: "导出" }))).toBe(expected);
+			expect(variantOfGroupContaining(screen.getByRole("button", { name: "活动面板" }))).toBe(expected);
+		} finally {
+			restore();
+		}
+	});
+
+	it("窄布局下更多菜单与面板开关所在组同样跟随 chrome 外观", async () => {
+		const restore = stubNavigatorPlatform("Win32");
+		try {
+			const { FreshHeaderActionBarView, chromeButtonGroupVariant } = await loadChromeAppearanceModules();
+			expect(chromeButtonGroupVariant).toBe("ghost");
+			renderFreshBar(FreshHeaderActionBarView, true, [action("builtin:export", "导出", vi.fn())]);
+
+			expect(variantOfGroupContaining(screen.getByRole("button", { name: labels.more }))).toBe("ghost");
+			expect(variantOfGroupContaining(screen.getByRole("button", { name: "活动面板" }))).toBe("ghost");
+		} finally {
+			restore();
+		}
+	});
+
+	it("展开的「调整」浮动胶囊在任何平台都保持玻璃，不跟 chrome 外观", async () => {
+		const restore = stubNavigatorPlatform("Win32");
+		try {
+			const { FreshHeaderActionBarView, chromeButtonGroupVariant } = await loadChromeAppearanceModules();
+			expect(chromeButtonGroupVariant).toBe("ghost");
+			renderFreshBar(FreshHeaderActionBarView, false, [action("builtin:export", "导出", vi.fn())]);
+
+			const user = userEvent.setup();
+			await user.click(screen.getByRole("button", { name: labels.customize }));
+			const adjustButton = await screen.findByRole("button", { name: labels.adjust });
+			// 常驻组已是幽灵；「调整」是浮层胶囊（贴内容而非 chrome 墙面），保持玻璃。
+			expect(variantOfGroupContaining(screen.getByRole("button", { name: "导出" }))).toBe("ghost");
+			expect(variantOfGroupContaining(adjustButton)).toBe("glass");
+		} finally {
+			restore();
+		}
+	});
+});

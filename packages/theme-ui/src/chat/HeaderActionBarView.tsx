@@ -24,6 +24,7 @@ import {
 import { ButtonGroup, ButtonGroupItem } from "@vetta-org/ui/button-group";
 import { SessionTopItem, SessionTopMenuItems, type SessionTopMenuItem } from "@vetta-org/ui/session-top-item";
 import { cn } from "@vetta-org/ui/utils";
+import { chromeButtonGroupVariant } from "../shared/platform";
 import { VettaKbd } from "../shared/VettaKbd";
 import { useHeaderCrowded } from "../app-shell/header-crowding";
 import { partitionHeaderActionsForNarrow } from "./header-action-narrow";
@@ -673,7 +674,7 @@ export function HeaderActionBarView({
 						/>
 					</ButtonGroup>
 				) : narrow === null ? (
-					<ButtonGroup blur={false} onDragOver={overZone("top")} onDrop={dropOn("top")}>
+					<ButtonGroup blur={false} variant={chromeButtonGroupVariant} onDragOver={overZone("top")} onDrop={dropOn("top")}>
 						{top.length === 0 && (
 							<span
 								data-header-action-seat="true"
@@ -859,7 +860,7 @@ export function HeaderActionBarView({
 			{/* 活动面板开关是个独立的小组，固定在最右，不参与排序与收纳。 */}
 			{/* 活动面板开关所在的小组；被收纳却处于选中态的动作（如窗口置顶）在它左边露出来，调整期间禁用。 */}
 			{pinned || beside.length > 0 ? (
-				<ButtonGroup blur={false}>
+				<ButtonGroup blur={false} variant={chromeButtonGroupVariant}>
 					{beside.map((item) => (
 						<BarItem key={item.key} item={item} itemDisabled={editing && !crowded} closeLabel={labels.close} />
 					))}

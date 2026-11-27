@@ -522,6 +522,17 @@ textarea:disabled,
 	border-right-width: 1px;
 }
 
+/* Windows 上玻璃按钮组按扁平画：窗口 chrome 由 DWM 平涂，没有 macOS 那层透明与阴影做过渡，
+   深色下的内高光、投影和背景模糊会显得突兀。按钮组组件本身不判断平台，这是应用层的取舍。 */
+:root[data-platform="windows"] [data-slot="button-group"][data-variant="glass"] {
+	backdrop-filter: none;
+}
+
+/* 阴影只在深色下清：浅色玻璃本来就不加阴影，调用方自带的阴影（如启动器的浮动按钮组）要留着。 */
+:root[data-platform="windows"][data-mode="dark"] [data-slot="button-group"][data-variant="glass"] {
+	box-shadow: none;
+}
+
 /* 顶栏内容与 macOS 红绿灯对齐。h-11 自身居中：悬浮时顶栏占 8~52、中线 30 偏下；
    经典下从 y=0 起算、中线 22 偏上。两边各补一侧内边距把中线挪到实测位置
    （悬浮 28、经典 29）。padding 记在 h-11 元素自身（border-box，总高不变），
