@@ -31,7 +31,7 @@ rg -n '^status: (draft|ready|in_progress|blocked|verifying)$' project/tasks -g '
 | Task ID | 状态 | Plan | 任务（详情见原记录） |
 |---|---|---|---|
 | `TASK-0541` | `verifying` | PLAN-0032 | [Windows 两项修复：设计引擎跨盘画布空白 + 界面字体显式指定](TASK-0541-windows-crossdrive-and-font-fixes.md)：0.6.32 增量；手工合并上游 59f124232+168a38bb2。 |
-| `TASK-0538` | `in_progress` | PLAN-0032 | [计算/渲染性能移植批](TASK-0538-compute-render-performance.md)：手工合并上游 01ceb15c1+566455dae+15b901f49+82f7ab230——编辑订阅收窄、导航索引缓存、大 Markdown 渐进渲染、设置空闲预取。 |
+| `TASK-0538` | `verifying` | PLAN-0032 | [计算/渲染性能移植批](TASK-0538-compute-render-performance.md)：手工合并上游 01ceb15c1+566455dae+15b901f49+82f7ab230——编辑订阅收窄、导航索引缓存、大 Markdown 渐进渲染、设置空闲预取。 |
 | `TASK-0536` | `verifying` | PLAN-0032 | [上游功能错误四项修复](TASK-0536-upstream-functional-bug-fixes.md)：基线外增量；手工合并上游 245f0dc4f+057b22c1d+50d6f5f86+29e678a97——预设对齐失败回退、团队换模型快照只进不退、预设请求头保留、csh/tcsh 登录 shell。 |
 | `TASK-0535` | `verifying` | PLAN-0032 | [发布说明进入更新 feed，更新弹窗渲染 Markdown](TASK-0535-release-notes-into-update-feed.md)：基线外增量；上游 e4af417d9 批次按 fork 实际适配——修复打包从未携带发布说明的断链，弹窗纯文本改 Markdown 渲染。 |
 | `TASK-0532` | `verifying` | PLAN-0032 | [导出诊断包改为引导弹窗并让用户选择保存位置](TASK-0532-diagnostics-export-dialog.md)：基线外增量；手工合并上游 2c376e998+925ce0cdc，main 编排按本地 IPC 薄层边界拆 diagnostics-export.ts。 |

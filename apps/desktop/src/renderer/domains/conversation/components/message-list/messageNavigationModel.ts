@@ -26,6 +26,22 @@ function visibleMessageText(message: ChatTimelineItem): string {
 	return message.text;
 }
 
+type NavigationText = ReturnType<typeof createMessageFeedNavigationText>;
+
+/**
+ * Feed items are immutable and keep their identity until they change, so while a reply
+ * streams only the tail message is projected again instead of the whole transcript.
+ */
+const navigationTextCache = new WeakMap<ChatTimelineItem, NavigationText>();
+
+function navigationTextOf(message: ChatTimelineItem): NavigationText {
+	const cached = navigationTextCache.get(message);
+	if (cached) return cached;
+	const text = createMessageFeedNavigationText(visibleMessageText(message));
+	navigationTextCache.set(message, text);
+	return text;
+}
+
 /** Chat adapter: projects the domain message schema into the shared navigation contract. */
 export function buildMessageNavigationTurns(messages: readonly ChatTimelineItem[]): MessageFeedNavigationTurn[] {
 	const turns: Array<{
@@ -48,7 +64,7 @@ export function buildMessageNavigationTurns(messages: readonly ChatTimelineItem[
 			turns.push(current);
 		}
 
-		const navigationText = createMessageFeedNavigationText(visibleMessageText(message));
+		const navigationText = navigationTextOf(message);
 		current.entries.push({
 			id: message.id,
 			itemIndex: messageIndex,

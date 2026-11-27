@@ -429,7 +429,6 @@
     "apps/desktop/src/renderer/domains/settings/components/SettingsSidebar.test.tsx": 8,
     "apps/desktop/src/renderer/domains/settings/components/SshHostsSettings.test.tsx": 2,
     "apps/desktop/src/renderer/domains/settings/components/installed-fonts.test.ts": 1,
-    "apps/desktop/src/renderer/domains/settings/components/settings-tab-loaders.test.ts": 2,
     "apps/desktop/src/renderer/domains/settings/components/useArchivedSessionsSettingsModel.test.tsx": 10,
     "apps/desktop/src/renderer/domains/settings/components/useFeishuBindDialogModel.test.tsx": 1,
     "apps/desktop/src/renderer/domains/settings/components/useImageGenerationSettingsModel.test.tsx": 2,

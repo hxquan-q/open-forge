@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { ThemeDef } from "../tokens";
 
 // 与 styles.css 中原 [data-theme="dark"] / [data-theme="light"] 字节级一致。
