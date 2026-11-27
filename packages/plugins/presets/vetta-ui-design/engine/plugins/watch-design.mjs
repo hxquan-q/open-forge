@@ -1,5 +1,6 @@
 // Modified by The Open Forge contributors.
 import { readdirSync, watch } from "node:fs";
+import { RESOLVED_FRAMES_MODULE_ID } from "./frames.mjs";
 import { isDesignManifest } from "./theme-source.mjs";
 
 /**
@@ -10,9 +11,9 @@ import { isDesignManifest } from "./theme-source.mjs";
  * one at a time as they are served (`ensureWatchedFile`). A brand-new file is
  * therefore watched by nobody, and two things go stale at once:
  *
- * - src/main.tsx collects frames with `import.meta.glob`, which vite only
- *   re-evaluates when a create/delete event reaches its watcher. Without one,
- *   every freshly loaded iframe keeps getting the stale frame table
+ * - The frame table (`virtual:vetd-frames`, see plugins/frames.mjs) is built
+ *   once and cached in the module graph. Without an invalidation, every
+ *   freshly loaded iframe keeps getting the stale frame table
  *   ("Frame not found") until the server restarts.
  * - src/styles.css rescans the whole `@source` dir on every re-transform, but
  *   nothing asks it to re-transform: no HMR update ever names the stylesheet.
@@ -29,7 +30,6 @@ import { isDesignManifest } from "./theme-source.mjs";
  * untouched, and that path already rebuilds the stylesheet.
  */
 export function vetdWatchDesign(engineRoot, designRoot) {
-	const mainId = `${engineRoot.replaceAll("\\", "/")}/src/main.tsx`;
 	const stylesId = `${engineRoot.replaceAll("\\", "/")}/src/styles.css`;
 	/**
 	 * Dot-prefixed entries are skipped on purpose: `.snapshots/` is written on
@@ -106,7 +106,9 @@ export function vetdWatchDesign(engineRoot, designRoot) {
 						known = next;
 						const environment = server.environments.client;
 						if (framesChanged) {
-							const mod = environment.moduleGraph.getModuleById(mainId);
+							// 失效的是虚拟模块本身而不是 main.tsx：新 frame 靠它重建表，
+							// 否则新 frame 一直 "Frame not found"（见 plugins/frames.mjs）。
+							const mod = environment.moduleGraph.getModuleById(RESOLVED_FRAMES_MODULE_ID);
 							if (mod) environment.moduleGraph.invalidateModule(mod);
 						}
 						// ?direct / ?inline variants each get their own module node.

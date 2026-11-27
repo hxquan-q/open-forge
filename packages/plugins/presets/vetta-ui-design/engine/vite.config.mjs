@@ -9,6 +9,7 @@ import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 import { createSourceTagger } from "./plugins/source-tagger.mjs";
+import { vetdFrames } from "./plugins/frames.mjs";
 import { vetdThemeSource } from "./plugins/theme-source.mjs";
 import { vetdWatchDesign } from "./plugins/watch-design.mjs";
 
@@ -20,6 +21,8 @@ export default defineConfig(({ command }) => ({
 	plugins: [
 		react(command === "serve" ? { babel: { plugins: [createSourceTagger(designRootPosix)] } } : {}),
 		vetdThemeSource(designRootPosix),
+		// frame 表由这个插件生成；不用 import.meta.glob 的原因见 plugins/frames.mjs（Windows 跨盘符）。
+		vetdFrames(designRootPosix),
 		vetdWatchDesign(engineRoot, designRoot),
 		tailwindcss(),
 	],
