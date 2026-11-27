@@ -68,6 +68,26 @@ describe("AIMES form demo preset", () => {
 		expect(await prompt("demo")).toContain("不复审产物");
 	});
 
+	it("restricts the lead to relaying: no member work, no attachment parsing, act only on member request", async () => {
+		const lead = await prompt("demo");
+		expect(lead).toContain("主控只面向用户，不面向执行");
+		expect(lead).toContain("不解析附件");
+		expect(lead).toContain("原样转交目标成员");
+		expect(lead).toContain("不做任何事，只传话");
+		const workflow = await read("../agent/workflows/demo.md");
+		expect(workflow).toContain("不代做成员职责内的工作");
+		expect(workflow).toContain("只转发用户目标与材料");
+	});
+
+	it("closes the pipeline after one pass and forbids re-dispatch to completed stages without a member request", async () => {
+		const lead = await prompt("demo");
+		expect(lead).toContain("流程按工作流完整走一遍即结束");
+		expect(lead).toContain("不得对已完成阶段重复派工");
+		const workflow = await read("../agent/workflows/demo.md");
+		expect(workflow).toContain("不得对已完成阶段重复派工");
+		expect(workflow).toContain("不安排复测、复验或第二遍执行");
+	});
+
 	it("keeps CustomDev project discovery with the lead and permits standalone preview only on request", async () => {
 		const lead = await prompt("demo");
 		expect(lead).toContain("Runtime 给出的项目根/AI workspace 根与当前授权");
