@@ -1594,6 +1594,7 @@
 		"loading": "Preparing preview…",
 		"retry": "Retry",
 		"enlarge": "Enlarge",
+		"copyImage": "Copy image",
 		"save": "Save as",
 		"diagram": "Diagram",
 		"imageFailed": "Could not load image.",

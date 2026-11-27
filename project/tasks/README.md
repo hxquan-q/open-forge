@@ -30,6 +30,7 @@ rg -n '^status: (draft|ready|in_progress|blocked|verifying)$' project/tasks -g '
 
 | Task ID | 状态 | Plan | 任务（详情见原记录） |
 |---|---|---|---|
+| `TASK-0542` | `verifying` | PLAN-0032 | [体验类移植批：Mermaid 图表操作与输入栏细节打磨](TASK-0542-mermaid-toolbar-input-polish.md)：手工合并上游 d2d267722+3686687a6+a73f1524d+b8bd42467+da7a476a5+e9b6945f8+fef618780+808d86ecd+807d43b81——Mermaid 操作收进顶栏、深色灰画布、导出白底、输入框不跳高、用量环 tooltip portal、输入栏描边压淡。 |
 | `TASK-0539` | `verifying` | PLAN-0032 | [设计画廊 iframe 性能移植](TASK-0539-design-gallery-iframe-budget.md)：手工合并上游 d99e32377+57e3136a1+867179b27——风格墙与设计资源 Dialog 悬停停留 160ms 才挂 demo iframe。 |
 | `TASK-0541` | `verifying` | PLAN-0032 | [Windows 两项修复：设计引擎跨盘画布空白 + 界面字体显式指定](TASK-0541-windows-crossdrive-and-font-fixes.md)：0.6.32 增量；手工合并上游 59f124232+168a38bb2。 |
 | `TASK-0538` | `verifying` | PLAN-0032 | [计算/渲染性能移植批](TASK-0538-compute-render-performance.md)：手工合并上游 01ceb15c1+566455dae+15b901f49+82f7ab230——编辑订阅收窄、导航索引缓存、大 Markdown 渐进渲染、设置空闲预取。 |

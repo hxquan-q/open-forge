@@ -82,7 +82,7 @@ TASK-0535 只移植更新说明的 Markdown 渲染、外链转系统浏览器和
 
 **基线之前的漏项**：`d99e32377`（画廊风格墙静止时不给每张卡挂 iframe）是 `641aaf694` 的祖先（已用 `git merge-base --is-ancestor` 核对），不在这 125 个里；已随 `867179b27`、`57e3136a1` 一起由 TASK-0539 落地。
 
-体验（11 个）：
+体验（11 个）——**其中 9 个已随 TASK-0542 落地**（`e9b6945f8`、Mermaid 四个、theme-ui 小修中的 `808d86ecd`/`807d43b81`/`fef618780`；另 `d2d267722` 纯重构一并逐字移植）；输入预测两个（`ec42f4d02`/`e1d4baa74`）为功能增强未实施，`f76d0958b` 浅色取舍待用户拍板：
 
 - `e9b6945f8` 回复中输入文字，发送按钮切成「添加到队列」时输入框高度跳动。落点 `InputBarToolbar.tsx:195`。
 - Mermaid 四个，落点 `packages/theme-ui/src/markdown/MermaidBlock.tsx:25,32,35-42`、`preview-policy.ts:32-45`、`MarkdownImage.tsx:40`：
@@ -164,7 +164,7 @@ TASK-0535 只移植更新说明的 Markdown 渲染、外链转系统浏览器和
 - 品牌与素材 11 个：应用图标 `49818d337` `1793f66d1` `cee202825` `e4edb55f3` `46625eacb` `9cf6fa0e1`；README 图 `38719a58d` `8379298c8` `6c8378425` `18b229239` `250685916`。本仓没找到应用图标选择功能，只做了粗查。
 - 已有等价 4 个：
   - `f56937aac` `f4fac1eaf` Windows SSH：`apps/desktop/src/main/ssh/ssh-runtime.ts:63` 的 `createPlatformRunner` 在 win32 上走进程内 ssh2（[BUG-0049](../bugs/BUG-0049-windows-ssh-controlmaster-mux.md)，已核对）。只核实了这个生产入口。
-  - `d2d267722` 纯重构，`packages/theme-ui/src/markdown/MarkdownImage.tsx:16-36` 已有同样的状态机和 generation 防过期（已核对）。
+  - `d2d267722` 纯重构，`packages/theme-ui/src/markdown/MarkdownImage.tsx:16-36` 已有同样的状态机和 generation 防过期（已核对）。后因 MermaidBlock 操作收进顶栏需共用该状态机，已随 TASK-0542 一并逐字移植 `image-actions.ts`。
   - `195cfcc44` `apps/desktop/src/main/plugins/plugin-protocol.ts:148` 已转发 `SegmentedControl`（已核对）。
 - 前提不存在 3 个：
   - `9236a0385` 本仓会话行视图没有 `waiting` 字段（`apps/desktop/src/renderer/domains/project/hooks/stableSessionViews.ts`，已核对），等待态只在 `SpaceSwitcher` 的空间级汇总里有。

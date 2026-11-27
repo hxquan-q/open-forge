@@ -69,6 +69,12 @@
 		},
 		"packages/theme-ui/src/sidebar/WaitingPulseBadge.tsx": {
 			"D07": 1
+		},
+		"packages/theme-ui/src/markdown/MermaidBlock.tsx": {
+			"D01": 2
+		},
+		"packages/theme-ui/src/chat/ContextRingView.tsx": {
+			"D01": 1
 		}
 	}
 }
