@@ -101,8 +101,11 @@ describe("AIMES form demo preset", () => {
 		const requirements = await prompt("requirements");
 		expect(requirements).toContain("有实体表单附件时");
 		expect(requirements).toContain("已确认、演示假设和待核实");
+		expect(requirements).toContain("先过实体判定门");
 		const guide = await memberGuide("requirements");
-		expect(guide).toContain("无法确定是对象还是文本时默认对象");
+		expect(guide).toContain("string` 在这一步不是选项");
+		expect(guide).toContain("单属性引用同样是对象");
+		expect(guide).toContain("永远不是类型证据");
 		expect(guide).toContain("`material.name` 才是文本");
 		expect(guide).toMatch(/取值来源[\s\S]*默认值[\s\S]*精度[\s\S]*空值[\s\S]*联动/);
 		expect(guide).toContain("不查库");
