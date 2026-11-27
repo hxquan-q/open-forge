@@ -745,7 +745,7 @@ describe("Team delegation message-to-UI flow", () => {
 				},
 			});
 		});
-		expect(strip.textContent).toContain("收尾中");
+		await waitFor(() => expect(strip.textContent).toContain("收尾中"));
 
 		act(() => {
 			streamListener?.({

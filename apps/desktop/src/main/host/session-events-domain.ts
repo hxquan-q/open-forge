@@ -17,6 +17,7 @@ import type { SessionEvent } from "@vetta/runtime-core";
 import { sessionExtensionObservation } from "@vetta/runtime-core/session-extensions";
 import type { RunningChangedEvent, SessionGlobalEvent } from "../../shared/session-global-event-codec.js";
 import { agentTeamSessionService } from "../agent-teams/team-session-service.js";
+import { createToolCallDeltaCoalescer } from "../conversations/coalesce-tool-call-deltas.js";
 import { onConversationListChanged } from "../conversations/conversation-list-events.js";
 import { recordSessionEventForDebug } from "../conversations/session-debug-recorder.js";
 import { slimSessionEventForIpc } from "../conversations/slim-session-event-for-ipc.js";
@@ -61,11 +62,20 @@ export const sessionEventsHostDomain: HostDomainImplementation<typeof SESSION_EV
 		}
 		const runtime = getSharedRuntime();
 		const subscriptionId = `${sessionId}:${randomUUID()}`;
-		const unsubscribe = runtime.subscribe(sessionId, (runtimeEvent: SessionEvent) => {
-			recordSessionEventForDebug(sessionId, runtimeEvent);
-			events.emitEvent(subscriptionId, slimSessionEventForIpc(runtimeEvent));
+		// 工具调用参数增量在主进程结构化克隆上随参数长度平方增长（上游 f0c003de0）：
+		// 同一调用的增量按 50ms 合批后发往端口，其它事件先冲刷保证顺序。订阅清理
+		// （退订与端口关闭共用 subscriptionsFor 的清理函数）同时 dispose 合批器。
+		const coalescer = createToolCallDeltaCoalescer((event) => {
+			events.emitEvent(subscriptionId, event);
 		});
-		subscriptionsFor(events).set(subscriptionId, unsubscribe);
+		const runtimeUnsubscribe = runtime.subscribe(sessionId, (runtimeEvent: SessionEvent) => {
+			recordSessionEventForDebug(sessionId, runtimeEvent);
+			coalescer.push(slimSessionEventForIpc(runtimeEvent));
+		});
+		subscriptionsFor(events).set(subscriptionId, () => {
+			runtimeUnsubscribe();
+			coalescer.dispose();
+		});
 
 		// 回放后台任务快照：注册表在主进程内存中跨 renderer 重载存活，但
 		// 后台任务扩展观察只在状态变化时推送——renderer 刷新后 atom

@@ -3,6 +3,7 @@ import { createAgentTeamFixture, createEmptyAgentTeamDocument } from "@vetta/age
 import { providerModelNotFoundError } from "@vetta/ai";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { resolveTeamSessionWorkspace } from "../agent-teams/team-workspace.js";
+import { SLIM_ASSISTANT_PARTIAL } from "../conversations/slim-session-event-for-ipc.js";
 import { type AgentTeamsIpcDependencies, registerAgentTeamsIpc } from "./agent-teams.js";
 
 const ipc = vi.hoisted(() => ({
@@ -480,6 +481,17 @@ describe("Agent Team IPC contract", () => {
 			initial: { type: string };
 		};
 		expect(result.initial.type).toBe("session-snapshot");
+		const fatPartial = {
+			...SLIM_ASSISTANT_PARTIAL,
+			provider: "openai",
+			content: [{ type: "text" as const, text: "answer ".repeat(1_000) }],
+		};
+		// 闭包捕获 send 入参（断言形状禁令：不用 toHaveBeenCalledWith）——先验证
+		// discard 事件原样过桥，再验证 agent-message-event 的 fat partial 被精简。
+		const sentFrames: unknown[][] = [];
+		(sender.send as ReturnType<typeof vi.fn>).mockImplementation((...args: unknown[]) => {
+			sentFrames.push(args);
+		});
 		streamHandler({
 			type: "conversation.agent-message-discard",
 			conversationId: "session",
@@ -490,12 +502,39 @@ describe("Agent Team IPC contract", () => {
 			reason: "completed",
 			timestamp: 1,
 		});
-		await new Promise<void>((resolve) => queueMicrotask(resolve));
-		expect(sender.send).toHaveBeenCalledWith(
-			"vetta:agent-teams:stream-event",
-			result.subscriptionId,
-			expect.objectContaining({ type: "conversation.agent-message-discard", reason: "completed" }),
-		);
+		await vi.waitFor(() => {
+			const discardFrame = sentFrames.find(
+				(frame) =>
+					typeof frame[2] === "object" &&
+					frame[2] !== null &&
+					(frame[2] as { type?: string }).type === "conversation.agent-message-discard",
+			);
+			expect(discardFrame?.slice(0, 2)).toEqual(["vetta:agent-teams:stream-event", result.subscriptionId]);
+			expect(discardFrame?.[2]).toMatchObject({ type: "conversation.agent-message-discard", reason: "completed" });
+		});
+		streamHandler({
+			type: "conversation.agent-message-event",
+			conversationId: "session",
+			messageId: "message-2",
+			turnId: "request",
+			author: { kind: "agent", id: "m" },
+			sequence: 2,
+			timestamp: 2,
+			event: { type: "text_delta", contentIndex: 0, delta: "answer ", partial: fatPartial },
+		});
+		await vi.waitFor(() => {
+			const messageEventFrame = sentFrames.find(
+				(frame) =>
+					typeof frame[2] === "object" &&
+					frame[2] !== null &&
+					(frame[2] as { type?: string }).type === "conversation.agent-message-event",
+			);
+			expect(messageEventFrame?.slice(0, 2)).toEqual(["vetta:agent-teams:stream-event", result.subscriptionId]);
+			expect(messageEventFrame?.[2]).toMatchObject({
+				type: "conversation.agent-message-event",
+				event: { type: "text_delta", delta: "answer ", partial: SLIM_ASSISTANT_PARTIAL },
+			});
+		});
 		const onDestroyed = sender.once.mock.calls[0]?.[1] as (() => void) | undefined;
 		onDestroyed?.();
 		expect(unsubscribe).toHaveBeenCalledOnce();
