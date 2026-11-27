@@ -55,7 +55,7 @@ updated: 2026-11-27
   - **i18n**：main.json 加 `runtime.noAvailableModel`（zh/en）；chat.json 加 `sessionOpenFailed` 三键（zh/en）。**品牌适配**：上游文案含「在 Magpie 里接入 Vetta」，本地无 Magpie 功能，只保留「在设置里添加模型服务商」。
   - **测试**：移植 `unavailable-model.test.ts`（占位模型识别、stream 拦截不发网络请求）与 `backend-pool.test.ts` 增量（无模型恢复放行/新建拒绝/配好后用真模型）、`session-open-failure.test.ts`——按 `a1cb2d2fb` 的最终形态（断言可观察结果、计数器），不用 `toHaveBeenCalled*`。
   - release fragment 一份。
-- 不做：诊断包弹窗（`2c376e998`）、Magpie 相关修复（`867179b27`/`5fd12b81f` 等，本地无该功能）；`verify:ui:*` 需授权，不做。
+  - 不做：诊断包弹窗（`2c376e998`，另见 TASK-0532）；与本任务无关的同批上游修复（画廊 iframe 性能 `867179b27` 等见 TASK-0539，Kimi 国内站 `5fd12b81f` 见 RESEARCH-0052 改写后采纳清单）；`verify:ui:*` 需授权，不做。
 - 保留本地分叉：opener 的 SSH 重绑卡片分支、批量/对话 scenario 推导、staged preview/perf 标记不动；backend-pool 本地 +37/-2 的既有分叉（hooks/entry 结构）不回填上游。
 - Given / When / Then：
   - 无任何可用模型 → 点旧会话正常打开看历史，发消息时提示去设置添加模型（不发网络请求）。

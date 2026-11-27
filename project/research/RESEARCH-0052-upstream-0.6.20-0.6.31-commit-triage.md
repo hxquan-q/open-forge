@@ -6,7 +6,7 @@ priority: P1
 owner: coordinator
 source: user-request; upstream openvetta/open-vetta 641aaf694..314065cac 对照
 created: 2026-11-27
-updated: 2026-11-27
+updated: 2026-11-27（同日补记 0.6.32 增量与批次落地状态）
 related_requirement: [REQ-0008]
 related_plan: [PLAN-0032, PLAN-0014]
 related_issue: []
@@ -32,7 +32,7 @@ related_issue: []
 
 ## 事实来源
 
-- 上游：`upstream/dev@314065cac`（2026-11-26 提交，2026-11-27 fetch）。本仓：本地 `main@045a987ab`。共同祖先 `d217984c7`。
+- 上游：分诊时 `upstream/dev@314065cac`（2026-11-26 提交）；2026-11-27 维护时上游已到 `f977794b3`（0.6.32），增量 8 个提交见文末「0.6.32 增量补记」。本仓：分诊时 `main@045a987ab`，维护时 `main@1fe300f27`。共同祖先 `d217984c7`。
 - 提交清单：`git log --no-merges --format='%h %s' 641aaf694..upstream/dev`，剔除标题以 `chore(release):`、`docs(release):` 开头的 34 个。下文各类 sha 合计 125 个，已用脚本核对无重复、无遗漏。
 - 单个提交的原意：`git show <sha>`；标题批量取：`git log --no-walk --format='%h %s' <sha...>`。
 - 本仓现状：源码、类型和既有 Task 记录。下文路径行号对应 `main@045a987ab`。
@@ -46,8 +46,8 @@ related_issue: []
 
 | 分类 | 数量 | 含义 |
 |---|---|---|
-| 已处理 | 22 | 已有 Task 移植完成，或正在进行 |
-| 可直接采纳 | 26 | 本仓有同样的问题或缺口，结构没有分叉，按上游思路补 |
+| 已处理 | 34 | 已有 Task 移植完成，或正在进行 |
+| 可直接采纳 | 20 | 本仓有同样的问题或缺口，结构没有分叉，按上游思路补 |
 | 改写后采纳 | 17 | 值得做，但本仓结构已分叉，要按本地结构重写 |
 | 需用户拍板 | 22 | 新功能、删除既有功能或打包范围，不能由 Agent 定 |
 | 不用跟 | 38 | 本仓没有对应功能、已有等价实现或与品牌相关 |
@@ -64,31 +64,23 @@ related_issue: []
 | [TASK-0533](../tasks/TASK-0533-main-window-navigation-refine.md) | `9741f73ae` |
 | [TASK-0534](../tasks/TASK-0534-toaster-portal-above-dialogs.md) | `39f3bdc88` |
 | [TASK-0498](../tasks/TASK-0498-plugin-ui-widening.md) | `2f2464e30`（`count` 已移植，`aria-pressed` 有意保留） |
-| TASK-0535（`in_progress`，写本记录时在另一会话中，尚未提交） | `e4af417d9` `cc5167f01` `6b2f3d075` `82dd6fa3f` `3d734aa54` `fba430225` |
+| [TASK-0535](../tasks/TASK-0535-release-notes-into-update-feed.md) | `e4af417d9` `cc5167f01` `6b2f3d075` `82dd6fa3f` `3d734aa54` `fba430225` |
+| [TASK-0536](../tasks/TASK-0536-upstream-functional-bug-fixes.md) | `245f0dc4f` `057b22c1d` `50d6f5f86` `29e678a97` |
+| [TASK-0537](../tasks/TASK-0537-streaming-ipc-performance.md) | `f0c003de0` `61c5c72ce` `4dc9f15f8` |
+| [TASK-0538](../tasks/TASK-0538-compute-render-performance.md) | `01ceb15c1` `566455dae` `15b901f49` `82f7ab230` |
+| [TASK-0539](../tasks/TASK-0539-design-gallery-iframe-budget.md) | `d99e32377` `57e3136a1` `867179b27`（含基线前漏项） |
 
 TASK-0535 只移植更新说明的 Markdown 渲染、外链转系统浏览器和开发预览，不做上游的多版本说明管道：本仓走 generic/R2 更新渠道，没有上游依赖的 `fullChangelog`。
 
 ### 可直接采纳（26 个）
 
-功能错误，价值最高（4 个）：
+（维护注记 2026-11-27：本节原为 26 个，其中功能错误 4 个已由 [TASK-0536](../tasks/TASK-0536-upstream-functional-bug-fixes.md) 落地、性能 9 个已由 [TASK-0537](../tasks/TASK-0537-streaming-ipc-performance.md)/[TASK-0538](../tasks/TASK-0538-compute-render-performance.md)/[TASK-0539](../tasks/TASK-0539-design-gallery-iframe-budget.md) 落地——含基线前漏项 `d99e32377`；落点行号等实施证据以各 Task 交付段为准，下文保留体验与低价值两组候选。）
 
-- `057b22c1d` 团队会话换模型后被旧快照改回。本仓没有 `adoptTeamSessionSnapshot`（已核对）。落点 `apps/desktop/src/main/agent-teams/team-session-service.ts:526`、`useTeamChatModel.ts:337,410,878`、`teamChatModel.ts:301`。
-- `245f0dc4f` 插件预设对齐失败时没有退回已存配置，整份读废。`apps/desktop/src/main/agent-teams/agent-team-file-repository.ts:93` 直接 `return await this.installPresets(document, index)`（已核对）。
-- `50d6f5f86` 预设服务商改 API key 时，用户手加的请求头被丢掉。`apps/desktop/src/renderer/domains/settings/components/usePresetProvidersSectionModel.ts:241` 起整条重写 provider，没带 `headers`（已核对）。
-- `29e678a97` 远端登录 shell 是 csh/tcsh 时 SSH 命令失败。`packages/ssh-transport/src/remote-command.ts:50` 直接用 `"${SHELL:-/bin/sh}" -l -c`（已核对）。同批还要改 `ssh-connection.ts:875` 和 `apps/ssh-helper/internal/server/proc.go:85`。
+功能错误，价值最高（4 个）——**已全部落地，见 TASK-0536**：`057b22c1d` `245f0dc4f` `50d6f5f86` `29e678a97`。
 
-性能（9 个）：
+性能（9 个）——**已全部落地**：`f0c003de0` `61c5c72ce` `4dc9f15f8`（TASK-0537）；`01ceb15c1` `566455dae` `15b901f49` `82f7ab230`（TASK-0538）；`867179b27` `57e3136a1`（TASK-0539）。
 
-- `f0c003de0` 工具调用参数流式时，每个事件带整份增长中的 `partial` 过 IPC，也没有 50ms 合批。`apps/desktop/src/main/conversations/slim-session-event-for-ipc.ts:13` 只精简 `text_delta`、`thinking_delta`（已核对），全仓没有 `coalesce-tool-call-deltas.ts`（已核对）。另一落点 `apps/desktop/src/main/host/session-events-domain.ts:66`。
-- `61c5c72ce` 团队会话每个 token 直接 `setStreams`，落点 `useTeamChatModel.ts:460`（已核对行号）。单聊已有 100ms 合流可对照：`apps/desktop/src/renderer/domains/conversation/hooks/useSessionEventController.ts:94,200`。
-- `4dc9f15f8` 团队 `agent-message-event` 的 `partial` 没精简，落点 `apps/desktop/src/main/ipc/agent-teams.ts:179` 的 `enrichTeamEvent`。
-- `566455dae` 消息导航文案每次投影都重算。`apps/desktop/src/renderer/domains/conversation/components/message-list/messageNavigationModel.ts:51`、`apps/desktop/src/renderer/shared/components/message-feed/navigationModel.ts:45`。
-- `15b901f49` 大 Markdown 预览一次性渲染。`packages/theme-ui/src/activity/MarkdownPreviewView.tsx:205`，全仓没有 `progressive-chunks.ts`（已核对）。[RESEARCH-0042](RESEARCH-0042-streaming-markdown-render-perf.md) 只解决流式聊天，不覆盖文件预览。
-- `82f7ab230` 设置页没有空闲预取常用标签。`apps/desktop/src/renderer/domains/settings/components/settings-tab-loaders.ts:32`、`SettingsSidebar.tsx:16`。
-- `867179b27` `57e3136a1` 设计插件模板画廊每张卡进视口就挂 iframe。本仓没有 `use-demo-dwell.ts`（已核对）；`packages/plugins/presets/vetta-ui-design/src/cards/TemplateGalleryDialog.tsx:117` 没传 `demo`，而默认值是 `true`（`DesignSystemTileContent.tsx:16`）。
-- `01ceb15c1` 每条用户消息都订阅全局编辑状态，进出编辑时整列重渲染。`apps/desktop/src/renderer/domains/conversation/hooks/useUserMessageActions.ts:186,308`。
-
-**基线之前的漏项**：`d99e32377`（画廊风格墙静止时不给每张卡挂 iframe）是 `641aaf694` 的祖先（已用 `git merge-base --is-ancestor` 核对），不在这 125 个里。但本仓 `gallery/DesignSystemGrid.tsx:56` 只传了 `demoActive`，没传 `demo`，也没有上游 160ms 悬停停留的逻辑（已核对）。应和 `867179b27`、`57e3136a1` 放进同一个 Task。
+**基线之前的漏项**：`d99e32377`（画廊风格墙静止时不给每张卡挂 iframe）是 `641aaf694` 的祖先（已用 `git merge-base --is-ancestor` 核对），不在这 125 个里；已随 `867179b27`、`57e3136a1` 一起由 TASK-0539 落地。
 
 体验（11 个）：
 
@@ -182,10 +174,20 @@ TASK-0535 只移植更新说明的 Markdown 渲染、外链转系统浏览器和
 
 ### 分诊中发现的台账问题
 
-本次不修，留给对应记录的维护者：
+两条均已于 2026-11-27 维护时修正：
 
-- TASK-0529 的「不做」一条把 `867179b27` 和 `5fd12b81f` 记成 Magpie 相关修复、本地无该功能。两者都不是 Magpie：前者是设计插件画廊性能，后者是 Kimi 国内站预设，本记录分别归入可直接采纳和改写后采纳。
-- `project/plans/README.md` 的 PLAN-0032 一行仍写「D1–D7 待拍板，未建 Task、未实施」，PLAN-0032 状态仍是 `draft`。实际 D3/D4/D5/D7 已于 2026-11-25 拍板，TASK-0516、TASK-0529–0535 已挂在该计划下实施。
+- ~~TASK-0529 的「不做」一条把 `867179b27` 和 `5fd12b81f` 记成 Magpie 相关修复、本地无该功能~~——已改为正确的归属说明（前者 TASK-0539 已落地，后者在本记录改写后采纳清单）。
+- ~~`project/plans/README.md` 的 PLAN-0032 一行仍写「D1–D7 待拍板，未建 Task、未实施」，PLAN-0032 状态仍是 `draft`~~——README 行与 frontmatter 均已更新为 `in_progress` 并反映拍板与批次进度。
+
+### 0.6.32 增量补记（314065cac..f977794b3，2026-11-27）
+
+上游推进到 0.6.32，增量共 8 个提交：
+
+- 发版流水 3 个跳过：`f977794b3`（版本推进）、`3749c7f4a`、`14dc99f5b`（发布说明定稿）。
+- 已落地 2 个（[TASK-0541](../tasks/TASK-0541-windows-crossdrive-and-font-fixes.md)）：`59f124232` 设计引擎跨盘画布空白、`168a38bb2` Windows 字体显式 Segoe UI/微软雅黑。
+- 待用户拍板 3 个（像素插画外观项，纯装饰）：`0357d928d` 工作空间弹窗像素风插画、`930580a72` 诊断包弹窗海底像素插画、`a0afcfedc` webp 类型声明上移（前两个的配套）。本仓是否跟随由用户决定。
+
+下一轮分诊以 `f977794b3` 为新锚点。
 
 ## 被否决的方案
 
@@ -207,7 +209,7 @@ TASK-0535 只移植更新说明的 Markdown 渲染、外链转系统浏览器和
 
 ## 失效条件与置信度
 
-- 上游 `dev` 越过 `314065cac` 后，新增提交需要另做增量分诊；本记录只对这 125 个有效。
+- 上游 `dev` 越过 `f977794b3` 后，新增提交需要另做增量分诊；125 个主体条目的分诊结论仍以 `314065cac` 版为准。
 - 本仓 `main` 越过 `045a987ab` 后，路径行号可能偏移，建 Task 时重新定位。TASK-0535 提交后，更新弹窗相关 6 个提交的状态以该 Task 记录为准。
 - 置信度：
   - 高：标注「已核对」的条目；已处理的 22 个（有 Task 记录和提交）；Magpie、品牌素材、纯测试这三组不用跟的判断。
@@ -220,4 +222,4 @@ TASK-0535 只移植更新说明的 Markdown 渲染、外链转系统浏览器和
 - 用户对四项拍板作出决定后，把结果写回 PLAN-0032，再排实施顺序。决定做自动化 IM 投递时需要新 ADR。
 - 用户要求开始实施时，按主题建 Task。建议顺序是功能错误 4 个、性能 9 个加 `d99e32377`、体验 11 个，再到改写后采纳的各组；每个 Task 开工前在 Task 内重新核对本仓 HEAD 与上游提交。
 - 用户反馈团队会话模型被改回、自定义请求头丢失、csh 主机连不上或长工具调用时界面卡顿时，对应条目直接提为修复 Task。
-- 上游发布 0.6.31 或 `dev` 明显前进时，以 `314065cac` 为新基线做下一轮增量分诊。
+- 上游 `dev` 明显前进时，以 `f977794b3` 为新基线做下一轮增量分诊。

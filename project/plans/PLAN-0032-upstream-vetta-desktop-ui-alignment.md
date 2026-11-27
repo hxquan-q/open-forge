@@ -1,13 +1,13 @@
 ---
 id: PLAN-0032
 type: plan
-status: draft
+status: in_progress
 priority: P1
 requirement: REQ-0008
 owner: coordinator
 source: user-request; openvetta/open-vetta@641aaf694
 created: 2026-11-24
-updated: 2026-11-24
+updated: 2026-11-27
 depends_on: []
 related_requirement: [REQ-0008]
 related_plan: [PLAN-0014, PLAN-0012, PLAN-0025, PLAN-0003]
