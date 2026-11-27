@@ -17,11 +17,14 @@ worktree: unassigned（主工作区串行）
 base_commit: a7f8c4bb9
 read_paths: []
 write_paths:
+  - .gitignore
   - apps/desktop/
   - apps/docs-site/
   - packages/theme-ui/
   - project/tasks/
   - project/issues/ISSUE-0007-*.md
+  - project/issues/ISSUE-0016-*.md
+  - project/research/RESEARCH-0003-*.md
   - project/research/RESEARCH-0052-*.md
 exclusive_paths: []
 depends_on: []
