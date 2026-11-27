@@ -7,6 +7,7 @@
 
 | 主题 | 来源 |
 |---|---|
+| 上游 0.6.20–0.6.31 增量提交分诊：`641aaf694..314065cac` 的 125 个实质提交分为已处理 22、可直接采纳 26、改写后采纳 17、需拍板 22、不用跟 38，附本仓落点与证据级别；仅分诊，四项拍板待定，未建 Task | [RESEARCH-0052](RESEARCH-0052-upstream-0.6.20-0.6.31-commit-triage.md)、[PLAN-0032](../plans/PLAN-0032-upstream-vetta-desktop-ui-alignment.md) |
 | Host 出进程 transport 预研：Electron 41 + speech-input-host 先例可行；建议两步走（先 MessagePort 换线不搬进程，再 utilityProcess + owner 插槽拆 clipboard/凭据面）；仅调研，切片未实施 | [RESEARCH-0050](RESEARCH-0050-host-process-transport.md) |
 | Desktop 宿主拆分与研发控制器可信闭环：对照 17 个参考项目与许可，否决整体迁 Tauri/Rust/Viva，定进程拆分顺序与控制器首批缺口；仅调研，候选 Task 未建立 | [RESEARCH-0049](RESEARCH-0049-desktop-host-and-controller-refactor-references.md) |
 | Agent 指令、DeepSeek 决策记录与跨工具开发范式优化；仅调研，候选尚未实施 | [RESEARCH-0048](RESEARCH-0048-agent-guidance-and-development-paradigms.md) |

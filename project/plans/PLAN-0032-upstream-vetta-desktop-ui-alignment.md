@@ -100,6 +100,8 @@ related_tasks: [TASK-0160, TASK-0193]
 
 决策证据与备选分析：[RESEARCH-0051](../research/RESEARCH-0051-plan-0032-decisions-brief.md)。
 
+基线 `641aaf694` 之后的上游增量（到 `314065cac`，125 个实质提交）逐提交分诊见 [RESEARCH-0052](../research/RESEARCH-0052-upstream-0.6.20-0.6.31-commit-triage.md)，其中四项待用户拍板。
+
 ## 阶段
 
 每个阶段开工前建 Task，标注改动归属（Upstreamable / Open-Forge-only / Compatibility）。下表规模为改动行数估算。
