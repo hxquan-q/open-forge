@@ -139,7 +139,6 @@ describe("Desktop brand layer", () => {
 		for (const entry of [
 			"src/renderer/index.html",
 			"src/renderer/onboarding.html",
-			"src/renderer/pet.html",
 			"src/renderer/remote-desktop-host.html",
 			"src/renderer-ocr/index.html",
 		]) {

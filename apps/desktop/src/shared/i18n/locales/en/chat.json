@@ -771,8 +771,7 @@
 		"noTitle": "(untitled)"
 	},
 	"guideBadgeSwiper": {
-		"dismissTooltip": "Don't show again",
-		"petFeatureText": "New desktop pet feature — click to enable in settings"
+		"dismissTooltip": "Don't show again"
 	},
 	"imagePreview": {
 		"altText": "Loaded image",
@@ -917,7 +916,6 @@
 				"webhook": "Webhook setup assist",
 				"appearance": "Appearance setup assist",
 				"plugins": "Plugin setup assist",
-				"pet": "Pet setup assist",
 				"environment": "Environment setup assist",
 				"shortcuts": "Shortcut setup assist",
 				"agent": "Agent setup assist",

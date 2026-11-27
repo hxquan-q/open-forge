@@ -86,7 +86,7 @@ updated: 2026-09-23
 - 深链协议从 `vetta://` 改为 `openforge://`：登录回调与扫码配对链接随之更新，旧协议链接不再被新应用接收。
 - 用户数据目录从 `~/.vetta` 迁移到 `~/.openforge`：首次启动时自动整体迁移旧目录（失败则继续读写旧目录，不丢数据）；开发隔离目录改为 `~/.openforge-dev`。项目内的 `.vetta/` 目录作为插件生态约定保持不变。
 - 远端 helper 改名为 `openforge-ssh-helper`，安装目录改为远端 `~/.cache/openforge/helper/`；部署新版本时会清理远端遗留的 `~/.cache/vetta/helper` 目录。
-- 桌宠（Vivi）暂时下线：桌宠窗口不再创建，设置里的「Vetta Vivi」标签页、命令面板与 AI 助手里的桌宠入口、新会话引导徽章同步隐藏，不再占用额外的渲染进程与 GPU 解码资源。功能接口与媒体资源保留。
+- 桌宠（Vivi）暂时下线：桌宠窗口不再创建，设置里的「Vetta Vivi」标签页、命令面板与 AI 助手里的桌宠入口、新会话引导徽章同步隐藏，不再占用额外的渲染进程与 GPU 解码资源。功能代码与媒体资源已按 TASK-0540 全部移除。
 - 导出的诊断包新增 `perf-snapshot.json`：按 Main/Renderer/GPU 归类的进程 CPU 与内存、主进程堆、以及按会话/Turn 关联的模型调用、工具、压缩与排队等待时长；采样在任务活跃时加密、空闲时降频，且只含数字与会话标识，不含消息内容或窗口标题。
 - 新增 Provider 流协议回归 fixture（`@vetta/ai/testing`）：把 DeepSeek/OpenAI Responses 风格流上观测到的协议失败（错误事件落错 output item、未知 output item、部分流、取消、可重试与不可重试错误）固化为确定性场景矩阵，供 Runtime 与 Agent Team 层测试在不访问真实 Provider 的情况下复现。
 - 项目级智能体技能新增 `diagnose`（难缠缺陷与性能回退的诊断回路）、`grill-me` / `grill-with-docs`（逐条追问方案，后者同步维护术语表与 ADR）、`handoff`（压缩会话交接给下一个智能体）、`zoom-out`（跳出局部看模块全貌）和 `vetta-task-intake`（把一句话需求编译为任务合同），仅供开发协作使用。

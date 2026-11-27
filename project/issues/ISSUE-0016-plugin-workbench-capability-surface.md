@@ -22,7 +22,7 @@ depends_on: [RESEARCH-0010]
 - 本仓库 plugin-sdk 现状（`packages/plugins/plugin-sdk/src/`）：
   - **已有**：13 个 `ui.slot.*` 贡献点（`workspace-view` 路由级整页、`activity-tab`、`bottom-panel`、`message`、`tool-call`、`turn-card` 等）+ `service-provider.ts` 外部服务 7 态生命周期 + `app.actions.register`（插件提供桌面 action）+ `agent.*` 深能力面；
   - **没有**：work-panel **列内嵌**视图（现有 `workspace-view` 是整页路由不是列内）、floating widget 贡献点、声明式常驻服务 manifest 面、插件↔插件 pub/sub 总线。
-- 约束：插件容器格式已定 `.vettapkg`（ADR-0121）+ Module Federation React 组件体系，不引第二格式；悬浮 pet 窗口是第一方功能（`pet-window.ts`，已下线保留接口）。
+- 约束：插件容器格式已定 `.vettapkg`（ADR-0121）+ Module Federation React 组件体系，不引第二格式；原第一方悬浮窗口先例（`pet-window.ts`）已按 TASK-0540 随桌宠功能移除，插件 workbench 需自建该能力。
 
 ## 未决问题
 

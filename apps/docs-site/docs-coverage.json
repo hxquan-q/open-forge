@@ -113,12 +113,6 @@
 			"pages": ["/product/app-snapshot/"]
 		},
 		{
-			"id": "desktop-pet",
-			"source": "apps/desktop/src/renderer/domains/pet",
-			"status": "complete",
-			"pages": ["/product/desktop-pet/"]
-		},
-		{
 			"id": "coding-agent-public-api",
 			"source": "packages/coding-agent/package.json#exports",
 			"status": "partial",

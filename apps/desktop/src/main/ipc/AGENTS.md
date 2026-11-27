@@ -12,7 +12,7 @@
 
 ## 放置规则
 
-- 业务服务放到对应领域目录，例如 `src/main/pet/*`、`src/main/notifications/*`、`src/main/plugins/*`。
+- 业务服务放到对应领域目录，例如 `src/main/app-monitor/*`、`src/main/notifications/*`、`src/main/plugins/*`。
 - 纯策略/映射逻辑放到领域目录中的独立模块，并优先设计为纯函数，方便测试。
 - IPC 文件只依赖业务服务，不让业务服务依赖 IPC 文件。
 - 如果某个 IPC 文件开始同时处理注册、持久化、窗口控制、策略判断等多类职责，先拆分再继续新增功能。
@@ -26,10 +26,10 @@
 
 ## 示例
 
-- 好：`ipc/pet.ts` 校验 `actionId` 后调用 `setDesktopPetActionFromUser(actionId)`。
-- 差：`ipc/pet.ts` 自己读取配置、拼媒体路径、决定动作策略并直接操作窗口。
-- 好：`ipc/session.ts` 收到 runtime event 后调用 `main/pet/session-event-action-policy.ts` 的映射函数。
-- 差：在 `ipc/session.ts` 或 `ipc/pet-event-mapper.ts` 内维护 session 事件到桌宠动作的业务规则。
+- 好：`ipc/app-monitor.ts` 校验参数后调用 `main/app-monitor/app-monitor-service.ts` 的 `recordAppMonitorEvent`。
+- 差：`ipc/app-monitor.ts` 自己聚合用量、维护统计状态并直接写持久化文件。
+- 好：`ipc/session.ts` 收到 runtime event 后交给 `main/notifications/session-turn-notification-controller.ts` 判定终态。
+- 差：在 `ipc/session.ts` 内维护 session 事件到通知文案与终态的业务规则。
 
 ## 规则分级
 

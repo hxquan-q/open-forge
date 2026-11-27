@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 /**
  * Rebuild docs/theme/ui/deferrals.json with ONLY valid kinds:
  * permanent_desktop | host_primitive_hold | non_goal
@@ -30,7 +31,7 @@ const report = JSON.parse(out.slice(jsonStart, out.lastIndexOf("}") + 1));
 
 const d = {};
 const shellRe =
-	/App\.tsx$|router\.tsx$|RootLayout|RootGlobal|ThemeColor|ThemeError|ThemePageRoute|ThemeRuntime|DefaultSidebar\.tsx$|Sidebar\.tsx$|ChatPage\.tsx$|InputBar\.tsx$|MessageList\.tsx$|NewSessionPage\.tsx$|SettingsPage\.tsx$|SettingsContent|SettingsSidebar|shared\.tsx$|ActivityPanel\.tsx$|BatchTasksPage\.tsx$|AutomationPage|SkillsPage\.tsx$|PluginsPanel\.tsx$|KnowledgeBaseListPage|KnowledgeContentsPanel\.tsx$|TitleBar|BotAvatar|UserAvatar|provider-icon|segmented-control|tab-bar|time-picker|DomainManage|ActionApprovalCenter|GenericActionApproval\.tsx$|pet-entry|main\.tsx$|index\.tsx$/;
+	/App\.tsx$|router\.tsx$|RootLayout|RootGlobal|ThemeColor|ThemeError|ThemePageRoute|ThemeRuntime|DefaultSidebar\.tsx$|Sidebar\.tsx$|ChatPage\.tsx$|InputBar\.tsx$|MessageList\.tsx$|NewSessionPage\.tsx$|SettingsPage\.tsx$|SettingsContent|SettingsSidebar|shared\.tsx$|ActivityPanel\.tsx$|BatchTasksPage\.tsx$|AutomationPage|SkillsPage\.tsx$|PluginsPanel\.tsx$|KnowledgeBaseListPage|KnowledgeContentsPanel\.tsx$|TitleBar|BotAvatar|UserAvatar|provider-icon|segmented-control|tab-bar|time-picker|DomainManage|ActionApprovalCenter|GenericActionApproval\.tsx$|main\.tsx$|index\.tsx$/;
 
 for (const e of report.must_host_hold || []) {
 	d[e.path] = {

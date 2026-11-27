@@ -4,7 +4,6 @@ import { defineConfig, type UserConfig } from "vite";
 
 const preloadEntries = {
 	index: "src/preload/index.ts",
-	pet: "src/preload/pet.ts",
 	onboarding: "src/preload/onboarding.ts",
 	"remote-desktop": "src/preload/remote-desktop.ts",
 } as const;

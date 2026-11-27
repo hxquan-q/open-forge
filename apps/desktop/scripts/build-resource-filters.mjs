@@ -1,5 +1,6 @@
+// Modified by The Open Forge contributors.
 export function resolveBuildResourceFilters(families) {
-	const filters = new Set(["pet/**/*"]);
+	const filters = new Set();
 	if (families.has("darwin")) {
 		filters.add("icon.icns");
 		filters.add("icon.png");

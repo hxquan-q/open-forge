@@ -771,8 +771,7 @@
 		"noTitle": "(无标题)"
 	},
 	"guideBadgeSwiper": {
-		"dismissTooltip": "不再提示",
-		"petFeatureText": "新增桌宠功能，点击前往设置开启"
+		"dismissTooltip": "不再提示"
 	},
 	"imagePreview": {
 		"altText": "读取的图片",
@@ -917,7 +916,6 @@
 				"webhook": "消息推送协助",
 				"appearance": "外观配置协助",
 				"plugins": "插件配置协助",
-				"pet": "桌宠配置协助",
 				"environment": "应用环境协助",
 				"shortcuts": "快捷键配置协助",
 				"agent": "Agent配置协助",

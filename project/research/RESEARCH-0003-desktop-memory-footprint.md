@@ -86,7 +86,7 @@ depends_on: []
 | 会话切换预览 | `tailTurns=2` 预览 + 异步全量；校验 1–10，fallback 32 条 | `useSessionOpener.ts:283`、`session-history-preview.ts:3`、`ipc/session.ts:1738-1743` |
 | 流式渲染 | delta flush 100ms；markdown 按稳定块 memo；非关键派生延迟（2×rAF + 400ms + idle 1500ms） | `useSessionEventController.ts:69-70`、`MarkdownContent.tsx`、`useDeferredMessageEnhancements.ts` |
 
-另有生命周期事实：quickpanel 首次触发才建窗（建后 hide/show 常驻）；pet 经 `DESKTOP_PET_ENABLED=false` 整体下线（`shared/feature-flags.ts`）；GPU/disk-cache 关闭开关只在 CLI 模式生效（`main.ts:216-218`）；开发态启动先 `session.defaultSession.clearCache()` 再加载 renderer（`main.ts:449-454`）；managed runtime 与 sandbox 初始化延迟到首帧后 500ms（`main.ts:843-846`）；speech-input 用 `utilityProcess.fork`；uiohook 因 CGEventTap 投递问题刻意留在 `worker_threads`（`uiohook-worker.ts:9`）；im-gateway 是 Go sidecar 子进程。
+另有生命周期事实：quickpanel 首次触发才建窗（建后 hide/show 常驻）；pet 曾由 `DESKTOP_PET_ENABLED=false` 整体下线，代码已按 TASK-0540 移除；GPU/disk-cache 关闭开关只在 CLI 模式生效（`main.ts:216-218`）；开发态启动先 `session.defaultSession.clearCache()` 再加载 renderer（`main.ts:449-454`）；managed runtime 与 sandbox 初始化延迟到首帧后 500ms（`main.ts:843-846`）；speech-input 用 `utilityProcess.fork`；uiohook 因 CGEventTap 投递问题刻意留在 `worker_threads`（`uiohook-worker.ts:9`）；im-gateway 是 Go sidecar 子进程。
 
 ### B. 已识别的驻留热点（按预期收益排序）
 

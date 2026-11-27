@@ -66,7 +66,6 @@ const SETTINGS_TABS = new Set<AppMonitorSettingsTab>([
 	"environment",
 	"permissions",
 	"knowledge",
-	"pet",
 	"plugins",
 	"archived",
 	"subscription",

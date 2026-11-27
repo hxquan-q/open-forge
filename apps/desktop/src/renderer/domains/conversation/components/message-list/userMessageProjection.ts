@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { ConversationUserMessageViewModel } from "@shared/conversation";
 import {
 	type InputSegment,
@@ -213,7 +214,6 @@ const SETTINGS_ASSIST_TAB_IDS = [
 	"im",
 	"webhook",
 	"appearance",
-	"pet",
 	"environment",
 	"shortcuts",
 	"agent",

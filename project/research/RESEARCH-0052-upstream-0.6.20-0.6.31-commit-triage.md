@@ -163,12 +163,12 @@ TASK-0535 只移植更新说明的 Markdown 渲染、外链转系统浏览器和
 - `d4c8c2ded` 移除 `html_to_pdf` 内置工具：本仓 coding-agent、runtime-node、cli-host 都还有，并出现在 `packages/coding-agent/src/features/scheduled-tasks/unattended-permission-tiers.ts`，删它会改动 ADR-0132 的分档清单。
 - `04757b1cd` 上游把 `comfyui-media-provider`、`content-creation` 移出 development 档位；本仓 `packages/plugins/tenants.json` 的 development 档位两者都在，production 档位没看全。
 
-**4. 桌宠已关闭的代码要不要清理**：`apps/desktop/src/shared/feature-flags.ts:39` 写死 `DESKTOP_PET_ENABLED = false`，代码保留（如 `apps/desktop/src/shared/pet-bubbles.ts`）。上游 `f41786fb6` `223cdfa95` 是删除桌宠气泡及样式选项。这两个 sha 在计数上归入下面「不用跟」的桌宠 7 个，这里只提出是否清理的问题。
+**4. 桌宠已关闭的代码要不要清理**：`apps/desktop/src/shared/feature-flags.ts` 曾写死 `DESKTOP_PET_ENABLED = false`。上游 `f41786fb6` `223cdfa95` 是删除桌宠气泡及样式选项。该功能已按 TASK-0540 整功能移除，主进程/preload/渲染器/设置页/媒体资源与文档全部删除；这两个 sha 仍归入下面「不用跟」的桌宠 7 个。
 
 ### 不用跟（38 个）
 
 - Magpie 服务商 10 个：`8721b7cec` `60e7fd8b4` `13cb135f7` `b93761b9c` `cdeb68e45` `e70acbb14` `634ffea2b` `5f28f7f9f` `e58596133` `24d4e93c3`。本仓 `rg -i magpie` 在源码中只命中 `packages/runtime-desktop/src/unavailable-model.ts:11` 一条注释。
-- 桌宠 7 个：`62496f274` `0e620ab7c` `89fa8add6` `1a690eb68` `4f015c2eb` `f41786fb6` `223cdfa95`。功能已关，暂不适用。
+- 桌宠 7 个：`62496f274` `0e620ab7c` `89fa8add6` `1a690eb68` `4f015c2eb` `f41786fb6` `223cdfa95`。功能已按 TASK-0540 移除，不需要再跟。
 - 品牌与素材 11 个：应用图标 `49818d337` `1793f66d1` `cee202825` `e4edb55f3` `46625eacb` `9cf6fa0e1`；README 图 `38719a58d` `8379298c8` `6c8378425` `18b229239` `250685916`。本仓没找到应用图标选择功能，只做了粗查。
 - 已有等价 4 个：
   - `f56937aac` `f4fac1eaf` Windows SSH：`apps/desktop/src/main/ssh/ssh-runtime.ts:63` 的 `createPlatformRunner` 在 win32 上走进程内 ssh2（[BUG-0049](../bugs/BUG-0049-windows-ssh-controlmaster-mux.md)，已核对）。只核实了这个生产入口。

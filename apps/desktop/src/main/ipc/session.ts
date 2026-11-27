@@ -56,9 +56,6 @@ import { getDesktopMcpAppRegistry } from "../mcp/mcp-app-runtime.js";
 import { getDesktopMcpTaskRegistry } from "../mcp/mcp-task-runtime.js";
 import { notify } from "../notifications/index.js";
 import { SessionTurnNotificationController } from "../notifications/session-turn-notification-controller.js";
-import { createPetBubbleCommand } from "../pet/pet-bubble-command.js";
-import { mapSessionEventToPetPresentation } from "../pet/session-event-action-policy.js";
-import { sendPetCommandToWindow } from "../pet-window.js";
 import { setDesktopPluginHookInvoker } from "../plugins/coding-agent-hook-invocation.js";
 import { listPlugins, pluginAgentContributionService } from "../plugins/plugin-catalog.js";
 import { createPluginHookRendererDispatcher } from "../plugins/plugin-hook-renderer-dispatcher.js";
@@ -339,24 +336,8 @@ export function registerSessionIpc(webContents: WebContents): () => void {
 		if (notificationSubs.has(sessionId)) return;
 		// 逐轮跟踪终结状态：message.final 带 stopReason，error 事件、aborted
 		// lifecycle 各自独立。agent_end 时按累积状态判定该不该通知。
-		let lastPetActionId: string | undefined;
-		const hasFinalPetBody = false;
 		const notificationController = new SessionTurnNotificationController();
 		const unsubscribe = runtime.subscribe(sessionId, (ev: SessionEvent) => {
-			const petPresentation = mapSessionEventToPetPresentation(ev);
-			const petActionId = petPresentation?.actionId;
-			if (petActionId && petActionId !== lastPetActionId) {
-				lastPetActionId = petActionId;
-				sendPetCommandToWindow({ type: "set-action", actionId: petActionId, source: "app" });
-			}
-			const petBubble = petPresentation?.bubble;
-			const isRedundantGenericCompletion =
-				ev.type === "session.lifecycle" && ev.phase === "agent_end" && hasFinalPetBody;
-			if (petBubble && !isRedundantGenericCompletion) {
-				const command = createPetBubbleCommand(petBubble, sessionId);
-				if (command) sendPetCommandToWindow(command);
-			}
-
 			const outcome = notificationController.handle(ev);
 			const sessionPath = outcome ? runtime.getSessionPath(sessionId) : undefined;
 			if (outcome && sessionPath) {

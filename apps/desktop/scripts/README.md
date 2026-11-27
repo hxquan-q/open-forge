@@ -124,7 +124,7 @@ electron-builder 阶段设置，否则编译产物与打包资源可能不一致
 
 - `coding-agent`: 排除 `**/*.map`
 - `vendor`: 排除 `**/*.pdb`
-- `build`: 按目标平台只复制运行时会查找的图标文件，桌宠资源 `pet/**/*` 保留。
+- `build`: 按目标平台只复制运行时会查找的图标文件。
 - `sandbox`: 按目标平台只复制对应沙箱运行时，Windows 包不带 Linux `bwrap`，Linux 包不带 Windows sandbox host。
 
 原因：

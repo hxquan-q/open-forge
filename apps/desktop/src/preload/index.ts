@@ -22,7 +22,6 @@ import { createMarkdownApi } from "./apis/markdown.js";
 import { createMemoryControlApi } from "./apis/memory.js";
 import { createMessageAnnotationsApi } from "./apis/message-annotations.js";
 import { createNotificationApi } from "./apis/notification.js";
-import { createPetApi } from "./apis/pet.js";
 import { createPluginsApi } from "./apis/plugins.js";
 import { createProjectApi } from "./apis/project.js";
 import { createRemotePairingApi } from "./apis/remote-pairing.js";
@@ -73,7 +72,6 @@ const rawApi: Omit<DesktopApi, "hostAccess"> = {
 	...createNotificationApi(ipcRenderer),
 	...createPluginsApi(ipcRenderer, webUtils),
 	...createThemesApi(ipcRenderer),
-	...createPetApi(ipcRenderer),
 	...createConversationTagsApi(ipcRenderer),
 	...createMemoryControlApi(ipcRenderer),
 	...createArchivedSessionsApi(ipcRenderer),

@@ -78,7 +78,6 @@ export type AppMonitorSettingsTab =
 	| "environment"
 	| "permissions"
 	| "knowledge"
-	| "pet"
 	| "plugins"
 	| "archived"
 	| "subscription"

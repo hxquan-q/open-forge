@@ -1,7 +1,7 @@
 // Modified by The Open Forge contributors.
 import { prefillNewSessionInputDraft } from "@shared/store/session-input-draft";
 import type { PluginOfficialApi } from "@vetta-org/plugin-sdk";
-import { isAppearanceUiThemeEnabled, isDesktopPetEnabled } from "../../../../shared/feature-flags";
+import { isAppearanceUiThemeEnabled } from "../../../../shared/feature-flags";
 import {
 	SETTINGS_SECTIONS,
 	SETTINGS_TABS,
@@ -121,7 +121,6 @@ function isAbsolutePath(value: string): boolean {
 
 function isSettingsSectionVisible(section: SettingsSectionRegistration): boolean {
 	if (section.id === "appearance-ui-theme") return isAppearanceUiThemeEnabled();
-	if (section.tab === "pet") return isDesktopPetEnabled();
 	return true;
 }
 
@@ -160,7 +159,7 @@ function isMcpSettingsTarget(tabKey?: string, section?: SettingsSectionRegistrat
 }
 
 function buildSettingsCatalog(): unknown {
-	const settingsTabs = SETTINGS_TABS.filter((tab) => tab.key !== "pet" || isDesktopPetEnabled()).map((tab) => ({
+	const settingsTabs = SETTINGS_TABS.map((tab) => ({
 		id: tab.key,
 		title: tab.label,
 		target: { type: "open", target: "settings", tab: tab.key },

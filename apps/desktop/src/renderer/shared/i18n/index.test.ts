@@ -21,7 +21,6 @@ describe("renderer i18n language split", () => {
 			"chat",
 			"settings",
 			"project",
-			"pet",
 			"main",
 			"message",
 			"skills",

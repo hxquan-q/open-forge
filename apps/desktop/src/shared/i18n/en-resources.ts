@@ -15,7 +15,6 @@ import enComputerUse from "./locales/en/computer-use.json";
 import enMain from "./locales/en/main.json";
 import enMemory from "./locales/en/memory.json";
 import enMessage from "./locales/en/message.json";
-import enPet from "./locales/en/pet.json";
 import enProject from "./locales/en/project.json";
 import enSettings from "./locales/en/settings.json";
 import enSkills from "./locales/en/skills.json";
@@ -27,7 +26,6 @@ export const enResources = {
 	main: enMain,
 	chat: enChat,
 	project: enProject,
-	pet: enPet,
 	settings: enSettings,
 	message: enMessage,
 	skills: enSkills,

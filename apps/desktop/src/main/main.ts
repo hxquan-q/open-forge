@@ -17,7 +17,7 @@ import {
 	shell,
 } from "electron";
 import { APP_RUNTIME_NAME } from "../shared/app-identity.js";
-import { isCloudBuildEnabled, isDesktopPetEnabled } from "../shared/feature-flags.js";
+import { isCloudBuildEnabled } from "../shared/feature-flags.js";
 import { stopAllOpenMarketplaceMcpRuntimes } from "./abilities/open-marketplace/open-marketplace-mcp-runtime-host.js";
 import { createAboutPanelOptions } from "./app-about-panel.js";
 import { ActionApprovalBroker } from "./app-actions/approval-broker.js";
@@ -75,8 +75,6 @@ import { type DesktopLocalRpcServerHandle, startDesktopLocalRpcServer } from "./
 import { getAppLogger } from "./logger.js";
 import { MEDIA_PROTOCOL_PRIVILEGE, registerMediaProtocolHandler } from "./media-protocol.js";
 import { openExternalUrl } from "./open-external.js";
-import { startPetIdleGuard } from "./pet/pet-idle-guard.js";
-import { initializePetWindow } from "./pet-window.js";
 import { stopAllPluginSpawns } from "./plugins/command-spawner.js";
 import { PluginActionService } from "./plugins/plugin-action-service.js";
 import { discoverSystemPlugins } from "./plugins/plugin-catalog.js";
@@ -865,10 +863,6 @@ if (!gotSingleLock) {
 				startupPhases.register("idle", "sandbox-warmup", initializeSandbox);
 				void startupPhases.advanceTo("postFirstPaint");
 
-				if (isDesktopPetEnabled()) {
-					initializePetWindow();
-					startPetIdleGuard();
-				}
 				// Appshot：据配置启停「双键同按」手势监听。
 				void syncAppshotGesture().catch((err) => {
 					mainLog.error("failed to sync appshot gesture", err);

@@ -33,7 +33,6 @@ export const NAMESPACES = [
 	"main",
 	"chat",
 	"project",
-	"pet",
 	"settings",
 	"message",
 	"skills",

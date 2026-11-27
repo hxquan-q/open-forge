@@ -36,7 +36,6 @@ import { registerMemoryIpc } from "./memory.js";
 import { registerMessageAnnotationsIpc } from "./message-annotations.js";
 import { registerOnboardingIpc } from "./onboarding.js";
 import { registerPermissionsIpc } from "./permissions.js";
-import { registerPetIpc } from "./pet.js";
 import { registerPluginCapabilitiesIpc } from "./plugin-capabilities.js";
 import { registerPluginMediaProvidersIpc } from "./plugin-media-providers.js";
 import { registerPluginOcrProvidersIpc } from "./plugin-ocr-providers.js";
@@ -100,7 +99,6 @@ interface IpcTeardown {
 	teardownPluginMediaProviders: () => void;
 	teardownPluginOcrProviders: () => void;
 	teardownNotifications: () => void;
-	teardownPet: () => void;
 	teardownTerminal: () => void;
 	teardownConversationTags: () => void;
 	teardownArchivedSessions: () => void;
@@ -169,7 +167,6 @@ export function registerAllIpc(
 		teardownPluginMediaProviders: registerPluginMediaProvidersIpc(),
 		teardownPluginOcrProviders: registerPluginOcrProvidersIpc(),
 		teardownNotifications: registerNotificationIpc(webContents),
-		teardownPet: registerPetIpc(),
 		teardownTerminal: registerTerminalIpc(),
 		teardownConversationTags: registerConversationTagsIpc(webContents),
 		teardownArchivedSessions: registerArchivedSessionsIpc(webContents),
@@ -224,7 +221,6 @@ export function teardownAllIpc(teardown: IpcTeardown): void {
 	teardown.teardownPluginMediaProviders();
 	teardown.teardownPluginOcrProviders();
 	teardown.teardownNotifications();
-	teardown.teardownPet();
 	teardown.teardownTerminal();
 	teardown.teardownConversationTags();
 	teardown.teardownArchivedSessions();

@@ -13,7 +13,6 @@ import zhComputerUse from "./locales/zh/computer-use.json";
 import zhMain from "./locales/zh/main.json";
 import zhMemory from "./locales/zh/memory.json";
 import zhMessage from "./locales/zh/message.json";
-import zhPet from "./locales/zh/pet.json";
 import zhProject from "./locales/zh/project.json";
 import zhSettings from "./locales/zh/settings.json";
 import zhSkills from "./locales/zh/skills.json";
@@ -25,7 +24,6 @@ export const zhResources = {
 	main: zhMain,
 	chat: zhChat,
 	project: zhProject,
-	pet: zhPet,
 	settings: zhSettings,
 	message: zhMessage,
 	skills: zhSkills,
