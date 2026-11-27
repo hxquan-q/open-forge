@@ -1,11 +1,11 @@
 <!-- Copyright The Open Forge contributors. -->
-# AIMES 表单演示团队
+# 快捷开发
 
-在绑定目标 AIMES 项目的 Code 会话中新建团队会话，选择 **AIMES 表单演示团队**，与主控 `@eform-demo` 沟通。它和正式开发的 `eform-craft` 并列，不改变正式团队的入口、成员或流程。
+面向 AIMES CustomDev 表单快速开发交付的预置团队（随包分发）。在绑定目标 AIMES 项目的 Code 会话中新建团队会话，选择 **快捷开发**，与主控 `@eform-demo` 沟通。它和正式开发的 `eform-craft` 并列，不改变正式团队的入口、成员或流程。
 
-[工作流](agent/workflows/demo.md) 使用主控、需求、原型、测试、部署五个成员。主控只沟通和协助交接；测试成员做必要的构建检查和静态代码审视，按需选用单元测试，不做实际交互或操作测试。该预置只提供提示词和工作流，不加宿主权限或运行时门禁。它不包含固定表单、测试服务器配置或已部署的 AIMES 产物。
+[团队工作流](agent/workflows/demo.md) 使用主控、需求、开发、测试、部署五个成员。主控只做接收、路由派发与汇总汇报；开发成员实现前端 mock 原型，完成后只做静态自审，不写测试用例；测试成员做必要的构建检查和静态代码审视，按需选用单元测试，不做实际交互或操作测试；部署成员只构建前端包并交付部署信息卡。该预置只提供提示词和工作流，不加宿主权限或运行时门禁。它不包含固定表单、测试服务器配置或已部署的 AIMES 产物。
 
-需求和部署角色以正式 eform 的对应 Prompt 为蓝本。演示版的 [字段规格与基础资料](agent/docs/field-specification.md) 和 [完整打包、AIMES 接入与回滚](agent/docs/static-delivery.md) 随包注入对应成员的任务书，不调用正式团队的 Skills，也不增加插件权限。
+需求和部署角色以正式 eform 的对应 Prompt 为蓝本。[字段规格与基础资料](agent/docs/field-specification.md) 和 [部署信息卡](agent/docs/static-delivery.md) 随包注入对应成员的任务书，不调用正式团队的 Skills，也不增加插件权限。
 
 ## 验收走查
 
