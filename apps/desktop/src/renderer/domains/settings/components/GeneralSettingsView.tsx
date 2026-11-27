@@ -79,8 +79,7 @@ export function GeneralSettingsView({ model }: GeneralSettingsViewProps): JSX.El
 			}}
 			debugMode={model.debugMode}
 			onDebugChange={model.actions.toggleDebug}
-			exportingDiagnostics={model.exportingDiagnostics}
-			onExportDiagnostics={() => void model.actions.exportDiagnostics()}
+			onExportDiagnostics={model.actions.exportDiagnostics}
 			onStartAppGuide={model.actions.startAppGuide}
 			networkSection={
 				<div className="flex flex-col gap-4">

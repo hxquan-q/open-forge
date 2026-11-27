@@ -30,6 +30,7 @@ rg -n '^status: (draft|ready|in_progress|blocked|verifying)$' project/tasks -g '
 
 | Task ID | 状态 | Plan | 任务（详情见原记录） |
 |---|---|---|---|
+| `TASK-0532` | `verifying` | PLAN-0032 | [导出诊断包改为引导弹窗并让用户选择保存位置](TASK-0532-diagnostics-export-dialog.md)：基线外增量；手工合并上游 2c376e998+925ce0cdc，main 编排按本地 IPC 薄层边界拆 diagnostics-export.ts。 |
 | `TASK-0531` | `verifying` | PLAN-0032 | [删除遗留且从未开启过的 PostHog 与 Sentry 接入](TASK-0531-telemetry-dead-code-removal.md)：基线外增量；手工合并上游 4a3dc19e0+21f04ae88，搬迁 text-redaction/diagnostics 后整体移除遥测死代码。 |
 | `TASK-0530` | `verifying` | PLAN-0032 | [cli-host 恢复会话时显式 --model 优先](TASK-0530-cli-model-resume-precedence.md)：基线外增量；手工合并上游 8e6d9dfe2，IM 改模型重启后旧对话立即改用新模型。 |
 | `TASK-0529` | `verifying` | PLAN-0032 | [会话打开失败反馈闭环（上游 issue #91）](TASK-0529-session-open-failure-feedback-loop.md)：基线外增量；手工合并上游 223a8c6a3+972c6cdcb+a1cb2d2fb，无模型时旧会话可看历史、失败跨页 toast。 |

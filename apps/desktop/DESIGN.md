@@ -424,6 +424,8 @@ Size：`default`(h-8) / `xs`(h-6) / `sm`(h-7) / `lg`(h-9) / `icon`(size-8) / `ic
 
 > 代码块/表格统一外框（上游 `29ba5969b`/`4866771a5`）的移植原语同口径登记：`CodeBlock` 内面板用 `rounded-[9px]`（D05，与外框 `rounded-xl` 减去 3px 内边距保持同心圆角，与 `MarkdownTable` tbody 面板同一几何）——登记在同一基线文件，改写回归本地设计时删除对应条目。
 
+> 诊断包引导弹窗（上游 `2c376e998`/`925ce0cdc`）的移植原语同口径登记：`DiagnosticsExportDialogView` 沿用上游视觉语言——图标瓷贴与关闭圆钮的任意阴影 `shadow-[...]` 共 2 处（D02，白底浮起图标与圆形关闭钮的浮雕是上游横幅语言）、原语层直接用 `<button>` 共 4 处（D03，关闭圆钮/胶囊主按钮/次要入口沿用上游几何，替换为 `Button` 会引入按钮样式并破坏对照）、瓷贴 `rounded-[18px]` 与面板 `rounded-3xl`（D05，跟随上游大圆角面板曲率）、胶囊按钮 `transition-all`（D06，上游胶囊 hover/press 多属性联动）——登记在同一基线文件，改写回归本地设计时删除对应条目，超出计数的新增 token 仍判负；标题字号从上游 `text-[19px]` 归并到本地阶梯 `text-[20px]`，不再产生 D07。
+
 ### TabBar
 
 浏览器式**连通页签条**，本项目辨识度最高的自定义件（`@vetta-org/theme-ui/shared`，桌面端经 `shared/components/ui/tab-bar.tsx` 一行再导出）。

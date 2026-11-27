@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import type { LoginPopoverView } from "@cloud/auth/components/LoginPopoverView";
 import type { ActivityPanelFrame } from "@domains/activity-panel/components/activity-panel/ActivityPanelFrame";
 import type { AtPanelView } from "@domains/conversation/components/at-panel/AtPanelView";
@@ -28,6 +29,7 @@ import type {
 	PageHeaderWindowActions,
 } from "@shared/app-shell/page-header";
 import type { WindowControlButton, WindowControlsComponentProps } from "@shared/app-shell/window-controls";
+import type { DiagnosticsExportDialogView } from "@shared/components/DiagnosticsExportDialogView";
 import type { DrawerCard } from "@shared/components/DrawerCard";
 import type { UpdateRestartDialogView } from "@shared/components/UpdateRestartDialogView";
 import type { ConfirmDialogView } from "@shared/components/ui/ConfirmDialogView";
@@ -80,6 +82,7 @@ declare module "@vetta-org/theme-sdk" {
 		readonly "root.approval.themeChange"?: ComponentType;
 		readonly "root.confirmDialog"?: ComponentType;
 		readonly "root.confirmDialogView"?: typeof ConfirmDialogView;
+		readonly "root.diagnosticsExportDialogView"?: typeof DiagnosticsExportDialogView;
 		readonly "root.filePreviewDialog"?: ComponentType;
 		readonly "root.filePreviewDialogView"?: typeof FilePreviewDialogView;
 		readonly "root.genericActionApproval"?: ComponentType;

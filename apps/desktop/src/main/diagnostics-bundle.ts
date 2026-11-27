@@ -44,9 +44,14 @@ export async function buildDiagnosticsBundle(options: DiagnosticsBundleOptions =
 	addPerfSnapshot(zip);
 	await addManagedTools(zip, options.managedToolsInspector);
 
-	const zipPath = join(app.getPath("temp"), `vetta-diagnostics-${nowStamp()}.zip`);
+	const zipPath = join(app.getPath("temp"), diagnosticsBundleFileName());
 	await zip.writeZipPromise(zipPath);
 	return { zipPath, sizeBytes: (await stat(zipPath)).size };
+}
+
+/** 诊断包的默认文件名，带导出时刻，方便用户区分多次导出。 */
+export function diagnosticsBundleFileName(now: Date = new Date()): string {
+	return `vetta-diagnostics-${now.toISOString().replace(/[:.]/g, "-")}.zip`;
 }
 
 function addRecentLogs(zip: AdmZip): void {
@@ -137,8 +142,4 @@ function createManagedCodingToolsInspector(toolsDirectory: string): ManagedCodin
 		resolver.inspect
 			? resolver.inspect(tool)
 			: Promise.resolve({ tool, source: "missing", offline: false } satisfies CodingToolInspection);
-}
-
-function nowStamp(): string {
-	return new Date().toISOString().replace(/[:.]/g, "-");
 }

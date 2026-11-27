@@ -22,6 +22,7 @@ import { SchedulerExecutionApproval } from "../shared/action-approval/scheduler/
 import { SchedulerToggleApproval } from "../shared/action-approval/scheduler/SchedulerToggleApproval";
 import { SchedulerUpdateApproval } from "../shared/action-approval/scheduler/SchedulerUpdateApproval";
 import { SshPromptDialog } from "../shared/components/SshPromptDialog";
+import { DiagnosticsExportDialog } from "../shared/components/DiagnosticsExportDialog";
 import { UpdateRestartDialog } from "../shared/components/UpdateRestartDialog";
 import { Toaster } from "../shared/components/ui/Toaster";
 import { ConfirmDialog } from "../shared/components/ui/confirm-dialog";
@@ -56,6 +57,7 @@ export function RootGlobalOverlays(): JSX.Element {
 			<MigrationImportWizardDialog />
 			<ThemedFilePreviewDialog />
 			<ThemedUpdateRestartDialog />
+			<DiagnosticsExportDialog />
 			<SshPromptDialog />
 			<ActionApprovalCenter />
 			<ThemedGenericActionApproval />

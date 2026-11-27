@@ -32,6 +32,12 @@
 			"D03": 1,
 			"D07": 1
 		},
+		"packages/theme-ui/src/overlays/DiagnosticsExportDialogView.tsx": {
+			"D02": 2,
+			"D03": 4,
+			"D05": 2,
+			"D06": 1
+		},
 		"packages/theme-ui/src/scheduler/TaskListView.tsx": {
 			"D03": 1
 		},

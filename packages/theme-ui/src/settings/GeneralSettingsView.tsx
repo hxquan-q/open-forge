@@ -28,7 +28,6 @@ export interface GeneralSettingsViewLabels {
 	readonly fullAccess: string;
 	readonly useSandbox: string;
 	readonly export: string;
-	readonly exporting: string;
 	readonly reset: string;
 }
 
@@ -53,7 +52,6 @@ export interface GeneralSettingsViewProps {
 	readonly notifications: Omit<NotificationSettingsViewProps, "section">;
 	readonly debugMode: boolean;
 	readonly onDebugChange: (checked: boolean) => void;
-	readonly exportingDiagnostics: boolean;
 	readonly onExportDiagnostics: () => void;
 	readonly onStartAppGuide: () => void;
 	/** 网络代理区块，由宿主注入（需要读 models.json 的服务商列表）。 */
@@ -85,7 +83,6 @@ export function GeneralSettingsView({
 	notifications,
 	debugMode,
 	onDebugChange,
-	exportingDiagnostics,
 	onExportDiagnostics,
 	onStartAppGuide,
 	networkSection,
@@ -164,8 +161,8 @@ export function GeneralSettingsView({
 					description={labels.exportDiagnosticsDescription}
 					border={false}
 				>
-					<Button size="sm" variant="outline" disabled={exportingDiagnostics} onClick={onExportDiagnostics}>
-						{exportingDiagnostics ? labels.exporting : labels.export}
+					<Button size="sm" variant="outline" onClick={onExportDiagnostics}>
+						{labels.export}
 					</Button>
 				</SettingRow>
 			</SettingSection>
