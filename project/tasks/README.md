@@ -30,6 +30,7 @@ rg -n '^status: (draft|ready|in_progress|blocked|verifying)$' project/tasks -g '
 
 | Task ID | 状态 | Plan | 任务（详情见原记录） |
 |---|---|---|---|
+| `TASK-0539` | `verifying` | PLAN-0032 | [设计画廊 iframe 性能移植](TASK-0539-design-gallery-iframe-budget.md)：手工合并上游 d99e32377+57e3136a1+867179b27——风格墙与设计资源 Dialog 悬停停留 160ms 才挂 demo iframe。 |
 | `TASK-0541` | `verifying` | PLAN-0032 | [Windows 两项修复：设计引擎跨盘画布空白 + 界面字体显式指定](TASK-0541-windows-crossdrive-and-font-fixes.md)：0.6.32 增量；手工合并上游 59f124232+168a38bb2。 |
 | `TASK-0538` | `verifying` | PLAN-0032 | [计算/渲染性能移植批](TASK-0538-compute-render-performance.md)：手工合并上游 01ceb15c1+566455dae+15b901f49+82f7ab230——编辑订阅收窄、导航索引缓存、大 Markdown 渐进渲染、设置空闲预取。 |
 | `TASK-0536` | `verifying` | PLAN-0032 | [上游功能错误四项修复](TASK-0536-upstream-functional-bug-fixes.md)：基线外增量；手工合并上游 245f0dc4f+057b22c1d+50d6f5f86+29e678a97——预设对齐失败回退、团队换模型快照只进不退、预设请求头保留、csh/tcsh 登录 shell。 |

@@ -1,10 +1,11 @@
+// Modified by The Open Forge contributors.
 import { useTranslation } from "@vetta-org/plugin-sdk";
-import { useState } from "react";
 import { DesignSystemTileContent } from "../cards/DesignSystemTileContent";
 import { refreshDesignCatalog, useCatalogState } from "../design-systems/index";
 import type { DesignSystem } from "../design-systems/types";
 import { getPluginCtx } from "../plugin-context";
 import { SectionHeader } from "./SectionHeader";
+import { useDemoDwell } from "./use-demo-dwell";
 
 /**
  * 侧边栏「设计」页的风格库：和项目卡片同一套宫格语言，作为页面内容的一部分往下滚。
@@ -31,8 +32,7 @@ const SKELETON_COUNT = 6;
 export function DesignSystemGrid({ divided = false, busy, onPick }: DesignSystemGridProps) {
 	const { t } = useTranslation();
 	const { systems, status } = useCatalogState();
-	/** 悬停中的条目：只让它的 demo 滚动，其余保持静止。 */
-	const [hovered, setHovered] = useState<string | null>(null);
+	const { demoId, handlersFor } = useDemoDwell();
 
 	return (
 		<section className={divided ? "mt-8 border-t border-border/60 pt-6" : ""}>
@@ -46,14 +46,15 @@ export function DesignSystemGrid({ divided = false, busy, onPick }: DesignSystem
 							type="button"
 							disabled={busy}
 							onClick={() => onPick(system)}
-							onMouseEnter={() => setHovered(system.id)}
-							onMouseLeave={() => setHovered((current) => (current === system.id ? null : current))}
-							onFocus={() => setHovered(system.id)}
-							onBlur={() => setHovered((current) => (current === system.id ? null : current))}
+							{...handlersFor(system.id)}
 							aria-label={t("gallery.styles.view", { name: system.name })}
 							className="flex aspect-[4/3] min-w-0 flex-col gap-2 overflow-hidden rounded-xl border border-border bg-card p-2.5 text-left transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/60 hover:shadow-lg disabled:opacity-40"
 						>
-							<DesignSystemTileContent system={system} demoActive={hovered === system.id} />
+							<DesignSystemTileContent
+								system={system}
+								demo={demoId === system.id}
+								demoActive={demoId === system.id}
+							/>
 						</button>
 					))}
 				</div>
