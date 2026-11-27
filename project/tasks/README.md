@@ -30,6 +30,7 @@ rg -n '^status: (draft|ready|in_progress|blocked|verifying)$' project/tasks -g '
 
 | Task ID | 状态 | Plan | 任务（详情见原记录） |
 |---|---|---|---|
+| `TASK-0546` | `verifying` | PLAN-0032 | [Kimi 预设分国际站与国内站](TASK-0546-kimi-preset-global-cn-split.md)：改写移植上游 5fd12b81f——拆 Kimi (Global)/(China) 两预设共享目录。 |
 | `TASK-0545` | `verifying` | PLAN-0032 | [输入预测两件套](TASK-0545-inline-prompt-suggestion.md)：手工合并上游 ec42f4d02+e1d4baa74——第一条预测内联进输入框（Tab 填入/Esc 放弃）、开关移入个性化。 |
 | `TASK-0544` | `verifying` | PLAN-0032 | [Windows 窗口 chrome 按钮组](TASK-0544-windows-chrome-button-group.md)：手工合并上游 069cad7fa+4b7cb3a17+4e0914d70——Windows 上玻璃按钮组按扁平画、常驻按钮组改幽灵外观。 |
 | `TASK-0543` | `verifying` | PLAN-0032 | [性能三件套改写移植](TASK-0543-upstream-perf-trio-adaptation.md)：手工合并上游 502fe4dc5+770602579+ac62b5c2d——团队时间线对象复用、会话文件增量解析、大文件虚拟化预览。 |

@@ -109,7 +109,7 @@ TASK-0535 只移植更新说明的 Markdown 渲染、外链转系统浏览器和
 
 ### 改写后采纳（11 个）
 
-- `5fd12b81f` Kimi 预设分国际站与国内站。本仓只有国际站，用 `PROVIDER_KEYS` 重映射，要加 `kimi-cn` 别名并提升 catalog 版本。落点 `apps/desktop/src/main/models/presets/catalog.ts:61`、`presets/models-dev.ts:87`。
+- ~~`5fd12b81f`~~ Kimi 预设分国际站与国内站——**已由 TASK-0546 实施**：`catalogId` 共享机制按上游移植，`kimi-cn` 不进 `PROVIDER_KEYS`、不提 catalog 版本（快照按预设 id 存 `kimi` 一份，`kimi-cn` 经 catalogId 共享读取；原预测「加别名并提升版本」与实际落地不符，以上游最终态为准）。
 - `69edb1958` 基于预设人设自建的智能体不被插件预设认领。`apps/desktop/src/main/agent-teams/plugin-agent-preset-reconcile.ts:235` 已修主体，但 `findLibraryProfile` 没排除用户自建档案，`findPresetAgent` 没有 claims/taken 去重。后一个缺口能否实际触发未证实。
 - 侧栏三个。本仓固定按项目分组、只按 `modifiedAt` 排序，结构已分叉：
   - `6ca4b9479` 平铺展示与按创建或回复时间排序。`apps/desktop/src/renderer/domains/project/components/sidebar/projects/panel/ProjectsPanel.tsx:23,60`、`ProjectGroupsSection.tsx:16`、`services/sidebar-session-order.ts:29-40`。
