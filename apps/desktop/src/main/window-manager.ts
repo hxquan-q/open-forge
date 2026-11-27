@@ -14,6 +14,7 @@ import {
 	shouldPersistRendererConsoleMessage,
 } from "./logger/renderer-console-policy.js";
 import { getAppLogger } from "./logger.js";
+import { isAppSelfNavigation } from "./main-window-navigation.js";
 import { openExternalUrl } from "./open-external.js";
 import { configureMainWindowMediaPermissions } from "./speech-input/media-permissions.js";
 
@@ -156,13 +157,22 @@ export function createWindow(): BrowserWindow {
 		});
 		return { action: "deny" };
 	});
-	// 主窗口只承载应用自身内容（TASK-0309）：页面内发起的导航（被诱导的链接、脚本改
-	// location）一律拦下，外部内容走上面的系统浏览器出口。程序化加载（loadURL/
+	// 主窗口只承载应用自身内容（TASK-0309）：离开应用自身页面的导航一律拦下，
+	// 外部网页与邮件链接转交系统浏览器（TASK-0533，上游 9741f73ae 语义）；应用自身
+	// 页面内导航（打包态 file reload、dev server 内跳转）放行。程序化加载（loadURL/
 	// loadFile）与 reload 不触发本事件，开发服务器的 HMR 不受影响；与 markdown
 	// isolated-window 的既有做法保持一致。
-	mainWindow.webContents.on("will-navigate", (event, url) => {
+	const mainContents = mainWindow.webContents;
+	mainContents.on("will-navigate", (event) => {
+		const { url } = event;
+		if (isAppSelfNavigation(url, mainContents.getURL())) return;
 		event.preventDefault();
 		windowLog.warn("blocked main-window navigation", { url });
+		if (/^(https?|mailto):/i.test(url)) {
+			void openExternalUrl(url).catch((error: unknown) => {
+				windowLog.error("open external failed", { url, error });
+			});
+		}
 	});
 
 	return mainWindow;
