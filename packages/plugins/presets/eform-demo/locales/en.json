@@ -2,7 +2,7 @@
 	"plugin.name": "AIMES Form Demo",
 	"plugin.description": "Build Vue form demos with bundled mock data and an AIMES menu entry without replacing other modules' real backends.",
 	"team.demo.name": "AIMES Form Demo Team",
-	"team.demo.description": "Preview the demo locally and build the full CustomDev frontend and backend for AIMES test deployment.",
+	"team.demo.description": "Preview the demo locally; test deployment delivers the frontend package only, as this demo makes no backend changes.",
 	"agent.demo.name": "Form Demo · Coordinator",
 	"agent.demo.description": "Talks with the user and supports the four team members.",
 	"agent.requirements.name": "Form Demo · Requirements",
@@ -12,5 +12,5 @@
 	"agent.tester.name": "Form Demo · Tester",
 	"agent.tester.description": "Checks builds and reviews code, with unit tests only as needed and no interaction testing.",
 	"agent.deployer.name": "Form Demo · Deployment",
-	"agent.deployer.description": "Integrates an authorized private branch and delivers both CustomDev frontend and backend artifacts with AIMES test deployment instructions."
+	"agent.deployer.description": "Integrates an authorized private branch, builds the frontend package only (no jar replacement or service restart), and delivers AIMES test deployment instructions."
 }

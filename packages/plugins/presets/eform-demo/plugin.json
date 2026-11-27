@@ -73,7 +73,7 @@
 					{ "agent": "tester", "responsibility": "做必要的构建检查、静态审视和按需单元测试，不操作页面。" },
 					{
 						"agent": "deployer",
-						"responsibility": "按授权集成私有分支，交付完整 CustomDev 前后端及 AIMES 部署文档。",
+						"responsibility": "按授权集成私有分支，只构建前端包并交付 AIMES 部署文档。",
 						"instructionsPath": "agent/docs/static-delivery.md"
 					}
 				]

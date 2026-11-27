@@ -113,7 +113,7 @@ describe("AIMES form demo preset", () => {
 		expect(guide).toContain("子应用 HTML 入口，不是宿主业务路由");
 		expect(guide).toContain("只能通过运行态验收确认");
 		expect(guide).toContain("团队不打开页面、不请求真实 API");
-		expect(guide).toContain("恢复上一版匹配的前后端制品及菜单/注册配置");
+		expect(guide).toContain("恢复上一版匹配的前端制品及菜单/注册配置");
 		expect(guide).toContain("不覆盖其他模块");
 	});
 
@@ -139,10 +139,12 @@ describe("AIMES form demo preset", () => {
 		expect(await memberGuide("deployer")).toContain("由用户自行决定是否执行");
 	});
 
-	it("ships both sides of the merged project while keeping mock scoped to the new form", async () => {
+	it("ships a frontend-only merged candidate while keeping mock scoped to the new form", async () => {
 		const deployer = await prompt("deployer");
-		expect(deployer).toContain("从同一个合并后的候选打包完整 CustomDev 前后端");
-		expect(deployer).toContain("不能只交前端 `dist`");
+		expect(deployer).toContain("从同一个合并后的候选用项目实际脚本只构建前端包");
+		expect(deployer).toContain("不构建后端制品、不打 jar、不替换 jar、不重启后端服务");
+		const workflow = await read("../agent/workflows/demo.md");
+		expect(workflow).toContain("后端无改动，不打 jar、不重启服务");
 		const prototype = await prompt("prototype");
 		expect(prototype).toContain("mock 作用域仅限本次演示表单");
 		expect(prototype).toContain("保留既有模块的真实 API");
@@ -163,7 +165,7 @@ describe("AIMES form demo preset", () => {
 	it("preserves demo mock across master integration and documents user-run acceptance", async () => {
 		const deployer = await prompt("deployer");
 		expect(deployer).toMatch(
-			/推送私有分支[\s\S]*`master`[\s\S]*合入本地私有分支[\s\S]*从同一个合并后的候选打包完整 CustomDev 前后端/,
+			/推送私有分支[\s\S]*`master`[\s\S]*合入本地私有分支[\s\S]*从同一个合并后的候选用项目实际脚本只构建前端包/,
 		);
 		expect(deployer).toContain("保留本表单的随包 JSON mock、不为它新增后端");
 		expect(deployer).toContain("`base: './'`");

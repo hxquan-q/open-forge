@@ -2,7 +2,7 @@
 	"plugin.name": "AIMES 表单演示",
 	"plugin.description": "用 Vue 和内置 mock 实现可从 AIMES 菜单进入的表单演示，不替换其他模块的真实后端。",
 	"team.demo.name": "AIMES 表单演示团队",
-	"team.demo.description": "主控、需求、原型、测试、部署。演示可本机预览，测试部署仍交付完整 CustomDev 前后端。",
+	"team.demo.description": "主控、需求、原型、测试、部署。演示可本机预览；测试部署只交付前端包，本次演示后端无改动。",
 	"agent.demo.name": "表单演示 · 主控",
 	"agent.demo.description": "与用户沟通并协助四个成员完成演示。",
 	"agent.requirements.name": "表单演示 · 需求",
@@ -12,5 +12,5 @@
 	"agent.tester.name": "表单演示 · 测试",
 	"agent.tester.description": "做必要的构建检查与静态审视，按需选用单元测试，不做交互测试。",
 	"agent.deployer.name": "表单演示 · 部署",
-	"agent.deployer.description": "按授权集成私有分支，交付完整 CustomDev 前后端和 AIMES 测试环境部署文档。"
+	"agent.deployer.description": "按授权集成私有分支，只构建前端包（不打 jar、不重启服务），交付 AIMES 测试环境部署文档。"
 }
