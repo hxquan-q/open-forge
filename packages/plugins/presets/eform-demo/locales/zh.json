@@ -12,5 +12,5 @@
 	"agent.tester.name": "表单演示 · 测试",
 	"agent.tester.description": "做必要的构建检查与静态审视，按需选用单元测试，不做交互测试。",
 	"agent.deployer.name": "表单演示 · 部署",
-	"agent.deployer.description": "按授权集成私有分支，只构建前端包（不打 jar、不重启服务），交付 AIMES 测试环境部署文档。"
+	"agent.deployer.description": "按授权集成私有分支，只构建前端包（不打 jar、不重启服务），交付 AIMES 测试环境部署信息卡。"
 }

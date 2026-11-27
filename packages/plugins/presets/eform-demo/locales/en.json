@@ -12,5 +12,5 @@
 	"agent.tester.name": "Form Demo · Tester",
 	"agent.tester.description": "Checks builds and reviews code, with unit tests only as needed and no interaction testing.",
 	"agent.deployer.name": "Form Demo · Deployment",
-	"agent.deployer.description": "Integrates an authorized private branch, builds the frontend package only (no jar replacement or service restart), and delivers AIMES test deployment instructions."
+	"agent.deployer.description": "Integrates an authorized private branch, builds the frontend package only (no jar replacement or service restart), and delivers an AIMES test deployment card."
 }

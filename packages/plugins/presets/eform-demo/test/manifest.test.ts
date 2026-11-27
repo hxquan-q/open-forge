@@ -108,13 +108,17 @@ describe("AIMES form demo preset", () => {
 		expect(guide).toContain("不查库");
 	});
 
-	it("ships a deployment guide that distinguishes menu route, HTML entry, mount and rollback", async () => {
+	it("ships a fill-in deployment card with fixed deploy flow and AIMES menu registration", async () => {
 		const guide = await memberGuide("deployer");
-		expect(guide).toContain("子应用 HTML 入口，不是宿主业务路由");
-		expect(guide).toContain("只能通过运行态验收确认");
-		expect(guide).toContain("团队不打开页面、不请求真实 API");
-		expect(guide).toContain("恢复上一版匹配的前端制品及菜单/注册配置");
-		expect(guide).toContain("不覆盖其他模块");
+		expect(guide).toContain("部署方式固定为**备份后替换**");
+		expect(guide).toContain("不打 jar、不替换 jar、不重启服务");
+		expect(guide).toContain("本卡交用户执行");
+		expect(guide).toContain("待确认（缺什么）");
+		expect(guide).toContain("「拆改配业务/新增表单」目录下新增一个菜单项");
+		expect(guide).toContain("| 上级菜单 | 拆改配业务/新增表单（固定） |");
+		expect(guide).toContain("/home/custom-dev/<本次演示路由段>");
+		expect(guide).toContain("Qiankun微应用跳转（固定）");
+		expect(guide).toContain("正常进入表单模块则算成功");
 	});
 
 	it("carries list and form field shapes to a portable mock-only prototype", async () => {
@@ -136,7 +140,7 @@ describe("AIMES form demo preset", () => {
 		expect(tester).toContain("不做实际交互测试或操作测试");
 		const workflow = await read("../agent/workflows/demo.md");
 		expect(workflow).toContain("不把交互验收改派给其他成员");
-		expect(await memberGuide("deployer")).toContain("由用户自行决定是否执行");
+		expect(await memberGuide("deployer")).toContain("本卡交用户执行");
 	});
 
 	it("ships a frontend-only merged candidate while keeping mock scoped to the new form", async () => {
@@ -159,7 +163,7 @@ describe("AIMES form demo preset", () => {
 		expect(deployer).toContain("构建成功后不再追加测试、静态检测或制品复验");
 		const workflow = await read("../agent/workflows/demo.md");
 		expect(workflow).toContain("构建成功即出部署指导");
-		expect(await memberGuide("deployer")).toContain("不加跑测试或制品复验");
+		expect(await memberGuide("deployer")).toContain("本卡即最终交付的部署文档");
 	});
 
 	it("preserves demo mock across master integration and documents user-run acceptance", async () => {
@@ -169,8 +173,8 @@ describe("AIMES form demo preset", () => {
 		);
 		expect(deployer).toContain("保留本表单的随包 JSON mock、不为它新增后端");
 		expect(deployer).toContain("`base: './'`");
-		expect(deployer).toContain("AIMES 菜单配置与目标路由");
-		expect(await memberGuide("deployer")).toContain("从 AIMES 菜单进入并完成核心操作");
+		expect(deployer).toContain("菜单注册引导表中上级菜单、菜单类型、动作类型为固定值照抄");
+		expect(await memberGuide("deployer")).toContain("「拆改配业务/新增表单」目录下新增一个菜单项");
 		expect(await prompt("tester")).toContain("不能把构建成功写成实际接入通过");
 	});
 });
