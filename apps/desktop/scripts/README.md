@@ -328,4 +328,4 @@ Windows 的 Inno Setup 安装包是自定义产物，应由仓库的 release wor
 
 工作流的 `workflow_dispatch` 默认只执行三平台构建、校验并保留临时 Artifact；选择 `channel=test` 会发布到隔离的 `desktop-test` R2，选择 `channel=stable` 会在 `desktop-production` Environment 审批后进入与匹配 tag 相同的 R2/GitHub 发布 Job。生产 tag 仍必须是 `v<package-version>`；其它 `v*` tag 经轻量 scope Job 判定后跳过打包。所有会发布的构建都要求 macOS 签名与公证。GitHub Release 已经公开后不允许 CI 用 `--clobber` 修改，只能恢复尚未公开的 draft。
 
-打包时会从本包 `CHANGELOG.md` 提取与当前版本完全匹配的 `## [version]` 区段作为更新说明。正式发布必须先完成 Changelog 定版；找不到版本区段的本地 QA 构建只告警并省略更新说明。
+打包时会从仓库根 `.github/release-notes/v<version>.md` 提取首个 `##` 小节起的正文作为更新说明（标题与「发布日期 / Upstream baseline」等元信息不进包）。正式发布必须先完成该文件定版；文件缺失或正文为空的本地 QA 构建只告警并省略更新说明。

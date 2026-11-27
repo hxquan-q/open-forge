@@ -106,7 +106,9 @@ if (buildVersionOverride && buildVersionOverride !== packageVersion) {
 	console.warn(`[prepare-pack] QA build version override: ${packageVersion} -> ${appVersion}`);
 }
 const releaseInfo =
-	appVersion === packageVersion ? resolveReleaseInfo(join(projectRoot, "CHANGELOG.md"), appVersion) : undefined;
+	appVersion === packageVersion
+		? resolveReleaseInfo(join(projectRoot, "..", "..", ".github", "release-notes", `v${appVersion}.md`), appVersion)
+		: undefined;
 
 function resolveCliAppCompileTargets() {
 	const rawTargets = process.env.VETTA_CLI_TARGET_PLATFORMS ?? process.env.VETTA_VENDOR_PLATFORM;

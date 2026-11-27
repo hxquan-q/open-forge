@@ -1,7 +1,9 @@
+// Modified by The Open Forge contributors.
 import { AnimatePresence, motion } from "motion/react";
 import type { JSX, RefObject } from "react";
 import { cn } from "@vetta-org/ui";
 import { ThemeSurface } from "../appearance/ThemeSurface";
+import { ReleaseNoteMarkdown } from "./ReleaseNoteMarkdown";
 
 export interface UpdateRestartDialogViewLabels {
 	readonly install: string;
@@ -63,9 +65,9 @@ export function UpdateRestartDialogView({
 							<p className="mt-2 text-[12px] text-muted-foreground">{labels.message}</p>
 							{releaseNote && (
 								<div className="mt-3 max-h-[40vh] overflow-auto rounded-lg border border-border bg-secondary/50 p-3">
-									<p className="whitespace-pre-wrap break-words text-[12px] text-muted-foreground">
-										{releaseNote}
-									</p>
+									<div className="break-words text-[12px] text-muted-foreground">
+										<ReleaseNoteMarkdown>{releaseNote}</ReleaseNoteMarkdown>
+									</div>
 								</div>
 							)}
 							<div className="mt-5 flex justify-end gap-2">
