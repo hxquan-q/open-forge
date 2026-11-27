@@ -84,7 +84,7 @@ TASK-0535 只移植更新说明的 Markdown 渲染、外链转系统浏览器和
 
 **基线之前的漏项**：`d99e32377`（画廊风格墙静止时不给每张卡挂 iframe）是 `641aaf694` 的祖先（已用 `git merge-base --is-ancestor` 核对），不在这 125 个里；已随 `867179b27`、`57e3136a1` 一起由 TASK-0539 落地。
 
-体验（11 个）——**其中 9 个已随 TASK-0542 落地**（`e9b6945f8`、Mermaid 四个、theme-ui 小修中的 `808d86ecd`/`807d43b81`/`fef618780`；另 `d2d267722` 纯重构一并逐字移植）；输入预测两个（`ec42f4d02`/`e1d4baa74`）为功能增强未实施，`f76d0958b` 浅色取舍待用户拍板：
+体验（11 个）——**其中 9 个已随 TASK-0542 落地**（`e9b6945f8`、Mermaid 四个、theme-ui 小修中的 `808d86ecd`/`807d43b81`/`fef618780`；另 `d2d267722` 纯重构一并逐字移植）；**输入预测两个（`ec42f4d02`/`e1d4baa74`）已随 TASK-0545 落地**，`f76d0958b` 浅色取舍待用户拍板：
 
 - `e9b6945f8` 回复中输入文字，发送按钮切成「添加到队列」时输入框高度跳动。落点 `InputBarToolbar.tsx:195`。
 - Mermaid 四个，落点 `packages/theme-ui/src/markdown/MermaidBlock.tsx:25,32,35-42`、`preview-policy.ts:32-45`、`MarkdownImage.tsx:40`：
@@ -92,7 +92,7 @@ TASK-0535 只移植更新说明的 Markdown 渲染、外链转系统浏览器和
   - `a73f1524d` 深色主题下没有强制浅色配色和灰色画布。
   - `da7a476a5` 图操作没收进代码块顶栏，图片受 `max-h-96` 限高。
   - `3686687a6` 没有按 `viewBox` 算固有尺寸。
-- 输入预测两个，本仓已有该功能（`chat-atoms.ts:408`、`useSuggestionBubblesModel.ts:14`）：
+- 输入预测两个，本仓已有该功能（`chat-atoms.ts:408`、`useSuggestionBubblesModel.ts:14`）——**已由 TASK-0545 实施**：
   - `ec42f4d02` 第一条建议只进 placeholder，没有内联预测、Tab 填入和 Esc 放弃。`DefaultInputBarConnector.tsx:135`、`useInputBarSources.ts:125-126`。
   - `e1d4baa74` 开关还在实验区，上游移到个性化。`AgentSettingsView.tsx:93-106`。
 - theme-ui 小修四个：

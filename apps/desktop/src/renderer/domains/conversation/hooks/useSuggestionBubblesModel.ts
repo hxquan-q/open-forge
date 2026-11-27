@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { activeSessionAtom, promptSuggestionsAtom } from "@shared/store/atoms";
 import { useAtomValue } from "jotai";
 import { useMemo } from "react";
@@ -14,7 +15,8 @@ export function useSuggestionBubblesModel(): SuggestionBubblesModel {
 	const suggestionsMap = useAtomValue(promptSuggestionsAtom);
 	const suggestions = useMemo(() => {
 		const list = activeSession?.runtimeId ? suggestionsMap[activeSession.runtimeId] : undefined;
-		return list ?? [];
+		// 第一条显示在输入框里（Tab 填入），气泡只放其余几条，免得重复。
+		return list?.slice(1) ?? [];
 	}, [activeSession?.runtimeId, suggestionsMap]);
 
 	return {

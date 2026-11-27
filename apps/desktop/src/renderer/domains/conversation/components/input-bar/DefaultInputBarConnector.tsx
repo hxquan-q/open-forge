@@ -7,7 +7,7 @@ import { sessionAxesBadgeKind } from "@domains/workspace-mode";
 import { formatSessionAxesBadge, resolveSessionAxes } from "@domains/workspace-mode/lib/session-axes";
 import { pathBasename, toVettaFileUrl } from "@shared/lib/utils";
 import type { InputBarContextMenuViewProps } from "@vetta-org/theme-ui/chat";
-import { Fragment, memo, useMemo } from "react";
+import { Fragment, memo, useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { InputBar } from "../InputBar";
 import type { ActiveActionCapsule } from "./ActiveActionCapsules";
@@ -19,9 +19,9 @@ import {
 	useInputBarInteractionSource,
 	useInputBarQueueSource,
 	useInputBarSessionSource,
-	useInputBarSuggestionSource,
 	useInputBarTodoSource,
 } from "./useInputBarSources";
+import { useInlinePromptSuggestion } from "./useInlinePromptSuggestion";
 import { useInputBarTriggerModel } from "./useInputBarTriggerModel";
 import { useSpeechInput } from "./useSpeechInput";
 import { useSessionDropZoneModel } from "../../hooks/useSessionDropZoneModel";
@@ -39,7 +39,13 @@ export const DefaultInputBarConnector = memo(function DefaultInputBarConnector(p
 	const draft = useInputBarDraftSource();
 	const runtimeId = session.activeSession?.runtimeId;
 	const interactions = useInputBarInteractionSource(runtimeId);
-	const firstSuggestion = useInputBarSuggestionSource(runtimeId);
+	const inlineSuggestion = useInlinePromptSuggestion({
+		runtimeId,
+		hasSession: session.hasSession,
+		isStreaming: session.isStreaming,
+		placeholderVisible: session.placeholderVisible,
+	});
+	const firstSuggestion = inlineSuggestion.visible ? inlineSuggestion.suggestion : undefined;
 	const queue = useInputBarQueueSource(runtimeId);
 	const todoItems = useInputBarTodoSource(runtimeId);
 	const actionBar = useInputActionBarModel();
@@ -132,15 +138,24 @@ export const DefaultInputBarConnector = memo(function DefaultInputBarConnector(p
 	const placeholderModel = useMemo(() => {
 		if (!session.hasSession) return { placeholderTexts: [t("inputBar.placeholder.noSession")], placeholderRotating: false };
 		if (session.isStreaming) return { placeholderTexts: [t("inputBar.placeholder.thinking")], placeholderRotating: false };
-		if (session.placeholderVisible && firstSuggestion) return { placeholderTexts: [t("inputBar.placeholder.suggestion", { suggestion: firstSuggestion })], placeholderRotating: false };
+		if (firstSuggestion) return { placeholderTexts: [t("inputBar.placeholder.suggestion", { suggestion: firstSuggestion })], placeholderRotating: false };
 		return { placeholderTexts: defaultPlaceholders, placeholderRotating: defaultPlaceholders.length > 1 };
-	}, [defaultPlaceholders, firstSuggestion, session.hasSession, session.isStreaming, session.placeholderVisible, t]);
+	}, [defaultPlaceholders, firstSuggestion, session.hasSession, session.isStreaming, t]);
 	const labels = useMemo<InputBarModel["labels"]>(() => ({
 		capsule: { removeDefault: t("inputBar.capsule.removeDefault"), removeImage: t("inputBar.capsule.removeImage"), removeTooltip: (path) => t("inputBar.capsule.removeTooltip", { path }), activeGroup: (count) => t("inputBar.capsule.activeGroup", { count }) },
 		permission: { deny: t("inputBar.permission.deny"), allow: t("inputBar.permission.allow"), allowSession: t("inputBar.permission.allowSession") },
 		toolbar: { skills: t("inputBar.toolbar.skills"), addImage: t("inputBar.toolbar.addImage"), attachFile: t("inputBar.toolbar.attachFile"), queue: t("inputBar.drawer.queueLabel") },
 	}), [t]);
 	const contextMenu: InputBarContextMenuViewProps | null = contextMenuModel.contextMenu;
+
+	const handleKeyDown = useCallback(
+		(event: KeyboardEvent): boolean => {
+			// `/`、`@` 菜单打开时 Tab / Esc 归菜单。
+			if (!trigger.slashOpen && !trigger.atOpen && inlineSuggestion.handleKeyDown(event)) return true;
+			return planMode.handleKeyDown(event);
+		},
+		[inlineSuggestion.handleKeyDown, planMode.handleKeyDown, trigger.atOpen, trigger.slashOpen],
+	);
 
 	const model: InputBarModel = {
 		dropZone,
@@ -219,7 +234,7 @@ export const DefaultInputBarConnector = memo(function DefaultInputBarConnector(p
 			setFocused: trigger.setIsFocused,
 			setDrawerActiveTab: trigger.setDrawerActiveTab,
 			handleEnter: trigger.handleEnter,
-			handleKeyDown: planMode.handleKeyDown,
+			handleKeyDown,
 			handleContextMenu: contextMenuModel.onContextMenu,
 			removeImage: attachments.removeImage,
 			openImagePreview: attachments.openImagePreview,

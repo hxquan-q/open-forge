@@ -12,7 +12,6 @@ import {
 	pendingPlanReviewsAtom,
 	pendingQuestionsAtom,
 	promptAttachmentAtom,
-	promptSuggestionsAtom,
 	sandboxPermissionDrawerAtom,
 	todoItemsBySessionAtom,
 } from "@shared/store/atoms";
@@ -119,11 +118,6 @@ export function useInputBarInteractionSource(runtimeId?: string | readonly strin
 				? sandboxPermission
 				: null,
 	};
-}
-
-export function useInputBarSuggestionSource(runtimeId?: string): string | undefined {
-	const suggestions = useAtomValue(promptSuggestionsAtom);
-	return runtimeId ? suggestions[runtimeId]?.[0] : undefined;
 }
 
 export function useInputBarQueueSource(runtimeId?: string) {

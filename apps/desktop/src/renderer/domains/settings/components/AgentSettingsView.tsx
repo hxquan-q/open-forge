@@ -1,3 +1,4 @@
+// Modified by The Open Forge contributors.
 import { Button } from "@vetta-org/ui";
 import { Switch } from "@vetta-org/ui";
 import { useMemo } from "react";
@@ -85,6 +86,16 @@ export function AgentSettingsView({ model, imageGeneration, runtimeConfiguration
 								: model.labels.apply}
 					</Button>
 				</div>
+
+				<SettingRow
+					title={model.labels.inputPrediction}
+					description={model.labels.inputPredictionDescription}
+				>
+					<Switch
+						checked={model.promptPredictionEnabled}
+						onCheckedChange={model.actions.togglePromptPrediction}
+					/>
+				</SettingRow>
 			</div>
 
 			<ImageGenerationSettingsSection model={imageGeneration} />
@@ -96,15 +107,6 @@ export function AgentSettingsView({ model, imageGeneration, runtimeConfiguration
 						description={model.labels.appOpDescription}
 					>
 						<Switch checked={model.vettaCliEnabled} onCheckedChange={model.actions.toggleVettaCli} />
-					</SettingRow>
-					<SettingRow
-						title={model.labels.inputPrediction}
-						description={model.labels.inputPredictionDescription}
-					>
-						<Switch
-							checked={model.promptPredictionEnabled}
-							onCheckedChange={model.actions.togglePromptPrediction}
-						/>
 					</SettingRow>
 					<SettingRow
 						title={model.labels.agentSkill}
